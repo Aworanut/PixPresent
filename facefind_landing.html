@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FaceFind — Find Your Moments in a Blink of an Eye</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Chonburi, Cormorant Garamond, IBM Plex Sans Thai, Kanit, Charmonman -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chonburi&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=IBM+Plex+Sans+Thai:wght@200;300;400;500;600;700&family=Kanit:wght@100;200;300;400;500;600;700&family=Charmonman:wght@400;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['"Cormorant Garamond"', 'var(--font-serif-thai)', 'serif'],
+            sans: ['"IBM Plex Sans Thai"', 'sans-serif'],
+          },
+          colors: {
+            cream: '#FBF9F6',
+            charcoal: '#111111',
+            champagne: {
+              DEFAULT: '#D4AF37',
+              light: '#F5EEDC',
+              dark: '#AA882C'
+            }
+          },
+          letterSpacing: {
+            widest: '0.25em',
+            mega: '0.4em'
+          },
+          borderWidth: {
+            '0.5': '0.5px'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Load Local Sao Chingcha font */
+    @font-face {
+      font-family: 'SaoChingcha';
+      src: url('public/fonts/SaoChingcha-Regular.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'SaoChingcha';
+      src: url('public/fonts/SaoChingcha-Bold.otf') format('opentype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'SaoChingcha';
+      src: url('public/fonts/SaoChingcha-Light.otf') format('opentype');
+      font-weight: 300;
+      font-style: normal;
+    }
+
+    /* Custom CSS custom variables for dynamic header toggling */
+    :root {
+      --font-serif-thai: 'Kanit', sans-serif;
+      --heading-weight: 400;
+    }
+
+    /* Fix Thai letter-spacing issue (prevent vowels & tone marks from separating) */
+    html[lang="th"] [data-i18n],
+    html[lang="th"] .tracking-widest,
+    html[lang="th"] .tracking-mega,
+    html[lang="th"] .tracking-[0.25em],
+    html[lang="th"] .tracking-[0.4em] {
+      letter-spacing: -0.01em !important;
+    }
+
+    /* Custom Luxury Styles */
+    body {
+      background-color: #FBF9F6;
+      color: #111111;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      transition: background-color 0.5s ease, color 0.5s ease;
+      letter-spacing: -0.01em;
+    }
+
+    html.dark body {
+      background-color: #111111;
+      color: #FBF9F6;
+    }
+
+    /* Force all font-serif classes and editorial-heading to follow the active variable settings */
+    .font-serif {
+      font-family: 'Cormorant Garamond', var(--font-serif-thai), serif !important;
+      font-weight: var(--heading-weight) !important;
+    }
+
+    .editorial-heading {
+      font-family: 'Cormorant Garamond', var(--font-serif-thai), serif !important;
+      font-weight: var(--heading-weight) !important;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    /* Asymmetric Masonry Column Layout */
+    .masonry-gallery {
+      columns: 1 250px;
+      column-gap: 1.5rem;
+    }
+    @media (min-width: 768px) {
+      .masonry-gallery {
+        columns: 2 300px;
+      }
+    }
+    @media (min-width: 1024px) {
+      .masonry-gallery {
+        columns: 4 250px;
+      }
+    }
+    .masonry-item {
+      break-inside: avoid;
+      margin-bottom: 1.5rem;
+      position: relative;
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Subtle Scanning Line Animation */
+    @keyframes scan {
+      0% {
+        top: 0%;
+        opacity: 0;
+      }
+      10% {
+        opacity: 0.8;
+      }
+      90% {
+        opacity: 0.8;
+      }
+      100% {
+        top: 100%;
+        opacity: 0;
+      }
+    }
+
+    .scanner-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+      box-shadow: 0 0 8px #D4AF37;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .scanning .scanner-line {
+      animation: scan 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+    }
+
+    /* Custom input bottom-border only */
+    .luxury-input {
+      background: transparent;
+      border-bottom: 1px solid rgba(17, 17, 17, 0.2);
+      transition: all 0.4s ease;
+    }
+    html.dark .luxury-input {
+      border-bottom: 1px solid rgba(251, 249, 246, 0.2);
+    }
+    .luxury-input:focus {
+      outline: none;
+      border-bottom: 1px solid #D4AF37;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FBF9F6;
+    }
+    html.dark ::-webkit-scrollbar-track {
+      background: #111111;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D4AF37;
+      border-radius: 3px;
+    }
+
+    /* PREMIUM COMPONENT SYSTEM ADDITIONS */
+    
+    /* 1. Skeleton Loader & Shimmer Animation */
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+      100% {
+        background-position: 200% 0;
+      }
+    }
+    .skeleton-card {
+      background: linear-gradient(90deg, #F5F3ED 25%, #EFEBE0 50%, #F5F3ED 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite linear;
+    }
+    html.dark .skeleton-card {
+      background: linear-gradient(90deg, #1A1A1A 25%, #27272A 50%, #1A1A1A 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite linear;
+    }
+
+    /* 2. Premium Toast Notification Panel */
+    @keyframes slideInRight {
+      from {
+        transform: translateX(120%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+    .toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      pointer-events: none;
+    }
+    .luxury-toast {
+      pointer-events: auto;
+      animation: slideInRight 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: all 0.4s ease;
+    }
+    .luxury-toast.leaving {
+      animation: fadeOut 0.4s ease forwards;
+    }
+
+    /* 3. Photo Detail Lightbox Modal */
+    .photo-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background-color: rgba(17, 17, 17, 0.88);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .photo-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+  <script>
+    // FOUC Prevention for dark theme
+    const theme = localStorage.getItem('ff-theme') || 'light';
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+</head>
+<body class="selection:bg-champagne-light selection:text-charcoal dark:selection:bg-zinc-800 dark:selection:text-cream min-h-screen flex flex-col overflow-x-hidden">
+
+  <!-- Header Navigation -->
+  <header class="w-full border-b border-charcoal/5 dark:border-cream/5 px-6 md:px-12 py-6 flex items-center justify-between sticky top-0 bg-cream/90 dark:bg-zinc-950/90 backdrop-blur-md z-40 transition-colors duration-500">
+    <a href="#" class="font-serif text-2xl tracking-widest uppercase font-light text-charcoal dark:text-cream">
+      Face<span class="text-champagne font-medium">find</span>
+    </a>
+    
+    <nav class="hidden md:flex items-center gap-12 text-xs tracking-widest uppercase text-charcoal/60 dark:text-cream/60">
+      <a href="#hero" data-i18n="navSearch" class="hover:text-charcoal dark:hover:text-cream transition-colors">Search</a>
+      <a href="#gallery" data-i18n="navPortfolio" class="hover:text-charcoal dark:hover:text-cream transition-colors">Portfolio</a>
+      <a href="#how-it-works" data-i18n="navProcess" class="hover:text-charcoal dark:hover:text-cream transition-colors">Process</a>
+      <a href="#events" data-i18n="navEvents" class="hover:text-charcoal dark:hover:text-cream transition-colors">Events</a>
+    </nav>
+    
+    <div class="flex items-center gap-6">
+      <!-- Language Toggle EN/TH -->
+      <button id="lang-toggle" class="text-xs tracking-widest uppercase font-mono text-charcoal/50 dark:text-cream/40 hover:text-charcoal dark:hover:text-cream transition-colors border border-charcoal/10 dark:border-cream/10 px-2.5 py-1">
+        TH
+      </button>
+
+      <!-- Font Switcher Toggle -->
+      <button id="font-toggle" class="text-[10px] tracking-widest uppercase font-mono text-charcoal/50 dark:text-cream/40 hover:text-charcoal dark:hover:text-cream transition-colors border border-charcoal/10 dark:border-cream/10 px-2.5 py-1" title="Toggle Heading Font style">
+        FONT: CHONBURI
+      </button>
+
+      <!-- Minimalist Dark Mode Toggle -->
+      <button id="theme-toggle" class="w-8 h-8 rounded-full border border-charcoal/10 dark:border-cream/10 flex items-center justify-center text-charcoal/70 dark:text-cream/70 hover:border-champagne transition-all duration-300">
+        <!-- Sun Icon (shown in dark mode) -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <!-- Moon Icon (shown in light mode) -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+
+      <a href="#contact" data-i18n="navInquire" class="border border-champagne text-charcoal dark:text-cream hover:bg-champagne hover:text-white px-5 py-2.5 text-xs tracking-widest uppercase transition-all duration-500 ease-out">
+        Inquire Now
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="hero" class="w-full max-w-7xl mx-auto px-6 md:px-12 pt-16 pb-24 md:py-32 flex flex-col lg:flex-row items-center gap-16">
+    <div class="flex-1 space-y-8 text-left">
+      <span data-i18n="heroBadge" class="text-xs uppercase tracking-mega text-champagne font-semibold block">AI-Powered Event Photo Retrieval</span>
+      <h1 class="editorial-heading text-5xl sm:text-6xl lg:text-7xl font-light text-charcoal dark:text-cream">
+        <span id="hero-title-main" data-i18n="heroTitleMain">Find Your Moments</span><br>
+        <span id="hero-title-sub" data-i18n="heroTitleSub" class="italic font-normal font-serif text-charcoal/80 dark:text-cream/80">in Blink of an Eye.</span>
+      </h1>
+      <p data-i18n="heroDesc" class="text-charcoal/60 dark:text-cream/60 text-sm md:text-base font-light tracking-wide leading-relaxed max-w-lg">
+        An elegant face-recognition platform designed for luxury weddings and grand celebrations. Seamlessly scan thousands of images to locate your genuine moments instantly.
+      </p>
+      
+      <!-- Quick instructions / status -->
+      <div class="flex items-center gap-3 pt-2 text-xs text-charcoal/40 dark:text-cream/40 tracking-wider">
+        <span class="w-1.5 h-1.5 rounded-full bg-champagne animate-pulse"></span>
+        <span data-i18n="heroInstruction">Drag a portrait photo to test the AI finder live below.</span>
+      </div>
+    </div>
+    
+    <div class="w-full lg:w-[420px] flex justify-center">
+      <!-- Minimalist Face Upload Zone -->
+      <div id="upload-zone" class="w-full max-w-md bg-white dark:bg-zinc-900/50 border border-champagne/30 dark:border-champagne/10 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-700 ease-in-out group hover:border-champagne">
+        
+        <!-- Scanner Line -->
+        <div class="scanner-line"></div>
+
+        <!-- Default State -->
+        <div id="upload-default" class="space-y-6 py-10 transition-all duration-500 w-full cursor-pointer">
+          <!-- Elegant Gold Frame Icon -->
+          <div class="w-16 h-16 border border-champagne/40 rounded-full flex items-center justify-center mx-auto group-hover:scale-105 transition-transform duration-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="space-y-2">
+            <h3 data-i18n="uploadHeader" class="font-serif text-lg text-charcoal dark:text-cream font-light tracking-wider">UPLOAD PROFILE</h3>
+            <p class="text-xs text-charcoal/40 dark:text-cream/40 font-light tracking-wide max-w-[240px] mx-auto leading-relaxed">
+              <span data-i18n="uploadText">Drag & drop your portrait photo here, or </span><span data-i18n="uploadBrowse" class="text-champagne font-medium cursor-pointer underline underline-offset-4">browse files</span>
+            </p>
+          </div>
+          <input type="file" id="file-input" class="hidden" accept="image/*">
+        </div>
+
+        <!-- Scanning State -->
+        <div id="upload-scanning" class="hidden space-y-6 py-6 w-full text-center">
+          <div class="relative w-40 h-40 mx-auto border border-champagne/40 overflow-hidden">
+            <img id="preview-image" src="" alt="Selfie Preview" class="w-full h-full object-cover">
+            <div class="scanner-line !opacity-100" style="animation: scan 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;"></div>
+          </div>
+          <div class="space-y-1">
+            <h3 data-i18n="scanningHeader" class="font-serif text-base text-champagne tracking-widest uppercase">Analyzing Biometrics</h3>
+            <p data-i18n="scanningStatus" class="text-[10px] text-charcoal/40 dark:text-cream/40 tracking-widest uppercase animate-pulse">Mapping coordinates...</p>
+          </div>
+        </div>
+
+        <!-- Success State -->
+        <div id="upload-success" class="hidden space-y-4 py-4 w-full text-center">
+          <div class="w-16 h-16 bg-champagne-light dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto text-champagne">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <div class="space-y-1">
+            <h3 data-i18n="successHeader" class="font-serif text-lg text-charcoal dark:text-cream tracking-wide">Analysis Complete</h3>
+            <p id="match-count" class="text-xs text-charcoal/60 dark:text-cream/40 font-light">Found 2 matched photos below</p>
+          </div>
+          <button id="reset-button" data-i18n="resetButton" class="text-[10px] uppercase tracking-widest text-champagne underline underline-offset-4 font-medium hover:text-champagne-dark">
+            Upload another
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Experiential Portfolio Gallery -->
+  <section id="gallery" class="w-full bg-white dark:bg-zinc-950 border-y border-charcoal/5 dark:border-cream/5 py-24 md:py-32 transition-colors duration-500">
+    <div class="max-w-7xl mx-auto px-6 md:px-12 space-y-16">
+      
+      <!-- Section Intro -->
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-charcoal/5 dark:border-cream/5 pb-10">
+        <div class="space-y-4">
+          <span data-i18n="galleryBadge" class="text-xs uppercase tracking-mega text-champagne font-semibold">Exquisite Archives</span>
+          <h2 data-i18n="galleryTitle" class="editorial-heading text-4xl sm:text-5xl font-light text-charcoal dark:text-cream">Experiential Portfolio</h2>
+        </div>
+        <p data-i18n="galleryDesc" class="text-charcoal/50 dark:text-cream/40 text-xs md:text-sm font-light max-w-sm leading-relaxed">
+          Hover over each piece to reveal high-end wedding and event atmospheres. Uploading your face above will instantly highlight the matching frames in real time.
+        </p>
+      </div>
+
+      <!-- Asymmetric borderless Masonry grid -->
+      <div class="masonry-gallery w-full">
+        
+        <!-- Photo 1 (Landscape - Ceremony) -->
+        <div id="gallery-item-1" class="masonry-item group" data-match="true">
+          <div class="overflow-hidden border border-transparent group-hover:border-champagne/40 transition-all duration-700">
+            <img src="public/images/wedding_ceremony_vogue.png" alt="Luxury Outdoor Wedding Ceremony" class="w-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-[1.03] transition-all duration-700 ease-out">
+          </div>
+          <div class="mt-4 flex items-center justify-between text-xs font-light">
+            <span data-i18n="galleryItem1Title" class="text-charcoal dark:text-cream font-serif italic text-sm">I. The Tuscany Wedding</span>
+            <span data-i18n="galleryItem1Category" class="text-charcoal/40 dark:text-cream/40 font-mono tracking-widest uppercase">Ceremony</span>
+          </div>
+          <div data-i18n="matchBadge" class="match-badge absolute top-4 right-4 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border border-champagne text-champagne text-[10px] tracking-widest uppercase px-3 py-1 font-medium hidden">
+            Matched Photo
+          </div>
+        </div>
+
+        <!-- Photo 2 (Square/Portrait - Bride) -->
+        <div id="gallery-item-2" class="masonry-item group" data-match="true">
+          <div class="overflow-hidden border border-transparent group-hover:border-champagne/40 transition-all duration-700">
+            <img src="public/images/bride_portrait_vogue.png" alt="Bridal Vogue Portrait" class="w-full object-cover grayscale-[30%] group-hover:grayscale-0 group-hover:scale-[1.03] transition-all duration-700 ease-out">
+          </div>
+          <div class="mt-4 flex items-center justify-between text-xs font-light">
+            <span data-i18n="galleryItem2Title" class="text-charcoal dark:text-cream font-serif italic text-sm">II. Portrait of Grace</span>
+            <span data-i18n="galleryItem2Category" class="text-charcoal/40 dark:text-cream/40 font-mono tracking-widest uppercase">Bridal</span>
+          </div>
+          <div data-i18n="matchBadge" class="match-badge absolute top-4 right-4 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border border-champagne text-champagne text-[10px] tracking-widest uppercase px-3 py-1 font-medium hidden">
+            Matched Photo
+          </div>
+        </div>
+
+        <!-- Photo 3 (Landscape - Reception) -->
+        <div id="gallery-item-3" class="masonry-item group" data-match="false">
+          <div class="overflow-hidden border border-transparent group-hover:border-champagne/40 transition-all duration-700">
+            <img src="public/images/wedding_reception_vogue.png" alt="Luxury Reception Tablescape" class="w-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-[1.03] transition-all duration-700 ease-out">
+          </div>
+          <div class="mt-4 flex items-center justify-between text-xs font-light">
+            <span data-i18n="galleryItem3Title" class="text-charcoal dark:text-cream font-serif italic text-sm">III. Golden Hour Banquet</span>
+            <span data-i18n="galleryItem3Category" class="text-charcoal/40 dark:text-cream/40 font-mono tracking-widest uppercase">Reception</span>
+          </div>
+          <div data-i18n="matchBadge" class="match-badge absolute top-4 right-4 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border border-champagne text-champagne text-[10px] tracking-widest uppercase px-3 py-1 font-medium hidden">
+            Matched Photo
+          </div>
+        </div>
+
+        <!-- Photo 4 (Portrait - Guests Cocktail) -->
+        <div id="gallery-item-4" class="masonry-item group" data-match="false">
+          <div class="overflow-hidden border border-transparent group-hover:border-champagne/40 transition-all duration-700">
+            <img src="public/images/guests_cocktail_vogue.png" alt="Guests Cocktail Party" class="w-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-[1.03] transition-all duration-700 ease-out">
+          </div>
+          <div class="mt-4 flex items-center justify-between text-xs font-light">
+            <span data-i18n="galleryItem4Title" class="text-charcoal dark:text-cream font-serif italic text-sm">IV. Riviera Summer Gala</span>
+            <span data-i18n="galleryItem4Category" class="text-charcoal/40 dark:text-cream/40 font-mono tracking-widest uppercase">Cocktail</span>
+          </div>
+          <div data-i18n="matchBadge" class="match-badge absolute top-4 right-4 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border border-champagne text-champagne text-[10px] tracking-widest uppercase px-3 py-1 font-medium hidden">
+            Matched Photo
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- How It Works Section (SaaS Showcase) -->
+  <section id="how-it-works" class="w-full py-24 md:py-32">
+    <div class="max-w-7xl mx-auto px-6 md:px-12 space-y-24">
+      
+      <!-- Section Intro -->
+      <div class="max-w-xl space-y-4">
+        <span data-i18n="processBadge" class="text-xs uppercase tracking-mega text-champagne font-semibold">Effortless Journey</span>
+        <h2 data-i18n="processTitle" class="editorial-heading text-4xl sm:text-5xl font-light text-charcoal dark:text-cream">The SaaS Showcase</h2>
+        <p data-i18n="processDesc" class="text-charcoal/60 dark:text-cream/60 text-sm font-light tracking-wide leading-relaxed">
+          Designed specifically to bypass complex visual noise. A minimal 3-step typographic journey that lets event organizers deliver digital memories directly to guests instantly.
+        </p>
+      </div>
+
+      <!-- Typographic 3-Step Grid without Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-12">
+        
+        <!-- Step 1 -->
+        <div class="space-y-6 group border-t border-charcoal/10 dark:border-cream/10 pt-8 hover:border-champagne transition-all duration-500">
+          <span class="font-serif text-5xl font-extralight text-champagne/40 group-hover:text-champagne transition-colors duration-500">01</span>
+          <h3 data-i18n="step1Title" class="font-serif text-2xl font-light text-charcoal dark:text-cream tracking-wide">Upload Profile</h3>
+          <p data-i18n="step1Desc" class="text-charcoal/60 dark:text-cream/60 text-sm font-light leading-relaxed">
+            Guests securely scan or upload a selfie via their mobile phone when entering the event. Privacy is fully respected under strict biometric regulations.
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="space-y-6 group border-t border-charcoal/10 dark:border-cream/10 pt-8 hover:border-champagne transition-all duration-500">
+          <span class="font-serif text-5xl font-extralight text-champagne/40 group-hover:text-champagne transition-colors duration-500">02</span>
+          <h3 data-i18n="step2Title" class="font-serif text-2xl font-light text-charcoal dark:text-cream tracking-wide">Instant AI Scan</h3>
+          <p data-i18n="step2Desc" class="text-charcoal/60 dark:text-cream/60 text-sm font-light leading-relaxed">
+            Our luxury optimized neural system analyzes files within milliseconds, comparing facial features against the event's professional gallery collections.
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="space-y-6 group border-t border-charcoal/10 dark:border-cream/10 pt-8 hover:border-champagne transition-all duration-500">
+          <span class="font-serif text-5xl font-extralight text-champagne/40 group-hover:text-champagne transition-colors duration-500">03</span>
+          <h3 data-i18n="step3Title" class="font-serif text-2xl font-light text-charcoal dark:text-cream tracking-wide">Download Memories</h3>
+          <p data-i18n="step3Desc" class="text-charcoal/60 dark:text-cream/60 text-sm font-light leading-relaxed">
+            View matches instantly in a premium personal gallery folder. Download in web-optimized size or full commercial resolution immediately.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- User Gallery Directory (Preview) -->
+  <section id="events" class="w-full bg-white dark:bg-zinc-950/40 border-t border-charcoal/5 dark:border-cream/5 py-24 md:py-32 transition-colors duration-500">
+    <div class="max-w-7xl mx-auto px-6 md:px-12 space-y-16">
+      
+      <!-- Section Intro -->
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-charcoal/5 dark:border-cream/5 pb-10">
+        <div class="space-y-4">
+          <span data-i18n="directoryBadge" class="text-xs uppercase tracking-mega text-champagne font-semibold">Active Portals</span>
+          <h2 data-i18n="directoryTitle" class="editorial-heading text-4xl sm:text-5xl font-light text-charcoal dark:text-cream">Gallery Directory</h2>
+        </div>
+        <p data-i18n="directoryDesc" class="text-charcoal/50 dark:text-cream/40 text-xs md:text-sm font-light max-w-sm leading-relaxed">
+          A preview of current and recent high-end events using FaceFind to manage their digital photo distribution.
+        </p>
+      </div>
+
+      <!-- Clean List Layout (No cards) -->
+      <div class="w-full font-light text-sm divide-y divide-charcoal/10 dark:divide-cream/10">
+        
+        <!-- Row 1 -->
+        <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:bg-cream/40 dark:hover:bg-zinc-900/20 transition-colors px-4 duration-300">
+          <div class="flex items-center gap-6">
+            <span data-i18n="statusActive" class="text-xs text-champagne font-semibold font-mono tracking-widest">ACTIVE</span>
+            <span data-i18n="event1Name" class="font-serif text-xl text-charcoal dark:text-cream font-light tracking-wide group-hover:text-champagne transition-colors">I. The Tuscany Villa Estate Wedding</span>
+          </div>
+          <div class="flex items-center gap-8 text-xs text-charcoal/60 dark:text-cream/60">
+            <span class="hidden sm:inline">Firenze, Italy</span>
+            <span>Oct 14, 2026</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="transform translate-x-0 group-hover:translate-x-2 transition-transform duration-300">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Row 2 -->
+        <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:bg-cream/40 dark:hover:bg-zinc-900/20 transition-colors px-4 duration-300">
+          <div class="flex items-center gap-6">
+            <span data-i18n="statusActive" class="text-xs text-champagne font-semibold font-mono tracking-widest">ACTIVE</span>
+            <span data-i18n="event2Name" class="font-serif text-xl text-charcoal dark:text-cream font-light tracking-wide group-hover:text-champagne transition-colors">II. Vogue Summer Soirée 2026</span>
+          </div>
+          <div class="flex items-center gap-8 text-xs text-charcoal/60 dark:text-cream/60">
+            <span class="hidden sm:inline">Saint-Tropez, France</span>
+            <span>Jul 09, 2026</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="transform translate-x-0 group-hover:translate-x-2 transition-transform duration-300">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Row 3 -->
+        <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:bg-cream/40 dark:hover:bg-zinc-900/20 transition-colors px-4 duration-300">
+          <div class="flex items-center gap-6">
+            <span data-i18n="statusCompleted" class="text-xs text-charcoal/40 dark:text-cream/40 font-semibold font-mono tracking-widest">COMPLETED</span>
+            <span data-i18n="event3Name" class="font-serif text-xl text-charcoal/60 dark:text-cream/60 font-light tracking-wide group-hover:text-champagne transition-colors">III. The Somerset Grand Estate Gala</span>
+          </div>
+          <div class="flex items-center gap-8 text-xs text-charcoal/40 dark:text-cream/40">
+            <span class="hidden sm:inline">Somerset, UK</span>
+            <span>May 18, 2026</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="transform translate-x-0 group-hover:translate-x-2 transition-transform duration-300 text-charcoal/30 dark:text-cream/30">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Row 4 -->
+        <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:bg-cream/40 dark:hover:bg-zinc-900/20 transition-colors px-4 duration-300">
+          <div class="flex items-center gap-6">
+            <span data-i18n="statusCompleted" class="text-xs text-charcoal/40 dark:text-cream/40 font-semibold font-mono tracking-widest">COMPLETED</span>
+            <span data-i18n="event4Name" class="font-serif text-xl text-charcoal/60 dark:text-cream/60 font-light tracking-wide group-hover:text-champagne transition-colors">IV. Aman Riviera Spring Vernissage</span>
+          </div>
+          <div class="flex items-center gap-8 text-xs text-charcoal/40 dark:text-cream/40">
+            <span class="hidden sm:inline">Phuket, Thailand</span>
+            <span>Apr 02, 2026</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="transform translate-x-0 group-hover:translate-x-2 transition-transform duration-300 text-charcoal/30 dark:text-cream/30">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Premium Contact & Inquiry Form -->
+  <section id="contact" class="w-full py-24 md:py-32">
+    <div class="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-16">
+      
+      <!-- Contact Details -->
+      <div class="space-y-8 text-left">
+        <span data-i18n="contactBadge" class="text-xs uppercase tracking-mega text-champagne font-semibold block">Exclusive Collaborations</span>
+        <h2 class="editorial-heading text-4xl sm:text-5xl font-light text-charcoal dark:text-cream">
+          <span data-i18n="contactTitle1">Let’s Curate Your</span><br>
+          <span data-i18n="contactTitle2" class="italic font-normal font-serif text-charcoal/80 dark:text-cream/80">Digital Memories.</span>
+        </h2>
+        <p data-i18n="contactDesc" class="text-charcoal/60 dark:text-cream/60 text-sm md:text-base font-light tracking-wide leading-relaxed max-w-md">
+          Are you a professional high-end photographer or event planner looking to elevate the guest experience? Provide your details to explore our bespoke integration packages.
+        </p>
+        
+        <div class="space-y-4 pt-4 text-xs tracking-widest uppercase text-charcoal/50 dark:text-cream/40">
+          <p class="flex items-center gap-3">
+            <span class="text-champagne font-bold">EMAIL //</span> contact@facefind.app
+          </p>
+          <p class="flex items-center gap-3">
+            <span class="text-champagne font-bold">HQ //</span> Milan · Bangkok · Paris
+          </p>
+        </div>
+      </div>
+
+      <!-- High-End Minimalist Form -->
+      <div class="bg-white dark:bg-zinc-900/20 border border-champagne/20 dark:border-champagne/10 p-8 md:p-12">
+        <form id="inquiry-form" class="space-y-8" onsubmit="event.preventDefault(); handleFormSubmit();">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="flex flex-col space-y-2">
+              <label for="name" data-i18n="formName" class="text-[10px] uppercase tracking-widest text-charcoal/50 dark:text-cream/40">Full Name *</label>
+              <input type="text" id="name" required class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream">
+            </div>
+            
+            <div class="flex flex-col space-y-2">
+              <label for="organization" data-i18n="formOrg" class="text-[10px] uppercase tracking-widest text-charcoal/50 dark:text-cream/40">Studio / Organization</label>
+              <input type="text" id="organization" class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream">
+            </div>
+          </div>
+
+          <div class="flex flex-col space-y-2">
+            <label for="email" data-i18n="formEmail" class="text-[10px] uppercase tracking-widest text-charcoal/50 dark:text-cream/40">Email Address *</label>
+            <input type="email" id="email" required class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream">
+          </div>
+
+          <div class="flex flex-col space-y-2">
+            <label for="role" data-i18n="formRole" class="text-[10px] uppercase tracking-widest text-charcoal/50 dark:text-cream/40">Your Professional Role</label>
+            <select id="role" class="luxury-input py-2 text-sm font-light text-charcoal/60 dark:text-cream/60 bg-transparent">
+              <option value="photographer" data-i18n="optPhoto">Lead Event Photographer</option>
+              <option value="planner" data-i18n="optPlanner">Luxury Wedding/Event Planner</option>
+              <option value="host" data-i18n="optHost">Event Venue/Organizer</option>
+              <option value="other" data-i18n="optOther">Other Creative</option>
+            </select>
+          </div>
+
+          <div class="flex flex-col space-y-2">
+            <label for="message" data-i18n="formMessage" class="text-[10px] uppercase tracking-widest text-charcoal/50 dark:text-cream/40">Project Details / Inquiries</label>
+            <textarea id="message" rows="3" class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream resize-none"></textarea>
+          </div>
+
+          <button type="submit" data-i18n="formSubmit" class="w-full bg-charcoal dark:bg-zinc-800 text-white hover:bg-champagne hover:text-white py-4 text-xs tracking-widest uppercase transition-all duration-500 ease-out font-medium">
+            Send Inquiry
+          </button>
+
+        </form>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="w-full border-t border-charcoal/5 dark:border-cream/5 bg-cream/30 dark:bg-zinc-950/20 py-12 px-6 md:px-12 mt-auto transition-colors duration-500">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-charcoal/40 dark:text-cream/40 font-light tracking-widest uppercase">
+      <span data-i18n="footerCopy">© 2026 FACEFIND. ALL RIGHTS RESERVED.</span>
+      <div class="flex items-center gap-6">
+        <a href="#" data-i18n="footerPrivacy" class="hover:text-charcoal dark:hover:text-cream transition-colors">Privacy</a>
+        <a href="#" data-i18n="footerTerms" class="hover:text-charcoal dark:hover:text-cream transition-colors">Terms</a>
+        <button id="dev-health-trigger" class="flex items-center gap-2 text-champagne/80 hover:text-champagne transition-colors font-medium border border-champagne/30 dark:border-champagne/10 px-3 py-1 font-mono tracking-normal text-[10px]">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+          SYS HEALTH: OK
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- System Health Drawer (Hidden by default) -->
+  <div id="dev-health-drawer" class="fixed inset-y-0 right-0 w-80 bg-white dark:bg-zinc-900 border-l border-charcoal/10 dark:border-cream/10 shadow-2xl z-50 transform translate-x-full transition-transform duration-500 ease-in-out font-mono p-6 text-xs text-charcoal dark:text-cream">
+    <div class="flex items-center justify-between border-b border-charcoal/10 dark:border-cream/10 pb-4 mb-6">
+      <h4 class="font-semibold tracking-wide text-sm flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+        SYSTEM HEALTH
+      </h4>
+      <button id="dev-health-close" class="text-charcoal/40 dark:text-cream/40 hover:text-charcoal dark:hover:text-cream font-bold text-lg leading-none">&times;</button>
+    </div>
+    
+    <div class="space-y-6">
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-charcoal/50 dark:text-cream/50">Next.js Dev Server</span>
+          <span class="text-emerald-600 font-bold">RUNNING</span>
+        </div>
+        <p class="text-[10px] text-charcoal/40 dark:text-cream/40">Port 3000 (Local Dev Server)</p>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-charcoal/50 dark:text-cream/50">Supabase (Local)</span>
+          <span class="text-emerald-600 font-bold">CONNECTED</span>
+        </div>
+        <p class="text-[10px] text-charcoal/40 dark:text-cream/40">PostgreSQL + Studio Docker containers active</p>
+      </div>
+
+      <div class="space-y-2 border-t border-charcoal/10 dark:border-cream/10 pt-4">
+        <span class="text-charcoal/40 dark:text-cream/40 block mb-2 uppercase text-[10px] tracking-wider">Local Setup Check</span>
+        <ul class="space-y-1.5 text-[10px] text-charcoal/60 dark:text-cream/60">
+          <li class="flex gap-2">✔ Docker Engine: Running</li>
+          <li class="flex gap-2">✔ Supabase CLI: Active</li>
+          <li class="flex gap-2">✔ Port Check 54321: Occupied</li>
+        </ul>
+      </div>
+
+      <div class="p-3 bg-cream dark:bg-zinc-800/50 border border-champagne/20 dark:border-champagne/10 space-y-1.5 text-[10px]">
+        <span class="text-champagne font-medium block">DEVELOPER NOTE:</span>
+        <p class="text-charcoal/60 dark:text-cream/60 leading-relaxed font-sans">
+          This system metrics drawer represents Issue #1 checklist integration. It lets you monitor local Supabase connectivity while previewing our high-end Vogue design system.
+        </p>
+      </div>
+    </div>
+  <!-- Luxury Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Photo Detail Lightbox Modal -->
+  <div id="photo-modal" class="photo-modal-overlay" onclick="closePhotoModal()">
+    <div class="max-w-4xl max-h-[85vh] w-full p-4 relative flex flex-col items-center justify-center pointer-events-auto" onclick="event.stopPropagation()">
+      <!-- Close Button -->
+      <button class="absolute -top-10 right-4 text-white hover:text-champagne transition-colors font-mono text-xs tracking-widest uppercase flex items-center gap-2" onclick="closePhotoModal()">
+        <span>CLOSE</span> <span class="text-lg leading-none">&times;</span>
+      </button>
+      <!-- Image Frame -->
+      <div class="border border-champagne/30 bg-zinc-950 p-2 md:p-3 max-h-[75vh] flex items-center justify-center overflow-hidden">
+        <img id="modal-image" src="" alt="Full Screen Preview" class="max-w-full max-h-[70vh] object-contain">
+      </div>
+      <!-- Details -->
+      <div class="mt-4 text-center space-y-1">
+        <span id="modal-title" class="font-serif italic text-white text-base md:text-lg block"></span>
+        <span id="modal-category" class="font-mono text-champagne text-[10px] tracking-widest uppercase block"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Interactions -->
+  <script>
+    // Bilingual Copy Dictionaries
+    const TRANSLATIONS = {
+      EN: {
+        navSearch: "Search",
+        navPortfolio: "Portfolio",
+        navProcess: "Process",
+        navEvents: "Events",
+        navInquire: "Inquire Now",
+        heroBadge: "AI-Powered Event Photo Retrieval",
+        heroTitleMain: "Find Your Moments",
+        heroTitleSub: "in Blink of an Eye.",
+        heroDesc: "An elegant face-recognition platform designed for luxury weddings and grand celebrations. Seamlessly scan thousands of images to locate your genuine moments instantly.",
+        heroInstruction: "Drag a portrait photo to test the AI finder live below.",
+        uploadHeader: "UPLOAD PROFILE",
+        uploadText: "Drag & drop your portrait photo here, or ",
+        uploadBrowse: "browse files",
+        scanningHeader: "Analyzing Biometrics",
+        scanningStatus: "Mapping coordinates...",
+        successHeader: "Analysis Complete",
+        resetButton: "Upload another",
+        galleryBadge: "Exquisite Archives",
+        galleryTitle: "Experiential Portfolio",
+        galleryDesc: "Hover over each piece to reveal high-end wedding and event atmospheres. Uploading your face above will instantly highlight the matching frames in real time.",
+        galleryItem1Title: "I. The Tuscany Wedding",
+        galleryItem1Category: "Ceremony",
+        galleryItem2Title: "II. Portrait of Grace",
+        galleryItem2Category: "Bridal",
+        galleryItem3Title: "III. Golden Hour Banquet",
+        galleryItem3Category: "Reception",
+        galleryItem4Title: "IV. Riviera Summer Gala",
+        galleryItem4Category: "Cocktail",
+        matchBadge: "Matched Photo",
+        processBadge: "Effortless Journey",
+        processTitle: "The SaaS Showcase",
+        processDesc: "Designed specifically to bypass complex visual noise. A minimal 3-step typographic journey that lets event organizers deliver digital memories directly to guests instantly.",
+        step1Title: "Upload Profile",
+        step1Desc: "Guests securely scan or upload a selfie via their mobile phone when entering the event. Privacy is fully respected under strict biometric regulations.",
+        step2Title: "Instant AI Scan",
+        step2Desc: "Our luxury optimized neural system analyzes files within milliseconds, comparing facial features against the event's professional gallery collections.",
+        step3Title: "Download Memories",
+        step3Desc: "View matches instantly in a premium personal gallery folder. Download in web-optimized size or full commercial resolution immediately.",
+        directoryBadge: "Active Portals",
+        directoryTitle: "Gallery Directory",
+        directoryDesc: "A preview of current and recent high-end events using FaceFind to manage their digital photo distribution.",
+        statusActive: "ACTIVE",
+        statusCompleted: "COMPLETED",
+        event1Name: "I. The Tuscany Villa Estate Wedding",
+        event2Name: "II. Vogue Summer Soirée 2026",
+        event3Name: "III. The Somerset Grand Estate Gala",
+        event4Name: "IV. Aman Riviera Spring Vernissage",
+        contactBadge: "Exclusive Collaborations",
+        contactTitle1: "Let’s Curate Your",
+        contactTitle2: "Digital Memories.",
+        contactDesc: "Are you a professional high-end photographer or event planner looking to elevate the guest experience? Provide your details to explore our bespoke integration packages.",
+        formName: "Full Name *",
+        formOrg: "Studio / Organization",
+        formEmail: "Email Address *",
+        formRole: "Your Professional Role",
+        optPhoto: "Lead Event Photographer",
+        optPlanner: "Luxury Wedding/Event Planner",
+        optHost: "Event Venue/Organizer",
+        optOther: "Other Creative",
+        formMessage: "Project Details / Inquiries",
+        formSubmit: "Send Inquiry",
+        footerCopy: "© 2026 FACEFIND. ALL RIGHTS RESERVED.",
+        footerPrivacy: "Privacy",
+        footerTerms: "Terms",
+        alertSuccess: "Thank you. Our luxury concierge will contact you within 24 hours.",
+        uploadMatch: "Found 2 matching photos in The Tuscany Wedding"
+      },
+      TH: {
+        navSearch: "ค้นหา",
+        navPortfolio: "ผลงาน",
+        navProcess: "ขั้นตอนทำงาน",
+        navEvents: "แกลเลอรีอีเวนต์",
+        navInquire: "ติดต่อสอบถาม",
+        heroBadge: "ระบบค้นหาภาพถ่ายด้วยปัญญาประดิษฐ์",
+        heroTitleMain: "ค้นพบช่วงเวลาของคุณ",
+        heroTitleSub: "ในพริบตาเดียว",
+        heroDesc: "แพลตฟอร์มระบุตัวตนด้วยใบหน้าอันหรูหรา ออกแบบมาสำหรับงานแต่งงานระดับลักชัวรีและงานเฉลิมฉลองสุดอลังการ ค้นหารูปภาพของคุณท่ามกลางรูปถ่ายนับพันได้อย่างแม่นยำและราบรื่นทันทีในเสี้ยววินาที",
+        heroInstruction: "ลากและวางรูปภาพของคุณด้านล่างเพื่อทดสอบระบบ AI",
+        uploadHeader: "อัปโหลดภาพใบหน้า",
+        uploadText: "ลากและวางภาพพอร์ตเทรตหน้าตรงของคุณ หรือ ",
+        uploadBrowse: "เลือกไฟล์ภาพจากเครื่อง",
+        scanningHeader: "กำลังวิเคราะห์ข้อมูลชีวมิติ",
+        scanningStatus: "กำลังจับคู่พิกัดโครงสร้างใบหน้า...",
+        successHeader: "วิเคราะห์โครงสร้างใบหน้าสำเร็จ",
+        resetButton: "อัปโหลดรูปภาพใหม่",
+        galleryBadge: "คลังภาพจำลองระดับพรีเมี่ยม",
+        galleryTitle: "พอร์ตโฟลิโอแกลเลอรี",
+        galleryDesc: "วางเมาส์เหนือรูปภาพเพื่อสัมผัสบรรยากาศความหรูหรา เมื่อคุณจำลองอัปโหลดรูปภาพด้านบน ระบบ AI จะดึงรูปภาพที่ตรงกับใบหน้าของคุณขึ้นมาแสดงทันที",
+        galleryItem1Title: "I. พิธีวิวาห์ ณ แคว้นทัสคานี",
+        galleryItem1Category: "พิธีการ",
+        galleryItem2Title: "II. ภาพพอร์ตเทรตแห่งความสง่างาม",
+        galleryItem2Category: "เจ้าสาว",
+        galleryItem3Title: "III. งานเลี้ยงฉลองแสงสีทอง",
+        galleryItem3Category: "งานเลี้ยง",
+        galleryItem4Title: "IV. งานกาล่าฤดูร้อน ณ ชายฝั่งริเวียรา",
+        galleryItem4Category: "ค็อกเทล",
+        matchBadge: "ภาพของคุณ",
+        processBadge: "ความสะดวกสบายเหนือระดับ",
+        processTitle: "การทำงานของระบบ",
+        processDesc: "ตัดความซับซ้อนและองค์ประกอบทางสายตาที่วุ่นวายออกไป เพื่อให้แขกในงานเข้าถึงคลังรูปภาพส่วนตัวได้ทันทีผ่าน 3 ขั้นตอนเรียบง่ายอันเปี่ยมไปด้วยสุนทรียภาพ",
+        step1Title: "อัปโหลดโปรไฟล์",
+        step1Desc: "แขกอัปโหลดรูปภาพเซลฟี่ของตนเองอย่างปลอดภัยผ่านสมาร์ทโฟนของตนเมื่อเข้าสู่บริเวณงาน โดยข้อมูลส่วนบุคคลชีวมิติได้รับการปกป้องภายใต้ข้อกฎหมายความเป็นส่วนตัวอย่างเคร่งครัด",
+        step2Title: "วิเคราะห์อัจฉริยะ",
+        step2Desc: "เครือข่ายความปลอดภัยและปัญญาประดิษฐ์ของเราประมวลผลข้อมูลในหน่วยมิลลิวินาที เพื่อค้นหาภาพพอร์ตเทรตของคุณจากผลงานที่ช่างภาพมืออาชีพอัปโหลดเข้ามาในระบบ",
+        step3Title: "รับรูปถ่ายล้ำค่า",
+        step3Desc: "เข้าสู่หน้าแกลเลอรีส่วนตัวลักชัวรีทันทีเพื่อเลือกดาวน์โหลดรูปภาพของคุณในขนาดประหยัดพื้นที่ หรือดาวน์โหลดไฟล์เต็มระดับพาณิชย์โดยไม่สูญเสียความละเอียด",
+        directoryBadge: "พอร์ทัลใช้งานจริง",
+        directoryTitle: "สารบบแกลเลอรีงานอีเวนต์",
+        directoryDesc: "ตัวอย่างหน้าพอร์ทัลงานเลี้ยงและวิวาห์ระดับไฮเอนด์ที่เลือกใช้ FaceFind ในการเผยแพร่รูปภาพและอำนวยความสะดวกให้แก่แขกผู้มีเกียรติ",
+        statusActive: "กำลังเปิดบริการ",
+        statusCompleted: "เสร็จสิ้น",
+        event1Name: "I. งานวิวาห์ ณ คฤหาสน์หรูทัสคานี",
+        event2Name: "II. งานเลี้ยงสังสรรค์ฤดูร้อนนิตยสารโว้ก 2026",
+        event3Name: "III. งานเฉลิมฉลองสโมสรคฤหาสน์ซัมเมอร์เซ็ต",
+        event4Name: "IV. งานนิทรรศการศิลปะใบไม้ผลิ ณ อามัน ริเวียรา",
+        contactBadge: "การร่วมงานพิเศษเฉพาะบุคคล",
+        contactTitle1: "ให้เราดูแลและเรียงร้อย",
+        contactTitle2: "ความทรงจำในงานวิวาห์ของคุณ",
+        contactDesc: "หากคุณเป็นช่างภาพลักชัวรีระดับอาชีพ หรือผู้จัดงานจัดเลี้ยงระดับพรีเมี่ยมที่มุ่งเน้นการมอบบริการอันไร้ที่ติ กรุณากรอกรายละเอียดเพื่อรับข้อเสนอพิเศษเกี่ยวกับการผสานเทคโนโลยีของเราเข้ากับแบรนด์ของคุณ",
+        formName: "ชื่อ-นามสกุลจริง *",
+        formOrg: "สตูดิโอ / องค์กรของคุณ",
+        formEmail: "ที่อยู่อีเมล *",
+        formRole: "สายงานอาชีพของคุณ",
+        optPhoto: "ช่างภาพหลักงานแต่ง/อีเวนต์",
+        optPlanner: "ผู้จัดงานแต่งงานระดับหรู",
+        optHost: "ตัวแทนสถานที่/ผู้จัดงานแต่ง",
+        optOther: "สายงานสร้างสรรค์อื่นๆ",
+        formMessage: "รายละเอียดโครงการ / สอบถามบริการเพิ่มเติม",
+        formSubmit: "ส่งข้อมูลติดต่อ",
+        footerCopy: "© 2026 FACEFIND. สงวนลิขสิทธิ์ทั้งหมด.",
+        footerPrivacy: "นโยบายความเป็นส่วนตัว",
+        footerTerms: "ข้อกำหนดบริการ",
+        alertSuccess: "ขอบคุณสำหรับความสนใจของคุณ คอนเซียร์จส่วนตัวของเราจะติดต่อกลับเพื่อดูแลรายละเอียดภายใน 24 ชั่วโมง",
+        uploadMatch: "พบภาพถ่ายที่ตรงกับใบหน้าของคุณ 2 ภาพ ในงานวิวาห์ ณ แคว้นทัสคานี"
+      }
+    };
+
+    let currentLang = 'EN';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('ff-lang', lang);
+      
+      // Update HTML lang attribute (th / en)
+      document.documentElement.setAttribute('lang', lang.toLowerCase());
+      
+      // Update UI button text
+      document.getElementById('lang-toggle').textContent = lang === 'EN' ? 'TH' : 'EN';
+      
+      // Translate all marked elements
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) {
+          if (el.tagName === 'OPTION') {
+            el.text = TRANSLATIONS[lang][key];
+          } else {
+            el.textContent = TRANSLATIONS[lang][key];
+          }
+        }
+      });
+      
+      // Keep styling intact (italic font in sub-headings only for English)
+      if (lang === 'TH') {
+        document.getElementById('hero-title-sub').classList.remove('italic');
+      } else {
+        document.getElementById('hero-title-sub').classList.add('italic');
+      }
+    }
+
+    // Initialize Lang
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedLang = localStorage.getItem('ff-lang') || 'EN';
+      setLanguage(savedLang);
+    });
+
+    document.getElementById('lang-toggle').addEventListener('click', () => {
+      setLanguage(currentLang === 'EN' ? 'TH' : 'EN');
+    });
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `luxury-toast border bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-5 py-4 flex items-center gap-4 shadow-xl border-champagne/30 dark:border-champagne/10 max-w-sm pointer-events-auto`;
+      
+      let iconColor = type === 'success' ? '#D4AF37' : '#EF4444';
+      let strokeWidth = 1.5;
+      let iconSvg = type === 'success' 
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="${strokeWidth}"><polyline points="20 6 9 17 4 12"/></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="${strokeWidth}"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
+      toast.innerHTML = `
+        <div class="flex-shrink-0">${iconSvg}</div>
+        <div class="font-luxury-body text-xs text-charcoal dark:text-cream font-light tracking-wide leading-relaxed">${message}</div>
+      `;
+
+      container.appendChild(toast);
+
+      // Auto remove after 4s
+      setTimeout(() => {
+        toast.classList.add('leaving');
+        toast.addEventListener('animationend', () => {
+          toast.remove();
+        });
+      }, 4000);
+    }
+
+    function openPhotoModal(imgSrc, title, category) {
+      const modal = document.getElementById('photo-modal');
+      const modalImg = document.getElementById('modal-image');
+      const modalTitle = document.getElementById('modal-title');
+      const modalCategory = document.getElementById('modal-category');
+      
+      if (modal && modalImg) {
+        modalImg.src = imgSrc;
+        if (modalTitle) modalTitle.textContent = title;
+        if (modalCategory) modalCategory.textContent = category;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Lock background scroll
+      }
+    }
+    
+    function closePhotoModal() {
+      const modal = document.getElementById('photo-modal');
+      if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = ''; // Restore scroll
+      }
+    }
+
+    function handleFormSubmit() {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      
+      if (!name || !email) {
+        showToast(currentLang === 'EN' ? 'Please fill in all required fields.' : 'กรุณากรอกข้อมูลในช่องที่จำเป็นให้ครบถ้วน', 'error');
+        return;
+      }
+      
+      showToast(TRANSLATIONS[currentLang].alertSuccess, 'success');
+      document.getElementById('inquiry-form').reset();
+    }
+  </script>
+
+  <script>
+    // System Health Drawer Toggle
+    const devTrigger = document.getElementById('dev-health-trigger');
+    const devClose = document.getElementById('dev-health-close');
+    const devDrawer = document.getElementById('dev-health-drawer');
+
+    devTrigger.addEventListener('click', () => {
+      devDrawer.classList.remove('translate-x-full');
+    });
+
+    devClose.addEventListener('click', () => {
+      devDrawer.classList.add('translate-x-full');
+    });
+
+    // Dark Mode Theme Toggle Logic
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('ff-theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('ff-theme', 'dark');
+      }
+    });
+
+    // Face Upload & Scanner Interaction
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    const uploadDefault = document.getElementById('upload-default');
+    const uploadScanning = document.getElementById('upload-scanning');
+    const uploadSuccess = document.getElementById('upload-success');
+    const previewImage = document.getElementById('preview-image');
+    const matchCount = document.getElementById('match-count');
+    const resetButton = document.getElementById('reset-button');
+    
+    // Gallery Items to simulate Matches
+    // Gallery Items and Grid to simulate Matches and Skeletons
+    const galleryGrid = document.querySelector('.masonry-gallery');
+    const originalGalleryHTML = galleryGrid.innerHTML;
+
+    // Click trigger on file picker
+    uploadDefault.addEventListener('click', (e) => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleImageUpload(e.target.files[0]);
+      }
+    });
+
+    // Drag & Drop
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('border-champagne', 'bg-champagne/5');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('border-champagne', 'bg-champagne/5');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('border-champagne', 'bg-champagne/5');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleImageUpload(e.dataTransfer.files[0]);
+      }
+    });
+
+    // Lightbox Modal click bindings helper
+    function bindLightboxListeners() {
+      document.querySelectorAll('.masonry-item').forEach(item => {
+        const img = item.querySelector('img');
+        const titleEl = item.querySelector('.font-serif');
+        const categoryEl = item.querySelector('.font-mono');
+        
+        if (img) {
+          img.classList.add('cursor-pointer');
+          img.addEventListener('click', () => {
+            const imgSrc = img.getAttribute('src');
+            const title = titleEl ? titleEl.textContent : 'Exclusive Photo';
+            const category = categoryEl ? categoryEl.textContent : 'Memory';
+            openPhotoModal(imgSrc, title, category);
+          });
+        }
+      });
+    }
+
+    // Bind initially on load
+    document.addEventListener('DOMContentLoaded', () => {
+      bindLightboxListeners();
+    });
+
+    function handleImageUpload(file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        // Step 1: Trigger Scanning State in Upload Box
+        uploadDefault.classList.add('hidden');
+        uploadSuccess.classList.add('hidden');
+        uploadScanning.classList.remove('hidden');
+        
+        previewImage.src = event.target.result;
+        uploadZone.classList.add('scanning');
+
+        // Step 2: Show premium loading feedback and replace grid with shimmering skeletons!
+        showToast(currentLang === 'EN' ? "Secure biometrics upload complete. Analyzing..." : "อัปโหลดข้อมูลชีวมิติเสร็จสิ้น ระบบกำลังเริ่มสแกนแกลเลอรี...", "success");
+
+        // Swap gallery with elegant shimmering skeleton loaders
+        let skeletonHTML = '';
+        for (let i = 0; i < 4; i++) {
+          let heightClass = i % 2 === 0 ? 'h-64 md:h-[350px]' : 'h-80 md:h-[450px]';
+          skeletonHTML += `
+            <div class="masonry-item skeleton-card ${heightClass} border border-champagne/10 dark:border-zinc-800 relative overflow-hidden">
+              <div class="absolute bottom-4 left-4 right-4 space-y-2">
+                <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
+                <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3"></div>
+              </div>
+            </div>
+          `;
+        }
+        galleryGrid.innerHTML = skeletonHTML;
+
+        // Step 3: Simulate Scanning for 2.5 seconds
+        setTimeout(() => {
+          uploadZone.classList.remove('scanning');
+          uploadScanning.classList.add('hidden');
+          uploadSuccess.classList.remove('hidden');
+          
+          // Show success toast
+          showToast(currentLang === 'EN' ? "Face matching completed successfully! Found 2 matches." : "จับคู่ใบหน้าเสร็จสิ้น! พบภาพถ่ายของคุณ 2 ภาพ", "success");
+
+          // Restore original gallery grid markup
+          galleryGrid.innerHTML = originalGalleryHTML;
+          
+          // Re-bind Lightbox clicks to the fresh DOM elements!
+          bindLightboxListeners();
+
+          // Highlight matching photos in the restored Asymmetric Masonry Gallery
+          const activeGalleryItems = document.querySelectorAll('.masonry-item');
+          activeGalleryItems.forEach(item => {
+            const isMatch = item.getAttribute('data-match') === 'true';
+            if (isMatch) {
+              item.classList.remove('opacity-30');
+              item.classList.add('ring-1', 'ring-champagne', 'scale-[1.01]', 'shadow-lg');
+              item.querySelector('.match-badge').classList.remove('hidden');
+              item.querySelector('img').classList.remove('grayscale-[20%]', 'grayscale-[30%]');
+            } else {
+              item.classList.add('opacity-30');
+              item.classList.remove('ring-1', 'ring-champagne', 'scale-[1.01]', 'shadow-lg');
+              item.querySelector('.match-badge').classList.add('hidden');
+              item.querySelector('img').classList.add('grayscale');
+            }
+          });
+
+          // Show matches count text in upload box
+          matchCount.textContent = currentLang === 'EN' ? "Found 2 matching photos below" : "พบภาพถ่ายที่ตรงกับใบหน้าของคุณ 2 ภาพ ด้านล่าง";
+
+          // Smooth scroll down to the portfolio to see results
+          setTimeout(() => {
+            document.getElementById('gallery').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 600);
+
+        }, 2500);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Reset Flow
+    resetButton.addEventListener('click', () => {
+      fileInput.value = "";
+      uploadSuccess.classList.add('hidden');
+      uploadScanning.classList.add('hidden');
+      uploadDefault.classList.remove('hidden');
+      
+      // Restore default gallery state
+      galleryGrid.innerHTML = originalGalleryHTML;
+      bindLightboxListeners();
+
+      showToast(currentLang === 'EN' ? "Gallery reset. Displaying full portfolio." : "รีเซ็ตคลังภาพ เรียงพอร์ตโฟลิโอตัวอย่างฉบับเต็ม", "success");
+    });
+
+    // Font Toggling System (Kanit Regular -> Kanit Bold -> Sao Chingcha Reg -> Sao Chingcha Bold -> Charmonman Reg -> Charmonman Bold)
+    let currentFontState = 0; // 0 = Kanit Regular, 1 = Kanit Bold, 2 = Sao Chingcha Regular, 3 = Sao Chingcha Bold, 4 = Charmonman Regular, 5 = Charmonman Bold
+    const fontToggleBtn = document.getElementById('font-toggle');
+    const rootEl = document.documentElement;
+
+    // Set initial toggle button text
+    fontToggleBtn.innerHTML = 'FONT: KANIT REG (400)';
+
+    function updateFontSettings() {
+      const heroTitleSub = document.getElementById('hero-title-sub');
+      
+      if (currentFontState === 0) {
+        // Kanit Regular (400) [Default]
+        rootEl.style.setProperty('--font-serif-thai', "'Kanit', sans-serif");
+        rootEl.style.setProperty('--heading-weight', '400');
+        if (heroTitleSub) heroTitleSub.style.fontStyle = 'normal';
+        fontToggleBtn.innerHTML = 'FONT: KANIT REG (400)';
+      } else if (currentFontState === 1) {
+        // Kanit Bold (700)
+        rootEl.style.setProperty('--font-serif-thai', "'Kanit', sans-serif");
+        rootEl.style.setProperty('--heading-weight', '700');
+        if (heroTitleSub) heroTitleSub.style.fontStyle = 'normal';
+        fontToggleBtn.innerHTML = 'FONT: KANIT BOLD (700)';
+      } else if (currentFontState === 2) {
+        // Sao Chingcha Regular (400)
+        rootEl.style.setProperty('--font-serif-thai', "'SaoChingcha', serif");
+        rootEl.style.setProperty('--heading-weight', '400');
+        if (heroTitleSub) heroTitleSub.style.fontStyle = 'normal';
+        fontToggleBtn.innerHTML = 'FONT: SAO CHINGCHA REG (400)';
+      } else if (currentFontState === 3) {
+        // Sao Chingcha Bold (700)
+        rootEl.style.setProperty('--font-serif-thai', "'SaoChingcha', serif");
+        rootEl.style.setProperty('--heading-weight', '700');
+        if (heroTitleSub) heroTitleSub.style.fontStyle = 'normal';
+        fontToggleBtn.innerHTML = 'FONT: SAO CHINGCHA BOLD (700)';
+      } else if (currentFontState === 4) {
+        // Charmonman Regular (400)
+        rootEl.style.setProperty('--font-serif-thai', "'Charmonman', cursive");
+        rootEl.style.setProperty('--heading-weight', '400');
+        if (heroTitleSub) heroTitleSub.style.fontStyle = 'normal';
+        fontToggleBtn.innerHTML = 'FONT: CHARMONMAN (400)';
+      } else if (currentFontState === 5) {
+        // Charmonman Bold (700)
+        rootEl.style.setProperty('--font-serif-thai', "'Charmonman', cursive");
+        rootEl.style.setProperty('--heading-weight', '700');
+        if (heroTitleSub) heroTitleSub.style.fontStyle = 'normal';
+        fontToggleBtn.innerHTML = 'FONT: CHARMONMAN BOLD (700)';
+      }
+    }
+
+    fontToggleBtn.addEventListener('click', () => {
+      currentFontState = (currentFontState + 1) % 6;
+      updateFontSettings();
+    });
+  </script>
+</body>
+</html>

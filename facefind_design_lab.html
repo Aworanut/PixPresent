@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FaceFind — Interactive Design System Specimen Lab</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Cormorant Garamond, IBM Plex Sans Thai, Kanit, Charmonman -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=IBM+Plex+Sans+Thai:wght@200;300;400;500;600;700&family=Kanit:wght@100;200;300;400;500;600;700&family=Charmonman:wght@400;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['"Cormorant Garamond"', 'sans-serif'],
+            sans: ['"IBM Plex Sans Thai"', 'sans-serif'],
+            kanit: ['"Kanit"', 'sans-serif'],
+            charm: ['"Charmonman"', 'cursive']
+          },
+          colors: {
+            cream: '#FBF9F6',
+            charcoal: '#111111',
+            champagne: '#D4AF37',
+            goldLight: '#F5EEDC',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Luxury Styling */
+    body {
+      background-color: #FBF9F6;
+      color: #111111;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      transition: background-color 0.5s ease, color 0.5s ease;
+      letter-spacing: -0.015em;
+    }
+
+    html.dark body {
+      background-color: #111111;
+      color: #FBF9F6;
+    }
+
+    /* Fix Thai letter-spacing issue dynamically */
+    html[lang="th"] [data-i18n],
+    html[lang="th"] .tracking-widest,
+    html[lang="th"] .tracking-mega {
+      letter-spacing: -0.01em !important;
+    }
+
+    /* 1. Shimmer Animation for Skeleton cards */
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+      100% {
+        background-position: 200% 0;
+      }
+    }
+    .skeleton-card {
+      background: linear-gradient(90deg, #F5F3ED 25%, #EFEBE0 50%, #F5F3ED 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite linear;
+    }
+    html.dark .skeleton-card {
+      background: linear-gradient(90deg, #1A1A1A 25%, #27272A 50%, #1A1A1A 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite linear;
+    }
+
+    /* 2. Premium Toast Animations */
+    @keyframes slideInRight {
+      from {
+        transform: translateX(120%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+    .toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      pointer-events: none;
+    }
+    .luxury-toast {
+      pointer-events: auto;
+      animation: slideInRight 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: all 0.4s ease;
+    }
+    .luxury-toast.leaving {
+      animation: fadeOut 0.4s ease forwards;
+    }
+
+    /* 3. Photo Detail Lightbox Modal */
+    .photo-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background-color: rgba(17, 17, 17, 0.88);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .photo-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Custom Input bottom borders */
+    .luxury-input {
+      background: transparent;
+      border-bottom: 1px solid rgba(17, 17, 17, 0.2);
+      transition: all 0.4s ease;
+    }
+    html.dark .luxury-input {
+      border-bottom: 1px solid rgba(251, 249, 246, 0.2);
+    }
+    .luxury-input:focus {
+      outline: none;
+      border-bottom: 1px solid #D4AF37;
+    }
+
+    /* Smooth sidebar links highlight */
+    .nav-link.active {
+      color: #D4AF37;
+      border-left-color: #D4AF37;
+      padding-left: 1rem;
+    }
+  </style>
+</head>
+<body class="selection:bg-goldLight min-h-screen flex flex-col selection:text-charcoal dark:selection:bg-zinc-800 dark:selection:text-cream">
+
+  <!-- Header Navigation -->
+  <header class="w-full border-b border-charcoal/5 dark:border-cream/5 px-6 md:px-12 py-6 flex items-center justify-between sticky top-0 bg-cream/90 dark:bg-zinc-950/90 backdrop-blur-md z-40 transition-colors duration-500">
+    <a href="#" class="font-serif text-2xl tracking-widest uppercase font-light text-charcoal dark:text-cream">
+      Face<span class="text-champagne font-medium">find</span> <span class="text-[10px] tracking-widest font-mono text-champagne/80 font-bold border border-champagne/30 px-2 py-0.5 ml-2">DESIGN SYSTEM LAB</span>
+    </a>
+    
+    <div class="flex items-center gap-6">
+      <!-- Language Toggle EN/TH -->
+      <button id="lang-toggle" class="text-xs tracking-widest uppercase font-mono text-charcoal/50 dark:text-cream/40 hover:text-charcoal dark:hover:text-cream transition-colors border border-charcoal/10 dark:border-cream/10 px-2.5 py-1">
+        TH
+      </button>
+
+      <!-- Minimalist Dark Mode Toggle -->
+      <button id="theme-toggle" class="w-8 h-8 rounded-full border border-charcoal/10 dark:border-cream/10 flex items-center justify-center text-charcoal/70 dark:text-cream/70 hover:border-champagne transition-all duration-300">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+
+      <a href="facefind_landing.html" target="_blank" class="border border-champagne text-charcoal dark:text-cream hover:bg-champagne hover:text-white px-4 py-2 text-[10px] tracking-widest uppercase transition-all duration-500 ease-out font-mono">
+        Open Landing Page
+      </a>
+    </div>
+  </header>
+
+  <!-- Split screen layout -->
+  <div class="flex-1 max-w-7xl w-full mx-auto flex flex-col lg:flex-row px-6 md:px-12 py-12 gap-12 relative">
+    
+    <!-- Sticky sidebar navigation -->
+    <aside class="w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-28 h-fit space-y-8">
+      <div class="border-l border-charcoal/10 dark:border-cream/10 pl-6 space-y-4">
+        <span class="text-[9px] uppercase tracking-mega text-champagne font-mono block">Design Lab Index</span>
+        <h4 class="font-serif italic font-light text-xl text-charcoal dark:text-cream">UI Components</h4>
+      </div>
+      
+      <nav class="flex flex-col space-y-4 text-xs font-mono tracking-wider uppercase text-charcoal/50 dark:text-cream/50 pl-6">
+        <a href="#section-buttons" id="link-buttons" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">01 // CTA Buttons</a>
+        <a href="#section-toasts" id="link-toasts" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">02 // Toast Alerts</a>
+        <a href="#section-skeletons" id="link-skeletons" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">03 // Skeleton Cards</a>
+        <a href="#section-inputs" id="link-inputs" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">04 // Form Controls</a>
+        <a href="#section-lightbox" id="link-lightbox" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">05 // Photo Lightbox</a>
+      </nav>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <main class="flex-1 space-y-24 pb-24">
+      
+      <!-- Welcome intro -->
+      <section class="space-y-6 border-b border-charcoal/10 dark:border-cream/10 pb-12">
+        <span data-i18n="labBadge" class="text-xs uppercase tracking-mega text-champagne font-semibold block">Besoke UI Playground</span>
+        <h1 class="font-serif text-5xl md:text-6xl font-light leading-tight text-charcoal dark:text-cream">
+          Interactive Specimen<br>
+          <span class="italic font-normal">Design Lab.</span>
+        </h1>
+        <p data-i18n="labDesc" class="font-luxury-body text-charcoal/60 dark:text-cream/60 text-sm md:text-base font-light tracking-wide leading-relaxed max-w-2xl">
+          ยินดีต้อนรับสู่หน้าแล็บระบบดีไซน์จำลองแบบโต้ตอบได้จริง (Interactive Design Lab) หน้านี้ถูกออกแบบมาเพื่อให้คุณเลือก ตรวจสอบ และทดลองสัมผัส Micro-Animations ต่าง ๆ ของ 5 องค์ประกอบพรีเมียมที่ยังขาดอยู่ ก่อนที่เราจะนำไปบันทึกสเปกในเอกสารหลักและพัฒนาต่อยอดครับ
+        </p>
+      </section>
+
+      <!-- Section 1: Buttons -->
+      <section id="section-buttons" class="space-y-8 scroll-mt-28">
+        <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 01</span>
+          <h2 data-i18n="btnTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Actionable Button Systems (ระบบปุ่มกดที่พรีเมียม)</h2>
+        </div>
+        
+        <p data-i18n="btnDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
+          การออกแบบปุ่มระดับลักชัวรีจะต้องใช้เอฟเฟกต์การวางเมาส์ที่นุ่มนวลและควบคุมน้ำหนักคู่ขนานกัน ด้านล่างนี้คือ 3 รูปแบบปุ่มหลักที่คุณสามารถเลือกนำไปใช้บนหน้าจอแอปพลิเคชันจริง:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+          
+          <!-- Primary CTA Button (Obsidian Solid) -->
+          <div class="border border-charcoal/10 dark:border-cream/10 bg-white dark:bg-zinc-900/10 p-6 flex flex-col justify-between h-56 relative overflow-hidden">
+            <span class="text-[9px] font-mono text-champagne uppercase block">PRIMARY CTA</span>
+            <div class="space-y-4 my-auto">
+              <!-- Obsidian solid button with champagne hover sliding overlay -->
+              <button class="relative w-full overflow-hidden bg-charcoal dark:bg-zinc-800 text-white py-3 text-xs tracking-widest uppercase font-mono group transition-colors duration-500">
+                <span class="absolute inset-0 w-full h-full bg-champagne transform translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out z-0"></span>
+                <span class="relative z-10 transition-colors duration-500 group-hover:text-charcoal uppercase" data-i18n="btnPrimText">Bespoke Primary</span>
+              </button>
+            </div>
+            <div class="text-[10px] text-charcoal/40 dark:text-cream/40 font-mono">
+              Obsidian Solid with Gold Slide-up
+            </div>
+          </div>
+
+          <!-- Secondary CTA Button (Hairline Outline) -->
+          <div class="border border-charcoal/10 dark:border-cream/10 bg-white dark:bg-zinc-900/10 p-6 flex flex-col justify-between h-56 relative overflow-hidden">
+            <span class="text-[9px] font-mono text-champagne uppercase block">SECONDARY CTA</span>
+            <div class="space-y-4 my-auto">
+              <!-- Hairline outline with gold overlay on hover -->
+              <button class="w-full border border-charcoal/30 dark:border-cream/30 text-charcoal dark:text-cream py-3 text-xs tracking-widest uppercase font-mono hover:border-champagne hover:bg-goldLight/20 transition-all duration-500 ease-out" data-i18n="btnSecText">
+                Bespoke Outline
+              </button>
+            </div>
+            <div class="text-[10px] text-charcoal/40 dark:text-cream/40 font-mono">
+              Ultra-thin 1px with soft golden glow
+            </div>
+          </div>
+
+          <!-- Tertiary CTA Button (Minimal Link) -->
+          <div class="border border-charcoal/10 dark:border-cream/10 bg-white dark:bg-zinc-900/10 p-6 flex flex-col justify-between h-56 relative overflow-hidden">
+            <span class="text-[9px] font-mono text-champagne uppercase block">TERTIARY CTA</span>
+            <div class="space-y-4 my-auto text-center">
+              <!-- Letter-spacing expansion underline link -->
+              <a href="#" class="inline-block text-xs font-mono tracking-widest uppercase text-charcoal dark:text-cream border-b border-champagne pb-1 hover:tracking-[0.2em] hover:text-champagne transition-all duration-500 ease-out" data-i18n="btnTerText">
+                Besoke Text Link
+              </a>
+            </div>
+            <div class="text-[10px] text-charcoal/40 dark:text-cream/40 font-mono text-center">
+              Text expansion with gold border-b
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Section 2: Toasts -->
+      <section id="section-toasts" class="space-y-8 scroll-mt-28">
+        <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 02</span>
+          <h2 data-i18n="toastTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Luxury Toast & Alert Notifications (ระบบกล่องแจ้งเตือนระดับพรีเมียม)</h2>
+        </div>
+        
+        <p data-i18n="toastDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
+          กล่องข้อความแจ้งเตือนที่เหมาะสมกับการใช้งานจริง (SaaS Feedback) จะต้องแสดงผลด้วยความเงียบสงบ ไม่ทำลายองค์ประกอบของแอปพลิเคชัน ทดลองคลิกปุ่มควบคุมด้านล่างเพื่อยิงการแจ้งเตือนจริง ๆ ในมุมขวาล่างของหน้าจอ:
+        </p>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4">
+          <!-- Trigger Success -->
+          <button onclick="triggerToast('success')" class="border border-champagne bg-goldLight/20 text-charcoal dark:text-cream p-4 text-left font-mono transition-colors hover:bg-goldLight/40">
+            <span class="text-[9px] block text-champagne font-bold">01 // SUCCESS</span>
+            <span class="text-xs uppercase font-bold" data-i18n="tstSuccess">Trigger Success</span>
+          </button>
+          
+          <!-- Trigger Warning -->
+          <button onclick="triggerToast('warning')" class="border border-charcoal/10 hover:border-amber-500 text-charcoal dark:text-cream p-4 text-left font-mono transition-colors hover:bg-amber-500/5">
+            <span class="text-[9px] block text-amber-500 font-bold">02 // WARNING</span>
+            <span class="text-xs uppercase font-bold" data-i18n="tstWarning">Trigger Warning</span>
+          </button>
+
+          <!-- Trigger Error -->
+          <button onclick="triggerToast('error')" class="border border-charcoal/10 hover:border-red-500 text-charcoal dark:text-cream p-4 text-left font-mono transition-colors hover:bg-red-500/5">
+            <span class="text-[9px] block text-red-500 font-bold">03 // ERROR</span>
+            <span class="text-xs uppercase font-bold" data-i18n="tstError">Trigger Error</span>
+          </button>
+
+          <!-- Trigger Processing -->
+          <button onclick="triggerToast('processing')" class="border border-charcoal/10 hover:border-champagne text-charcoal dark:text-cream p-4 text-left font-mono transition-colors hover:bg-goldLight/10">
+            <span class="text-[9px] block text-champagne/80 font-bold">04 // PROCESSING</span>
+            <span class="text-xs uppercase font-bold" data-i18n="tstProgress">Trigger Loading</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Section 3: Skeletons -->
+      <section id="section-skeletons" class="space-y-8 scroll-mt-28">
+        <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 03</span>
+          <h2 data-i18n="sklTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Breathy UI Skeleton Loaders (โครงร่างภาพเรืองแสงขณะรอดึงรูปถ่าย)</h2>
+        </div>
+        
+        <p data-i18n="sklDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
+          หลีกเลี่ยงการใช้หน้าจอหมุนโหลด (Spinner) ที่น่ารำคาญใจ ระบบดีไซน์ของเราใช้การเรืองแสงสีทองอ่อนเคลื่อนที่จากซ้ายไปขวา (Shimmer Effect) เลียนแบบสเปกของช่องแสดงผลจริง ทดลองสลับสถานะด้านล่างเพื่อดูการสแนปเปลี่ยนผ่านของภาพพรีเมียม:
+        </p>
+
+        <div class="space-y-4">
+          <!-- Toggle Controller Button -->
+          <button onclick="toggleSkeletonState()" class="border border-charcoal dark:border-cream text-charcoal dark:text-cream hover:bg-charcoal hover:text-white px-5 py-2.5 text-xs font-mono uppercase tracking-widest transition-colors duration-500">
+            Toggle Loader State (กดเพื่อสลับภาพ/ตัวโหลด)
+          </button>
+
+          <!-- Mini Gallery Demo -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-6 pt-4" id="skeleton-grid">
+            
+            <!-- Item 1 -->
+            <div class="border border-charcoal/5 relative h-64 overflow-hidden group">
+              <!-- Skeleton State -->
+              <div class="skeleton-card absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
+                <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
+                <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
+              </div>
+              <!-- Real Image State (Fades in) -->
+              <img src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop" class="real-image w-full h-full object-cover opacity-0 transition-opacity duration-700">
+              <div class="image-detail absolute bottom-4 left-4 z-20 text-white opacity-0 transition-opacity duration-700">
+                <span class="font-serif italic text-sm block">The Tuscany Ceremony</span>
+                <span class="font-mono text-[9px] uppercase tracking-widest block text-champagne">Ceremony</span>
+              </div>
+            </div>
+
+            <!-- Item 2 -->
+            <div class="border border-charcoal/5 relative h-64 overflow-hidden group">
+              <div class="skeleton-card absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
+                <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
+                <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
+              </div>
+              <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=600&auto=format&fit=crop" class="real-image w-full h-full object-cover opacity-0 transition-opacity duration-700">
+              <div class="image-detail absolute bottom-4 left-4 z-20 text-white opacity-0 transition-opacity duration-700">
+                <span class="font-serif italic text-sm block">Portrait of Grace</span>
+                <span class="font-mono text-[9px] uppercase tracking-widest block text-champagne">Bridal</span>
+              </div>
+            </div>
+
+            <!-- Item 3 -->
+            <div class="border border-charcoal/5 relative h-64 overflow-hidden group">
+              <div class="skeleton-card absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
+                <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
+                <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
+              </div>
+              <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=600&auto=format&fit=crop" class="real-image w-full h-full object-cover opacity-0 transition-opacity duration-700">
+              <div class="image-detail absolute bottom-4 left-4 z-20 text-white opacity-0 transition-opacity duration-700">
+                <span class="font-serif italic text-sm block">Golden Hour Banquet</span>
+                <span class="font-mono text-[9px] uppercase tracking-widest block text-champagne">Reception</span>
+              </div>
+            </div>
+
+            <!-- Item 4 -->
+            <div class="border border-charcoal/5 relative h-64 overflow-hidden group">
+              <div class="skeleton-card absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
+                <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
+                <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
+              </div>
+              <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=600&auto=format&fit=crop" class="real-image w-full h-full object-cover opacity-0 transition-opacity duration-700">
+              <div class="image-detail absolute bottom-4 left-4 z-20 text-white opacity-0 transition-opacity duration-700">
+                <span class="font-serif italic text-sm block">Riviera Summer Gala</span>
+                <span class="font-mono text-[9px] uppercase tracking-widest block text-champagne">Cocktail</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Inputs -->
+      <section id="section-inputs" class="space-y-8 scroll-mt-28">
+        <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 04</span>
+          <h2 data-i18n="inpTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Form Controls & Validation States (อินพุตฟอร์มและสถานะเส้นขอบบาง 1px)</h2>
+        </div>
+        
+        <p data-i18n="inpDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
+          ระบบอินพุตระดับสูงจะไม่ใช้บล็อกกล่องทึบหนา แต่จะอาศัยความพริ้วไหวของเส้นใต้ (Bottom hairline line) ขอบทองแชมเปญ และสัญญาณไฟสถานะสีเขียวมรกตหรือแดงชาดที่ละเอียดอ่อน:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
+          
+          <!-- Focus State Mock -->
+          <div class="border border-charcoal/10 dark:border-cream/10 p-6 bg-white dark:bg-zinc-900/10 space-y-4">
+            <span class="text-[9px] font-mono text-champagne uppercase block">01 // FOCUS / ACTIVE STATE</span>
+            <div class="flex flex-col space-y-2">
+              <label class="text-[9px] uppercase tracking-widest text-champagne font-bold">Contact Email (สเตตัสกำลังพิมพ์)</label>
+              <!-- Focused inputs have bright gold hairline borders -->
+              <input type="text" value="photographer@vogue.com" class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream !border-champagne" readonly>
+            </div>
+            <p class="text-[10px] text-charcoal/40 dark:text-cream/40 leading-relaxed">
+              เส้นล่างจะเรืองแสงสีทองแชมเปญ (`#D4AF37`) เพื่อดึงโฟกัส
+            </p>
+          </div>
+
+          <!-- Success State Mock -->
+          <div class="border border-charcoal/10 dark:border-cream/10 p-6 bg-white dark:bg-zinc-900/10 space-y-4">
+            <span class="text-[9px] font-mono text-emerald-500 uppercase block">02 // VALIDATION SUCCESS STATE</span>
+            <div class="flex flex-col space-y-2 relative">
+              <label class="text-[9px] uppercase tracking-widest text-emerald-500 font-bold">Contact Email (สเตตัสกรอกถูกต้อง)</label>
+              <input type="text" value="concierge@facefind.app" class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream !border-emerald-500" readonly>
+              <!-- Small emerald dot -->
+              <span class="absolute right-0 bottom-3 w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            </div>
+            <p class="text-[10px] text-emerald-500/80 leading-relaxed">
+              สเตตัสผ่านจะแสดงเส้นสีเขียวมรกตบาง พร้อมจุดสัญญาณไฟในแนวระดับ
+            </p>
+          </div>
+
+          <!-- Error State Mock -->
+          <div class="border border-charcoal/10 dark:border-cream/10 p-6 bg-white dark:bg-zinc-900/10 space-y-4">
+            <span class="text-[9px] font-mono text-red-500 uppercase block">03 // ERROR STATE</span>
+            <div class="flex flex-col space-y-2 relative">
+              <label class="text-[9px] uppercase tracking-widest text-red-500 font-bold">Contact Email (สเตตัสเกิดข้อผิดพลาด)</label>
+              <input type="text" value="invalid-email-format" class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream !border-red-500" readonly>
+              <span class="absolute right-0 bottom-3 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+            </div>
+            <p class="text-[10px] text-red-500 leading-relaxed">
+              เส้นใต้เปลี่ยนเป็นสีแดง Crimson อ่อนพริ้วไหว เพื่อการตอบรับที่ชัดเจนและสง่างาม
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Section 5: Lightbox -->
+      <section id="section-lightbox" class="space-y-8 scroll-mt-28">
+        <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 05</span>
+          <h2 data-i18n="lgbTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Photo Lightbox Modals (หน้าต่างขยายภาพพร้อมเอฟเฟกต์เบลอหลัง)</h2>
+        </div>
+        
+        <p data-i18n="lgbDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
+          เมื่อแขกในงานกดที่รูปถ่าย แผงควบคุม Photo Viewer จะปรากฏขึ้นมาด้วยความนุ่มนวล พร้อมแสดงสถิติและดีเทลอย่างครบครัน ทดลองกดพรีวิวที่การ์ดจำลองรูปถ่ายด้านล่างเพื่อสัมผัสเอฟเฟกต์ Lightbox จริง ๆ:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+          
+          <!-- Clickable Card 1 -->
+          <div onclick="openLabLightbox('https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop', 'I. The Tuscany Villa Estate Wedding', 'Ceremony - Stated October 14, 2026')" class="border border-charcoal/10 dark:border-cream/10 p-4 bg-white dark:bg-zinc-900/10 cursor-pointer group hover:border-champagne transition-all duration-500 flex flex-col justify-between h-96">
+            <div class="h-64 overflow-hidden relative">
+              <img src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
+              <div class="absolute inset-0 bg-charcoal/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <span class="bg-white/90 px-3 py-1.5 text-[9px] font-mono tracking-widest text-charcoal uppercase">CLICK TO OPEN LIGHTBOX</span>
+              </div>
+            </div>
+            <div class="pt-4 flex items-center justify-between">
+              <span class="font-serif italic text-base text-charcoal dark:text-cream">I. The Tuscany Wedding</span>
+              <span class="font-mono text-[9px] uppercase tracking-widest text-champagne">STATION 01</span>
+            </div>
+          </div>
+
+          <!-- Clickable Card 2 -->
+          <div onclick="openLabLightbox('https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=1200&auto=format&fit=crop', 'II. Portrait of Grace at Sunset', 'Bridal - Stated July 09, 2026')" class="border border-charcoal/10 dark:border-cream/10 p-4 bg-white dark:bg-zinc-900/10 cursor-pointer group hover:border-champagne transition-all duration-500 flex flex-col justify-between h-96">
+            <div class="h-64 overflow-hidden relative">
+              <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=600&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
+              <div class="absolute inset-0 bg-charcoal/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <span class="bg-white/90 px-3 py-1.5 text-[9px] font-mono tracking-widest text-charcoal uppercase">CLICK TO OPEN LIGHTBOX</span>
+              </div>
+            </div>
+            <div class="pt-4 flex items-center justify-between">
+              <span class="font-serif italic text-base text-charcoal dark:text-cream">II. Portrait of Grace</span>
+              <span class="font-mono text-[9px] uppercase tracking-widest text-champagne">STATION 02</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Luxury Toast Notification Container (Dynamic) -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Photo Detail Lightbox Modal (Dynamic) -->
+  <div id="photo-modal" class="photo-modal-overlay" onclick="closeLabLightbox()">
+    <div class="max-w-4xl max-h-[85vh] w-full p-4 relative flex flex-col items-center justify-center pointer-events-auto" onclick="event.stopPropagation()">
+      <!-- Close Button -->
+      <button class="absolute -top-10 right-4 text-white hover:text-champagne transition-colors font-mono text-xs tracking-widest uppercase flex items-center gap-2" onclick="closeLabLightbox()">
+        <span>CLOSE</span> <span class="text-lg leading-none">&times;</span>
+      </button>
+      <!-- Image Frame -->
+      <div class="border border-champagne/30 bg-zinc-950 p-2 md:p-3 max-h-[75vh] flex items-center justify-center overflow-hidden">
+        <img id="modal-image" src="" alt="Full Screen Preview" class="max-w-full max-h-[70vh] object-contain">
+      </div>
+      <!-- Details -->
+      <div class="mt-4 text-center space-y-1">
+        <span id="modal-title" class="font-serif italic text-white text-base md:text-lg block"></span>
+        <span id="modal-category" class="font-mono text-champagne text-[10px] tracking-widest uppercase block"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="w-full border-t border-charcoal/5 dark:border-cream/5 py-12 px-6 md:px-12 mt-auto transition-colors duration-500">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-charcoal/40 dark:text-cream/40 font-light tracking-widest uppercase font-mono">
+      <span>© 2026 FACEFIND. DESIGN SYSTEM EXPERIMENTAL LAB.</span>
+      <span>VOGUE STYLE MOCKUP SYSTEM</span>
+    </div>
+  </footer>
+
+  <!-- JavaScript controller script -->
+  <script>
+    // Bilingual Dictionaries for Design Lab
+    const TRANSLATIONS = {
+      EN: {
+        labBadge: "Besoke UI Playground",
+        labDesc: "Welcome to the interactive design system specimen lab. This portal is built to let you preview, choose, and experience the remaining high-end micro-interactions (CTAs, Toasts, Skeletons, Inputs, Lightboxes) before locking them into the official design.md specification.",
+        btnTitle: "Actionable Button Systems",
+        btnDesc: "Luxury button designs rely on balanced weights and elegant hover states. Below are the three primary configurations tailored for your real-world platform:",
+        btnPrimText: "Bespoke Primary",
+        btnSecText: "Bespoke Outline",
+        btnTerText: "Bespoke Text Link",
+        toastTitle: "Luxury Toast & Alert Notifications",
+        toastDesc: "Status alerts must display feedback quietly and smoothly without breaking interface aesthetics. Click the buttons below to trigger real floating notifications in the bottom-right corner:",
+        tstSuccess: "Trigger Success",
+        tstWarning: "Trigger Warning",
+        tstError: "Trigger Error",
+        tstProgress: "Trigger Loading",
+        sklTitle: "Breathy UI Skeleton Loaders",
+        sklDesc: "Avoid annoying spinners. Our system utilizes a soft champagne-cream shimmering skeleton grid, gracefully preparing guests to view their final matched high-fidelity editorial memories:",
+        inpTitle: "Form Controls & Validation States",
+        inpDesc: "High-end inputs avoid bulky dark boundaries. They employ clean bottom hairline borders, subtle color transitions, and elegant success emerald or crimson indicator alerts:",
+        lgbTitle: "Photo Lightbox Modals",
+        lgbDesc: "When guests tap event images, the lightbox overlay opens gracefully. It manages downloads, prints, and credits cleanly. Click the cards below to test the full-screen interactive modal:",
+        toastSuccessMsg: "Biometric analysis completed successfully! Found 2 matched photos.",
+        toastWarningMsg: "Biometric clarity is slightly low. Recommended to re-upload for better matches.",
+        toastErrorMsg: "Secure database mapping timed out. Please check system status drawers.",
+        toastProcessingMsg: "Uploading secure biometrics to platform cloud. Please wait..."
+      },
+      TH: {
+        labBadge: "แผงควบคุมทดสอบ UI ระดับลักชัวรี",
+        labDesc: "ยินดีต้อนรับสู่หน้าแล็บระบบดีไซน์จำลองแบบโต้ตอบได้จริง (Interactive Design Lab) หน้านี้ถูกออกแบบมาเพื่อให้คุณเลือก ตรวจสอบ และทดลองสัมผัส Micro-Animations ต่าง ๆ ของ 5 องค์ประกอบพรีเมียมที่ยังขาดอยู่ ก่อนที่เราจะนำไปบันทึกสเปกในเอกสารหลักและพัฒนาต่อยอดครับ",
+        btnTitle: "ระบบปุ่มกดที่หรูหราคมเฉียบ",
+        btnDesc: "การออกแบบปุ่มระดับลักชัวรีจะต้องใช้เอฟเฟกต์การวางเมาส์ที่นุ่มนวลและควบคุมน้ำหนักคู่ขนานกัน ด้านล่างนี้คือ 3 รูปแบบปุ่มหลักที่คุณสามารถเลือกนำไปใช้บนหน้าจอแอปพลิเคชันจริง:",
+        btnPrimText: "ปุ่มหลัก Obsidian",
+        btnSecText: "ปุ่มขอบบาง Outline",
+        btnTerText: "ปุ่มลิงก์ขยายสเปซ",
+        toastTitle: "ระบบกล่องแจ้งเตือนพรีเมียม",
+        toastDesc: "กล่องข้อความแจ้งเตือนที่เหมาะสมกับการใช้งานจริง (SaaS Feedback) จะต้องแสดงผลด้วยความเงียบสงบ ไม่ทำลายองค์ประกอบของแอปพลิเคชัน ทดลองคลิกปุ่มควบคุมด้านล่างเพื่อยิงการแจ้งเตือนจริง ๆ ในมุมขวาล่างของหน้าจอ:",
+        tstSuccess: "ยิงสถานะสำเร็จ",
+        tstWarning: "ยิงสถานะแจ้งเตือน",
+        tstError: "ยิงสถานะผิดพลาด",
+        tstProgress: "ยิงสถานะกำลังโหลด",
+        sklTitle: "โครงร่างภาพเรืองแสงขณะรอดึงรูปถ่าย",
+        sklDesc: "หลีกเลี่ยงการใช้หน้าจอหมุนโหลด (Spinner) ที่น่ารำคาญใจ ระบบดีไซน์ของเราใช้การเรืองแสงสีทองอ่อนเคลื่อนที่จากซ้ายไปขวา (Shimmer Effect) เลียนแบบสเปกของช่องแสดงผลจริง ทดลองสลับสถานะด้านล่างเพื่อดูการสแนปเปลี่ยนผ่านของภาพพรีเมียม:",
+        inpTitle: "อินพุตฟอร์มและสถานะเส้นขอบบาง 1px",
+        inpDesc: "ระบบอินพุตระดับสูงจะไม่ใช้บล็อกกล่องทึบหนา แต่จะอาศัยความพริ้วไหวของเส้นใต้ (Bottom hairline line) ขอบทองแชมเปญ และสัญญาณไฟสถานะสีเขียวมรกตหรือแดงชาดที่ละเอียดอ่อน:",
+        lgbTitle: "หน้าต่างขยายภาพพร้อมเอฟเฟกต์เบลอหลัง",
+        lgbDesc: "เมื่อแขกในงานกดที่รูปถ่าย แผงควบคุม Photo Viewer จะปรากฏขึ้นมาด้วยความนุ่มนวล พร้อมแสดงสถิติและดีเทลอย่างครบครัน ทดลองกดพรีวิวที่การ์ดจำลองรูปถ่ายด้านล่างเพื่อสัมผัสเอฟเฟกต์ Lightbox จริง ๆ:",
+        toastSuccessMsg: "จับคู่โครงสร้างชีวมิติเสร็จสิ้น! พบภาพถ่ายของคุณ 2 ภาพในอัลบั้มทัสคานี",
+        toastWarningMsg: "ความละเอียดของรูปพอร์ตเทรตค่อนข้างต่ำ แนะนำให้อัปโหลดภาพใหม่เพื่อให้ได้สแกนแม่นยำขึ้น",
+        toastErrorMsg: "การส่งข้อมูลไปยังฐานข้อมูลขัดข้อง (Timeout) กรุณาตรวจสอบสถานะจาก Metrics Panel",
+        toastProcessingMsg: "กำลังอัปโหลดโครงร่างใบหน้าเข้าสู่คลาวด์อัจฉริยะอย่างปลอดภัย กรุณารอสักครู่..."
+      }
+    };
+
+    let currentLang = 'EN';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('ff-lang-lab', lang);
+      
+      // Toggle HTML Attribute for Thai spacing fix
+      document.documentElement.setAttribute('lang', lang.toLowerCase());
+
+      // Update button text
+      document.getElementById('lang-toggle').textContent = lang === 'EN' ? 'TH' : 'EN';
+
+      // Translate all marked elements
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) {
+          el.textContent = TRANSLATIONS[lang][key];
+        }
+      });
+    }
+
+    // Initialize Language settings
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedLang = localStorage.getItem('ff-lang-lab') || 'EN';
+      setLanguage(savedLang);
+      
+      // Auto highlight active sidebar section on scroll
+      setupScrollspy();
+    });
+
+    document.getElementById('lang-toggle').addEventListener('click', () => {
+      setLanguage(currentLang === 'EN' ? 'TH' : 'EN');
+    });
+
+    // Dark Mode Toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    const savedTheme = localStorage.getItem('ff-theme') || 'light';
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('ff-theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('ff-theme', 'dark');
+      }
+    });
+
+    // 1. Premium Toast Notification Logic
+    function triggerToast(type) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `luxury-toast border bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-5 py-4 flex items-center gap-4 shadow-xl border-champagne/30 dark:border-champagne/10 max-w-sm pointer-events-auto`;
+      
+      let iconColor = '#D4AF37';
+      let msg = TRANSLATIONS[currentLang].toastSuccessMsg;
+
+      if (type === 'warning') {
+        iconColor = '#F59E0B'; // Amber 500
+        msg = TRANSLATIONS[currentLang].toastWarningMsg;
+      } else if (type === 'error') {
+        iconColor = '#EF4444'; // Red 500
+        msg = TRANSLATIONS[currentLang].toastErrorMsg;
+      } else if (type === 'processing') {
+        iconColor = '#D4AF37'; // Gold
+        msg = TRANSLATIONS[currentLang].toastProcessingMsg;
+      }
+
+      let iconSvg = type === 'processing'
+        ? `<svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="1.5"><circle cx="12" cy="12" r="10" stroke-dasharray="16" stroke-dashoffset="4"/><polyline points="20 6 9 17 4 12" class="opacity-0"/></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+      if (type === 'warning') {
+        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+      } else if (type === 'error') {
+        iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="1.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+      }
+
+      toast.innerHTML = `
+        <div class="flex-shrink-0">${iconSvg}</div>
+        <div class="font-luxury-body text-xs text-charcoal dark:text-cream font-light tracking-wide leading-relaxed">${msg}</div>
+      `;
+
+      container.appendChild(toast);
+
+      // Remove Toast automatically
+      setTimeout(() => {
+        toast.classList.add('leaving');
+        toast.addEventListener('animationend', () => {
+          toast.remove();
+        });
+      }, 4000);
+    }
+
+    // 2. Image Skeleton / Loader Shimmer Toggler
+    let isSkeletonLoading = true;
+
+    function toggleSkeletonState() {
+      isSkeletonLoading = !isSkeletonLoading;
+      const skeletons = document.querySelectorAll('.skeleton-card');
+      const images = document.querySelectorAll('.real-image');
+      const details = document.querySelectorAll('.image-detail');
+
+      skeletons.forEach(s => {
+        s.style.opacity = isSkeletonLoading ? '1' : '0';
+        s.style.pointerEvents = isSkeletonLoading ? 'auto' : 'none';
+      });
+
+      images.forEach(img => {
+        img.style.opacity = isSkeletonLoading ? '0' : '1';
+      });
+
+      details.forEach(d => {
+        d.style.opacity = isSkeletonLoading ? '0' : '1';
+      });
+    }
+
+    // 3. Photo Detail Lightbox Modal controller
+    function openLabLightbox(src, title, desc) {
+      const modal = document.getElementById('photo-modal');
+      const modalImg = document.getElementById('modal-image');
+      const modalTitle = document.getElementById('modal-title');
+      const modalDesc = document.getElementById('modal-category');
+
+      if (modal && modalImg) {
+        modalImg.src = src;
+        modalTitle.textContent = title;
+        modalDesc.textContent = desc;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeLabLightbox() {
+      const modal = document.getElementById('photo-modal');
+      if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+
+    // 4. Scrollspy layout highlighters
+    function setupScrollspy() {
+      const links = document.querySelectorAll('.nav-link');
+      const sections = document.querySelectorAll('main > section');
+
+      function changeActiveLink() {
+        let index = sections.length;
+
+        while(--index && window.scrollY + 150 < sections[index].offsetTop) {}
+
+        links.forEach((link) => link.classList.remove('active'));
+        if (links[index]) {
+          links[index].classList.add('active');
+        }
+      }
+
+      changeActiveLink();
+      window.addEventListener('scroll', changeActiveLink);
+    }
+  </script>
+</body>
+</html>

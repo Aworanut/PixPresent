@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FaceFind — PRD v1.2 · Interactive Spec</title>
+<script>
+  // Set theme before paint to avoid flash
+  (function () {
+    try {
+      var saved = localStorage.getItem('ff-theme');
+      var t = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+/* ============ THEME TOKENS ============ */
+:root{
+  --bg:#eef1f7; --bg-grad1:#e9ecf7; --bg-grad2:#eff2f9;
+  --surface:#ffffff; --surface-2:#f7f9fc; --surface-3:#eef2f8;
+  --text:#141a26; --text-muted:#5a6577; --text-dim:#8893a4;
+  --border:#e4e9f2; --border-strong:#d4dbe8;
+  --accent:#5b63f0; --accent-2:#8b5cf6; --accent-fg:#ffffff;
+  --accent-soft:rgba(91,99,240,.10); --accent-line:rgba(91,99,240,.35);
+  --shadow-sm:0 1px 2px rgba(16,24,40,.06);
+  --shadow:0 1px 3px rgba(16,24,40,.07), 0 10px 28px rgba(16,24,40,.06);
+  --shadow-lg:0 20px 50px rgba(16,24,40,.14);
+  --code-bg:#f1f4fa; --code-fg:#3c4658;
+
+  --p0-bg:rgba(239,68,68,.12); --p0-fg:#c0392b; --p0-bd:rgba(239,68,68,.32);
+  --p1-bg:rgba(245,158,11,.14); --p1-fg:#b45309; --p1-bd:rgba(245,158,11,.34);
+  --ok-bg:rgba(34,197,94,.13); --ok-fg:#15803d; --ok-bd:rgba(34,197,94,.3);
+  --warn-bg:rgba(245,158,11,.13); --warn-fg:#b45309; --warn-bd:rgba(245,158,11,.3);
+  --info-bg:rgba(59,130,246,.12); --info-fg:#1d4ed8; --info-bd:rgba(59,130,246,.3);
+  --ph1-bg:rgba(91,99,240,.12); --ph1-fg:#4348c7; --ph1-bd:rgba(91,99,240,.3);
+  --ph2-bg:rgba(139,92,246,.13); --ph2-fg:#7c3aed; --ph2-bd:rgba(139,92,246,.3);
+  --muted-bg:rgba(100,116,139,.12); --muted-fg:#55607a; --muted-bd:rgba(100,116,139,.26);
+
+  --t-uuid:#7c3aed; --t-text:#0e9f6e; --t-bool:#db2777; --t-time:#b45309; --t-num:#2563eb;
+  --t-key:#a16207; --t-key-bg:rgba(202,138,4,.16); --t-fk:#1d4ed8; --t-fk-bg:rgba(59,130,246,.14);
+  --t-null:#8893a4; --t-dim:#9aa6b6;
+}
+[data-theme="dark"]{
+  --bg:#080b11; --bg-grad1:#0c1018; --bg-grad2:#0a0e15;
+  --surface:#121723; --surface-2:#171d2b; --surface-3:#1c2333;
+  --text:#e7ecf5; --text-muted:#9aa6bb; --text-dim:#6b768c;
+  --border:#222a3a; --border-strong:#2d3750;
+  --accent:#818cf8; --accent-2:#a78bfa; --accent-fg:#0b0e14;
+  --accent-soft:rgba(129,140,248,.15); --accent-line:rgba(129,140,248,.45);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow:0 1px 3px rgba(0,0,0,.5), 0 12px 30px rgba(0,0,0,.4);
+  --shadow-lg:0 24px 60px rgba(0,0,0,.55);
+  --code-bg:#1a2130; --code-fg:#c4cee0;
+
+  --p0-bg:rgba(248,113,113,.16); --p0-fg:#fca5a5; --p0-bd:rgba(248,113,113,.34);
+  --p1-bg:rgba(251,191,36,.16); --p1-fg:#fcd34d; --p1-bd:rgba(251,191,36,.32);
+  --ok-bg:rgba(74,222,128,.15); --ok-fg:#86efac; --ok-bd:rgba(74,222,128,.32);
+  --warn-bg:rgba(251,191,36,.15); --warn-fg:#fcd34d; --warn-bd:rgba(251,191,36,.3);
+  --info-bg:rgba(96,165,250,.16); --info-fg:#93c5fd; --info-bd:rgba(96,165,250,.32);
+  --ph1-bg:rgba(129,140,248,.16); --ph1-fg:#c7cbfd; --ph1-bd:rgba(129,140,248,.34);
+  --ph2-bg:rgba(167,139,250,.16); --ph2-fg:#d6c6fe; --ph2-bd:rgba(167,139,250,.34);
+  --muted-bg:rgba(148,163,184,.14); --muted-fg:#aeb8cc; --muted-bd:rgba(148,163,184,.26);
+
+  --t-uuid:#c084fc; --t-text:#34d399; --t-bool:#f472b6; --t-time:#fbbf24; --t-num:#60a5fa;
+  --t-key:#fbbf24; --t-key-bg:rgba(251,191,36,.16); --t-fk:#60a5fa; --t-fk-bg:rgba(96,165,250,.16);
+  --t-null:#6b768c; --t-dim:#5a6479;
+}
+
+/* ============ BASE ============ */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans Thai","Sarabun",sans-serif;
+  font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1200px 600px at 100% -10%, var(--bg-grad1), transparent 60%),
+                   radial-gradient(900px 500px at -10% 110%, var(--bg-grad2), transparent 55%);
+  background-attachment:fixed;
+}
+a{color:inherit;text-decoration:none}
+code,.mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+/* reading progress */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .12s ease}
+
+/* ============ LAYOUT ============ */
+.layout{display:flex;min-height:100vh}
+.sidebar{
+  position:fixed;top:0;left:0;width:288px;height:100vh;z-index:50;
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.4,0,.2,1);
+}
+.main{margin-left:288px;flex:1;min-width:0;width:calc(100% - 288px)}
+
+/* ============ SIDEBAR ============ */
+.brand{display:flex;align-items:center;gap:12px;padding:20px 20px 16px}
+.logo{width:38px;height:38px;border-radius:11px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:grid;place-items:center;box-shadow:0 6px 16px var(--accent-soft)}
+.logo svg{width:22px;height:22px;display:block}
+.brand-txt b{display:block;font-size:16px;font-weight:700;letter-spacing:-.2px}
+.brand-txt span{display:block;font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.side-search{padding:4px 16px 12px;position:relative}
+.side-search input{
+  width:100%;padding:9px 12px 9px 34px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text);font-size:13px;outline:none;transition:.15s}
+.side-search input:focus{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.side-search svg{position:absolute;left:27px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text-dim)}
+.nav{flex:1;overflow-y:auto;padding:4px 12px 16px}
+.nav ul{list-style:none;margin:0;padding:0}
+.nav li{margin:1px 0}
+.nav a{
+  display:flex;align-items:center;gap:11px;padding:8px 11px;border-radius:9px;
+  color:var(--text-muted);font-size:13.5px;font-weight:500;position:relative;transition:.13s}
+.nav a:hover{background:var(--surface-2);color:var(--text)}
+.nav a.active{background:var(--accent-soft);color:var(--accent);font-weight:650}
+.nav a.active .nnum{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+.nav a.active::before{content:"";position:absolute;left:-12px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
+.nnum{flex:0 0 auto;width:23px;height:23px;border-radius:7px;border:1px solid var(--border-strong);
+  display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text-muted);
+  background:var(--surface-2);transition:.13s}
+.side-foot{padding:14px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);line-height:1.5}
+.side-foot .conf{display:inline-flex;align-items:center;gap:5px;color:var(--p0-fg);font-weight:700;letter-spacing:.4px}
+.side-foot .dot{width:6px;height:6px;border-radius:50%;background:var(--p0-fg)}
+
+/* ============ TOPBAR ============ */
+.topbar{
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;
+  padding:11px 28px;background:color-mix(in srgb, var(--surface) 80%, transparent);
+  backdrop-filter:saturate(150%) blur(12px);-webkit-backdrop-filter:saturate(150%) blur(12px);
+  border-bottom:1px solid var(--border)}
+.topbar .tb-title{font-size:13px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:8px}
+.topbar .tb-title b{color:var(--text)}
+.spacer{flex:1}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);
+  font-size:12.5px;font-weight:600;transition:.14s;font-family:inherit}
+.btn:hover{background:var(--surface-3);color:var(--text);border-color:var(--border-strong)}
+.btn svg{width:15px;height:15px}
+.icon-btn{padding:8px;width:36px;height:36px;justify-content:center}
+#menuBtn{display:none}
+
+/* ============ HERO ============ */
+.wrap{max-width:1040px;margin:0 auto;padding:0 28px 80px}
+.hero{position:relative;margin-top:30px;padding:34px 34px 30px;border-radius:20px;overflow:hidden;
+  background:linear-gradient(135deg,var(--surface),var(--surface-2));border:1px solid var(--border);box-shadow:var(--shadow)}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(600px 240px at 92% -30%, var(--accent-soft), transparent 65%)}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;letter-spacing:.7px;
+  text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:5px 11px;border-radius:999px;border:1px solid var(--accent-line)}
+.hero h1{margin:16px 0 4px;font-size:42px;line-height:1.05;letter-spacing:-1.2px;font-weight:800}
+.hero h1 .accent{background:linear-gradient(120deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .sub{font-size:17px;color:var(--text-muted);font-weight:500;margin:0}
+.hero .tagline{position:relative;margin:16px 0 0;font-size:14.5px;color:var(--text-muted);max-width:680px}
+.meta-chips{position:relative;display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}
+.mchip{display:inline-flex;flex-direction:column;gap:1px;padding:9px 14px;border-radius:12px;background:var(--surface-3);border:1px solid var(--border)}
+.mchip .k{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-dim)}
+.mchip .v{font-size:13px;font-weight:650;color:var(--text)}
+
+/* ============ SECTIONS ============ */
+.section{margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  box-shadow:var(--shadow);scroll-margin-top:76px;overflow:hidden;transition:box-shadow .2s}
+.sec-head{display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;
+  padding:18px 22px;background:transparent;border:none;color:inherit;font-family:inherit;transition:background .14s}
+.sec-head:hover{background:var(--surface-2)}
+.sec-no{flex:0 0 auto;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+  font-size:13px;font-weight:800;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line)}
+.sec-head h2{margin:0;font-size:18.5px;font-weight:700;letter-spacing:-.3px;flex:1}
+.sec-head .chev{flex:0 0 auto;color:var(--text-dim);transition:transform .25s;width:20px;height:20px}
+.section.collapsed .chev{transform:rotate(-90deg)}
+.sec-body{padding:2px 24px 26px;border-top:1px solid var(--border)}
+.section.collapsed .sec-body{display:none}
+.sec-body>:first-child{margin-top:18px}
+
+/* typography inside */
+.sec-body h3{font-size:15px;font-weight:700;margin:26px 0 10px;letter-spacing:-.2px;
+  display:flex;align-items:center;gap:9px}
+.sec-body h3 .h3-bar{width:4px;height:16px;border-radius:3px;background:linear-gradient(var(--accent),var(--accent-2))}
+.sec-body p{margin:10px 0;color:var(--text-muted)}
+.lede{font-size:15px;color:var(--text)!important}
+ul.clean{list-style:none;margin:10px 0;padding:0}
+ul.clean li{position:relative;padding:5px 0 5px 24px;color:var(--text-muted)}
+ul.clean li::before{content:"";position:absolute;left:4px;top:13px;width:7px;height:7px;border-radius:2px;
+  background:var(--accent);transform:rotate(45deg);opacity:.8}
+ul.clean li b,ul.clean li strong{color:var(--text)}
+
+/* sub-block label */
+.subhead{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text-dim);margin:22px 0 8px}
+
+/* ============ GRIDS / CARDS ============ */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:16px 17px;transition:.16s}
+.card:hover{border-color:var(--border-strong);transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+.card .ck{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px}
+.card .cv{font-size:15px;font-weight:700;color:var(--text)}
+.card .cd{font-size:13px;color:var(--text-muted);margin-top:4px}
+
+/* fact cards (overview) */
+.facts{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:6px 0 4px}
+
+/* role cards */
+.role{display:flex;flex-direction:column;gap:8px}
+.role .rh{display:flex;align-items:center;gap:9px}
+.role .ric{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:0 0 auto}
+.role .ric svg{width:17px;height:17px}
+.role .rt{font-size:15px;font-weight:700}
+.role .rd{font-size:13px;color:var(--text-muted)}
+.login-chip{align-self:flex-start;margin-top:2px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:7px;
+  background:var(--surface-3);border:1px solid var(--border);color:var(--text-muted)}
+.login-chip.no{color:var(--ok-fg);background:var(--ok-bg);border-color:var(--ok-bd)}
+
+/* tech cards */
+.tech{position:relative;overflow:hidden}
+.tech .layer{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim)}
+.tech .name{font-size:16px;font-weight:750;margin:5px 0 7px;display:flex;align-items:center;gap:8px}
+.tech .name .nd{width:8px;height:8px;border-radius:50%;background:linear-gradient(var(--accent),var(--accent-2))}
+.tech .why{font-size:13px;color:var(--text-muted)}
+
+/* steps (journeys) */
+ol.steps{list-style:none;counter-reset:s;margin:8px 0;padding:0}
+ol.steps li{counter-increment:s;position:relative;padding:6px 0 14px 40px}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:4px;width:26px;height:26px;border-radius:8px;
+  display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--accent);
+  background:var(--accent-soft);border:1px solid var(--accent-line)}
+ol.steps li:not(:last-child)::after{content:"";position:absolute;left:13px;top:32px;bottom:2px;width:2px;background:var(--border-strong)}
+ol.steps li .st{color:var(--text-muted)}
+
+/* flow cards */
+.flow{background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:16px 18px}
+.flow .ft{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;margin-bottom:6px}
+.flow .ft .badge{font-size:10.5px}
+
+/* ============ BADGES ============ */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;letter-spacing:.2px;
+  padding:3px 9px;border-radius:999px;border:1px solid transparent;white-space:nowrap;line-height:1.5}
+.badge.p0{background:var(--p0-bg);color:var(--p0-fg);border-color:var(--p0-bd)}
+.badge.p1{background:var(--p1-bg);color:var(--p1-fg);border-color:var(--p1-bd)}
+.badge.ph1{background:var(--ph1-bg);color:var(--ph1-fg);border-color:var(--ph1-bd)}
+.badge.ph2{background:var(--ph2-bg);color:var(--ph2-fg);border-color:var(--ph2-bd)}
+.badge.ok{background:var(--ok-bg);color:var(--ok-fg);border-color:var(--ok-bd)}
+.badge.warn{background:var(--warn-bg);color:var(--warn-fg);border-color:var(--warn-bd)}
+.badge.muted{background:var(--muted-bg);color:var(--muted-fg);border-color:var(--muted-bd)}
+.badge.info{background:var(--info-bg);color:var(--info-fg);border-color:var(--info-bd)}
+
+/* ============ FEATURES ============ */
+.feature{border:1px solid var(--border);border-radius:13px;padding:0;margin:12px 0;overflow:hidden;background:var(--surface-2)}
+.feature .fh{display:flex;align-items:center;gap:11px;padding:13px 16px;background:var(--surface-3);border-bottom:1px solid var(--border)}
+.fid{font-family:ui-monospace,monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:7px;
+  background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);flex:0 0 auto}
+.feature .fh .ftitle{font-size:14.5px;font-weight:700}
+.feature .fb{padding:6px 16px 14px}
+.feature .fb ul.clean li{padding-left:22px}
+
+/* ============ TABLES ============ */
+.table-scroll{overflow-x:auto;margin:14px 0;border:1px solid var(--border);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:480px}
+thead th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--text-dim);padding:11px 14px;background:var(--surface-3);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text-muted);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+table.tbl td:first-child{color:var(--text);font-weight:600}
+
+/* schema tables */
+.schema-wrap{margin:16px 0}
+.schema-title{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;margin-bottom:8px}
+.schema-title .tbl-ico{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);font-size:13px}
+.schema-title .tbl-tag{font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--text-dim);background:var(--surface-3);border:1px solid var(--border);padding:2px 7px;border-radius:6px}
+.schema-title.new .tbl-ico{background:var(--ph2-bg);color:var(--ph2-fg)}
+table.schema{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+table.schema td.col{color:var(--text);font-weight:600}
+table.schema td.type{white-space:nowrap}
+table.schema td.def{white-space:nowrap}
+table.schema td.desc{font-family:"Inter",system-ui,"Noto Sans Thai",sans-serif;font-size:13px}
+
+/* schema syntax colors */
+.t-uuid{color:var(--t-uuid);font-weight:700}
+.t-text{color:var(--t-text);font-weight:700}
+.t-bool{color:var(--t-bool);font-weight:700}
+.t-time{color:var(--t-time);font-weight:700}
+.t-num{color:var(--t-num);font-weight:700}
+.t-plain{color:var(--text);font-weight:700}
+.t-dim{color:var(--t-dim)}
+.t-null{color:var(--t-null);font-style:italic}
+.t-lit{color:var(--t-time)}
+.kbadge{font-family:"Inter",sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.5px;
+  padding:1px 5px;border-radius:5px;margin-left:5px;vertical-align:1px}
+.kbadge.pk{color:var(--t-key);background:var(--t-key-bg)}
+.kbadge.fk{color:var(--t-fk);background:var(--t-fk-bg)}
+.enum{font-family:ui-monospace,monospace;font-size:11.5px;font-weight:600;color:var(--text);
+  background:var(--surface-3);border:1px solid var(--border);padding:1px 6px;border-radius:5px}
+.pipe{color:var(--t-dim);margin:0 1px}
+code.ref{font-size:11.5px;color:var(--accent);background:var(--accent-soft);padding:1px 6px;border-radius:5px}
+.phase{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:6px;margin-right:2px}
+.phase.ph1{color:var(--ph1-fg);background:var(--ph1-bg);border:1px solid var(--ph1-bd)}
+.phase.ph2{color:var(--ph2-fg);background:var(--ph2-bg);border:1px solid var(--ph2-bd)}
+
+/* total row */
+table.tbl tr.total td{background:var(--accent-soft);font-weight:700;color:var(--text);border-top:1px solid var(--accent-line)}
+
+/* ============ CALLOUT ============ */
+.note{display:flex;gap:11px;padding:13px 16px;border-radius:11px;margin:14px 0;
+  background:var(--info-bg);border:1px solid var(--info-bd);color:var(--text)}
+.note.ok{background:var(--ok-bg);border-color:var(--ok-bd)}
+.note.warn{background:var(--warn-bg);border-color:var(--warn-bd)}
+.note .ni{flex:0 0 auto;font-size:16px;line-height:1.4}
+.note .nt{font-size:13px;color:var(--text-muted)}
+.note .nt b{color:var(--text)}
+
+/* backlog list */
+.backlog{display:grid;gap:9px}
+.backlog .bl{display:flex;align-items:flex-start;gap:12px;padding:12px 15px;border-radius:11px;
+  background:var(--surface-2);border:1px solid var(--border)}
+.backlog .bl .bn{font-size:14px;font-weight:650;color:var(--text)}
+.backlog .bl .br{font-size:13px;color:var(--text-muted);margin-top:2px}
+.backlog .bl .bx{flex:0 0 auto;color:var(--text-dim);font-size:15px;margin-top:1px}
+
+/* path list */
+.paths{display:grid;gap:9px}
+.pathrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 15px;border-radius:11px;
+  background:var(--surface-2);border:1px solid var(--border)}
+.pathrow .pp{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:600;color:var(--text);
+  background:var(--code-bg);padding:4px 9px;border-radius:7px}
+.pathrow .pd{font-size:13px;color:var(--text-muted);flex:1;min-width:140px}
+
+/* plan cards */
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.plan{position:relative;border:1px solid var(--border);border-radius:14px;padding:18px 18px;background:var(--surface-2);text-align:center}
+.plan.pop{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.plan .pn{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.plan .pdesc{font-size:12.5px;color:var(--text-muted);margin-top:8px;min-height:34px}
+.plan .ptbd{margin-top:14px}
+
+/* interface / abstraction */
+.iface{border:1px solid var(--border);border-radius:13px;overflow:hidden;margin:8px 0}
+.iface .ih{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 16px;background:var(--surface-3);border-bottom:1px solid var(--border)}
+.iface .ih .in{font-family:ui-monospace,monospace;font-size:13.5px;font-weight:700;color:var(--text)}
+.iface .ib{padding:13px 16px}
+.methods{display:flex;flex-wrap:wrap;gap:7px}
+.method{font-family:ui-monospace,monospace;font-size:12px;font-weight:600;color:var(--accent);
+  background:var(--accent-soft);border:1px solid var(--accent-line);padding:4px 9px;border-radius:7px}
+
+/* open questions */
+.qlist{display:grid;gap:11px}
+.q{display:flex;gap:14px;padding:15px 17px;border-radius:13px;background:var(--surface-2);border:1px solid var(--border)}
+.q .qn{flex:0 0 auto;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;
+  font-size:13px;font-weight:800;background:var(--surface-3);color:var(--text-muted);border:1px solid var(--border)}
+.q.resolved{border-color:var(--ok-bd)} .q.resolved .qn{background:var(--ok-bg);color:var(--ok-fg);border-color:var(--ok-bd)}
+.q.pending .qn{background:var(--warn-bg);color:var(--warn-fg);border-color:var(--warn-bd)}
+.q .qmain{flex:1;min-width:0}
+.q .qq{font-size:14px;font-weight:650;color:var(--text)}
+.q .qmeta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:8px}
+.owner{font-size:11.5px;font-weight:600;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px}
+.owner svg{width:13px;height:13px;color:var(--text-dim)}
+.qstats{display:flex;gap:10px;margin:2px 0 6px;flex-wrap:wrap}
+
+/* ============ TIMELINE ============ */
+.tl-legend{display:flex;flex-wrap:wrap;gap:14px;margin:6px 0 18px}
+.tl-legend .lg{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text-muted);font-weight:600}
+.tl-legend .lg i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.lg.setup i{background:var(--muted-fg)} .lg.dev i{background:var(--accent)}
+.lg.gate i{background:var(--warn-fg)} .lg.launch i{background:var(--ok-fg)}
+.timeline{position:relative;margin:6px 0 0;padding-left:6px}
+.timeline::before{content:"";position:absolute;left:21px;top:6px;bottom:14px;width:2px;
+  background:linear-gradient(var(--accent-line),var(--border-strong))}
+.tnode{position:relative;display:flex;gap:16px;padding:0 0 16px 0}
+.tnode .tdot{flex:0 0 auto;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;z-index:1;
+  font-size:12px;font-weight:800;color:#fff;box-shadow:0 0 0 4px var(--surface)}
+.tnode.setup .tdot{background:var(--muted-fg)} .tnode.dev .tdot{background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+.tnode.gate .tdot{background:var(--warn-fg)} .tnode.launch .tdot{background:var(--ok-fg)}
+.tnode .tbody{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px 15px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tnode .ttask{font-size:14px;font-weight:600;color:var(--text)}
+.tnode .ttask .tk{font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--accent);margin-right:7px}
+.twhen{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:8px;white-space:nowrap}
+.twhen.setup{color:var(--muted-fg);background:var(--muted-bg);border:1px solid var(--muted-bd)}
+.twhen.dev{color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line)}
+.twhen.gate{color:var(--warn-fg);background:var(--warn-bg);border:1px solid var(--warn-bd)}
+.twhen.launch{color:var(--ok-fg);background:var(--ok-bg);border:1px solid var(--ok-bd)}
+
+/* page footer */
+.pagefoot{margin-top:36px;padding-top:22px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  font-size:12px;color:var(--text-dim)}
+
+/* back to top */
+#toTop{position:fixed;right:24px;bottom:24px;z-index:45;width:44px;height:44px;border-radius:12px;
+  display:grid;place-items:center;cursor:pointer;border:1px solid var(--border);background:var(--surface);
+  color:var(--text-muted);box-shadow:var(--shadow);opacity:0;transform:translateY(10px);pointer-events:none;transition:.22s}
+#toTop.show{opacity:1;transform:none;pointer-events:auto}
+#toTop:hover{color:var(--accent);border-color:var(--accent-line)}
+
+/* backdrop */
+.backdrop{position:fixed;inset:0;z-index:48;background:rgba(8,11,17,.5);opacity:0;pointer-events:none;transition:.25s}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width:980px){
+  .sidebar{transform:translateX(-100%);box-shadow:var(--shadow-lg)}
+  body.nav-open .sidebar{transform:none}
+  body.nav-open .backdrop{opacity:1;pointer-events:auto}
+  .main{margin-left:0;width:100%}
+  #menuBtn{display:inline-flex}
+  .hero h1{font-size:34px}
+}
+@media (max-width:720px){
+  .wrap{padding:0 16px 64px}
+  .topbar{padding:10px 16px}
+  .g2,.g3,.g4,.facts,.plans{grid-template-columns:1fr}
+  .hero{padding:26px 22px}
+  .hero h1{font-size:29px}
+  .sec-body{padding:2px 16px 22px}
+  .sec-head{padding:15px 16px}
+  .tb-title .crumb{display:none}
+  .tnode .tbody{flex-direction:column;align-items:flex-start}
+}
+@media print{
+  .sidebar,.topbar,#toTop,#progress,.backdrop{display:none!important}
+  .main{margin:0;width:100%}
+  .section{break-inside:avoid;box-shadow:none}
+  .section.collapsed .sec-body{display:block!important}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/>
+          <circle cx="12" cy="11" r="2.4"/><path d="M8.4 16.2a3.8 3.8 0 0 1 7.2 0"/>
+        </svg>
+      </div>
+      <div class="brand-txt"><b>FaceFind</b><span>PRD · v1.2</span></div>
+    </div>
+
+    <div class="side-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="text" placeholder="Filter sections…" autocomplete="off">
+    </div>
+
+    <nav class="nav">
+      <ul>
+        <li><a href="#overview"><span class="nnum">1</span> Product Overview</a></li>
+        <li><a href="#users"><span class="nnum">2</span> Users &amp; Roles</a></li>
+        <li><a href="#tech"><span class="nnum">3</span> Tech Stack &amp; Architecture</a></li>
+        <li><a href="#schema"><span class="nnum">4</span> Database Schema</a></li>
+        <li><a href="#features"><span class="nnum">5</span> Feature Requirements</a></li>
+        <li><a href="#image"><span class="nnum">6</span> Image Strategy</a></li>
+        <li><a href="#mvp"><span class="nnum">7</span> MVP Scope</a></li>
+        <li><a href="#nfr"><span class="nnum">8</span> Non-Functional Reqs</a></li>
+        <li><a href="#commerce"><span class="nnum">11</span> Commerce Readiness</a></li>
+        <li><a href="#payment"><span class="nnum">12</span> Slip + Credit Payment</a></li>
+        <li><a href="#questions"><span class="nnum">13</span> Open Questions</a></li>
+        <li><a href="#cost"><span class="nnum">14</span> Cost Estimate</a></li>
+        <li><a href="#next"><span class="nnum">15</span> Next Steps</a></li>
+      </ul>
+    </nav>
+
+    <div class="side-foot">
+      <span class="conf"><span class="dot"></span> CONFIDENTIAL</span><br>
+      Internal — Phase 1 MVP · May 2026
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="topbar">
+      <button class="btn icon-btn" id="menuBtn" aria-label="Open navigation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <div class="tb-title"><b>FaceFind PRD</b> <span class="crumb">· Event Photo Distribution SaaS</span></div>
+      <div class="spacer"></div>
+      <button class="btn" id="expandAll" title="Expand all sections">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 13 5 5 5-5M7 6l5 5 5-5"/></svg>
+        Expand
+      </button>
+      <button class="btn" id="collapseAll" title="Collapse all sections">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m17 11-5-5-5 5M17 18l-5-5-5 5"/></svg>
+        Collapse
+      </button>
+      <button class="btn icon-btn" id="themeBtn" aria-label="Toggle theme"><span class="theme-ico">☾</span></button>
+    </div>
+
+    <div class="wrap">
+      <!-- HERO -->
+      <header class="hero">
+        <span class="hero-eyebrow">Product Requirements Document</span>
+        <h1><span class="accent">FaceFind</span></h1>
+        <p class="sub">Event Photo Distribution SaaS · Face Recognition</p>
+        <p class="tagline">A SaaS platform for event organizers to distribute photos to attendees efficiently. Guests find their own photos instantly by uploading a selfie — no signup, no login required, powered by face recognition.</p>
+        <div class="meta-chips">
+          <div class="mchip"><span class="k">Status</span><span class="v">Draft v1.3 — Slip + Credit Payment Layer</span></div>
+          <div class="mchip"><span class="k">Phase</span><span class="v">Phase 1 — MVP (Internal Pilot)</span></div>
+          <div class="mchip"><span class="k">Last Updated</span><span class="v">May 2026</span></div>
+        </div>
+      </header>
+
+      <!-- ============ 1. OVERVIEW ============ -->
+      <section class="section" id="overview">
+        <button class="sec-head"><span class="sec-no">1</span><h2>Product Overview</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <p class="lede">FaceFind คือ SaaS platform สำหรับ Event Organizer ที่ต้องการแจกรูปถ่ายให้แก่ผู้เข้าร่วมงานอย่างมีประสิทธิภาพ ระบบใช้เทคโนโลยี Face Recognition ให้แขกค้นหารูปของตัวเองได้ทันทีโดยเพียงแค่อัพโหลดเซลฟี่ ไม่ต้องสมัครสมาชิกหรือ login</p>
+
+          <div class="facts">
+            <div class="card"><div class="ck">Product Name</div><div class="cv">FaceFind</div></div>
+            <div class="card"><div class="ck">Business Model</div><div class="cv">SaaS Multi-tenant</div><div class="cd">รองรับหลาย Organizer หลาย Event</div></div>
+            <div class="card"><div class="ck">Target Users</div><div class="cv">Organizer · ช่างภาพ · Guest</div><div class="cd">Event Organizer, ช่างภาพงาน event, ผู้เข้าร่วมงาน</div></div>
+            <div class="card"><div class="ck">MVP Goal</div><div class="cv">Internal Pilot</div><div class="cd">ทดสอบภายในองค์กรก่อน expand เป็น SaaS เชิงพาณิชย์</div></div>
+          </div>
+
+          <h3><span class="h3-bar"></span>1.1 ปัญหาที่แก้ไข</h3>
+          <ul class="clean">
+            <li>หลังงาน event ช่างภาพมีรูปหลายร้อยใบ แต่การแจกรูปให้ถูกคนทำได้ยาก</li>
+            <li>แขกต้องไล่ดูรูปทีละใบจากจำนวนหลักร้อยถึงพัน ใช้เวลานานและไม่สะดวก</li>
+            <li>Organizer ไม่มีเครื่องมือจัดการการแจกรูปแบบ scalable</li>
+          </ul>
+
+          <h3><span class="h3-bar"></span>1.2 Solution</h3>
+          <ul class="clean">
+            <li>แขกอัพโหลดเซลฟี่ → ระบบค้นหารูปที่มีใบหน้าตรงกันจากทุกรูปในงาน → แสดง Gallery ทันที</li>
+            <li>Organizer จัดการทุกอย่างผ่าน Dashboard เดียว ตั้งแต่ sync รูปจนถึงแชร์ link</li>
+            <li>รองรับช่างภาพหลายคนต่อ event ผ่าน folder แยกกัน</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============ 2. USERS & ROLES ============ -->
+      <section class="section" id="users">
+        <button class="sec-head"><span class="sec-no">2</span><h2>Users &amp; Roles</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <div class="grid g2">
+            <div class="card role">
+              <div class="rh"><span class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/></svg></span><span class="rt">Super Admin</span></div>
+              <div class="rd">ทีมพัฒนา / เจ้าของ platform จัดการ tenant และ plan</div>
+              <span class="login-chip">Admin panel แยกต่างหาก</span>
+            </div>
+            <div class="card role">
+              <div class="rh"><span class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></span><span class="rt">Organizer</span></div>
+              <div class="rd">เจ้าของงาน event สร้าง/จัดการ event, sync รูป, generate link</div>
+              <span class="login-chip">Email + Password (Supabase Auth)</span>
+            </div>
+            <div class="card role">
+              <div class="rh"><span class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><span class="rt">Photographer</span></div>
+              <div class="rd">ช่างภาพประจำงาน อัพรูปเข้า Drive/Dropbox folder ตัวเอง</div>
+              <span class="login-chip no">ไม่ต้อง login เข้าระบบ</span>
+            </div>
+            <div class="card role">
+              <div class="rh"><span class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="rt">Guest</span></div>
+              <div class="rd">ผู้เข้าร่วมงาน ค้นหาและ download รูปตัวเอง</div>
+              <span class="login-chip no">ไม่ต้อง login — ใช้ event link</span>
+            </div>
+          </div>
+
+          <h3><span class="h3-bar"></span>2.1 Organizer Journey</h3>
+          <ol class="steps">
+            <li><span class="st">สมัคร account และสร้าง Organization</span></li>
+            <li><span class="st">เชื่อมต่อ Google Drive หรือ Dropbox</span></li>
+            <li><span class="st">สร้าง Event และเพิ่ม folder ของ Google Drive ที่ช่างภาพจะอัพรูป (ใส่ได้หลาย folder, ติด label ให้แต่ละทีม)</span></li>
+            <li><span class="st">Share editor access ของ folder ให้ช่างภาพแต่ละทีม → พวกเขาอัพรูปเข้า folder ของ Organizer โดยตรง</span></li>
+            <li><span class="st">รอให้ช่างภาพอัพรูปครบ แล้วกด Sync &amp; Index</span></li>
+            <li><span class="st">ตั้งค่า Blacklist (ถ้ามี) สำหรับบุคคลที่ไม่ต้องการให้ถูกค้นหา</span></li>
+            <li><span class="st">Generate Guest Link และแชร์ให้ผู้เข้าร่วมงาน</span></li>
+          </ol>
+
+          <h3><span class="h3-bar"></span>2.2 Guest Journey</h3>
+          <ol class="steps">
+            <li><span class="st">เปิด Guest Link ที่ได้รับ</span></li>
+            <li><span class="st">อัพโหลดรูปเซลฟี่ที่ชัดเจน (เห็นหน้าเต็ม)</span></li>
+            <li><span class="st">รอระบบประมวลผล (~2-5 วินาที)</span></li>
+            <li><span class="st">ดู Gallery รูปทั้งหมดที่ตัวเองอยู่</span></li>
+            <li><span class="st">Download รูปแบบ Web-optimized หรือ Full Resolution</span></li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ============ 3. TECH STACK ============ -->
+      <section class="section" id="tech">
+        <button class="sec-head"><span class="sec-no">3</span><h2>Tech Stack &amp; Architecture</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <div class="grid g2">
+            <div class="card tech"><div class="layer">Frontend + API</div><div class="name"><span class="nd"></span>Next.js <span class="badge muted">Vercel</span></div><div class="why">Full-stack, SSR, auto-scale, familiar stack</div></div>
+            <div class="card tech"><div class="layer">Database + Auth</div><div class="name"><span class="nd"></span>Supabase <span class="badge muted">PostgreSQL</span></div><div class="why">Row-level security, Auth built-in, real-time</div></div>
+            <div class="card tech"><div class="layer">Face Recognition</div><div class="name"><span class="nd"></span>AWS Rekognition</div><div class="why">Accuracy สูง, API-based ไม่ต้อง manage model, free tier 5K ภาพ/เดือน</div></div>
+            <div class="card tech"><div class="layer">File Serving (CDN)</div><div class="name"><span class="nd"></span>Cloudflare R2</div><div class="why">Egress ฟรี, fast CDN, ถูกกว่า S3 มาก</div></div>
+            <div class="card tech"><div class="layer">File Source</div><div class="name"><span class="nd"></span>Google Drive / Dropbox</div><div class="why">ช่างภาพใช้ workflow เดิมได้ ไม่ต้องเปลี่ยนนิสัย</div></div>
+          </div>
+
+          <h3><span class="h3-bar"></span>3.1 Architecture Diagram</h3>
+          <p>Flow หลักของระบบแบ่งเป็น 2 ส่วน:</p>
+          <div class="grid g2">
+            <div class="flow">
+              <div class="ft"><span class="badge info">Organizer</span> Indexing Flow</div>
+              <ol class="steps">
+                <li><span class="st">ช่างภาพอัพรูปเข้า Google Drive / Dropbox folder ที่กำหนด</span></li>
+                <li><span class="st">Organizer กด <b>"Sync &amp; Index"</b> ใน Dashboard</span></li>
+                <li><span class="st">ระบบดึงไฟล์ → Copy ไปเก็บที่ Cloudflare R2 (ทั้ง Web-optimized และ Full Resolution)</span></li>
+                <li><span class="st">ส่งรูปไปยัง AWS Rekognition เพื่อ index ใบหน้า → บันทึก Face ID ลง Supabase</span></li>
+                <li><span class="st">Organizer Generate Guest Link → แชร์ให้แขก</span></li>
+              </ol>
+            </div>
+            <div class="flow">
+              <div class="ft"><span class="badge ok">Guest</span> Search Flow</div>
+              <ol class="steps">
+                <li><span class="st">Guest เปิด Link → อัพโหลดเซลฟี่</span></li>
+                <li><span class="st">ระบบส่ง selfie ไปยัง AWS Rekognition <span class="mono">SearchFacesByImage</span></span></li>
+                <li><span class="st">กรอง Face ID ที่อยู่ใน Blacklist ออก</span></li>
+                <li><span class="st">Query Supabase เพื่อดึง Photo metadata ที่ match</span></li>
+                <li><span class="st">แสดง Gallery จาก Cloudflare R2 CDN URL</span></li>
+              </ol>
+            </div>
+          </div>
+
+          <h3><span class="h3-bar"></span>3.2 Rekognition Strategy</h3>
+          <ul class="clean">
+            <li>สร้าง <b>1 Face Collection ต่อ 1 Event</b> เพื่อแยก scope ชัดเจน</li>
+            <li>ลบ Collection หลังงานสิ้นสุดเพื่อลด cost</li>
+            <li>Blacklist ทำงานที่ DB layer (filter ก่อน return) ไม่กระทบ Rekognition</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============ 4. DATABASE SCHEMA ============ -->
+      <section class="section" id="schema">
+        <button class="sec-head"><span class="sec-no">4</span><h2>Database Schema</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+
+          <div class="schema-wrap">
+            <div class="schema-title"><span class="tbl-ico">▤</span> tenants <span class="tbl-tag">4.1 · table</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">id</td><td class="type">UUID PK</td><td class="desc">Tenant identifier</td></tr>
+                <tr><td class="col">name</td><td class="type">TEXT</td><td class="desc">Organization name</td></tr>
+                <tr><td class="col">plan</td><td class="type">TEXT</td><td class="desc">free | starter | pro</td></tr>
+                <tr><td class="col">storage_provider</td><td class="type">TEXT</td><td class="desc">gdrive | dropbox</td></tr>
+                <tr><td class="col">created_at</td><td class="type">TIMESTAMPTZ</td><td class="desc">Registration date</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+
+          <div class="schema-wrap">
+            <div class="schema-title"><span class="tbl-ico">▤</span> events <span class="tbl-tag">4.2 · table</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">id</td><td class="type">UUID PK</td><td class="desc">Event identifier</td></tr>
+                <tr><td class="col">tenant_id</td><td class="type">UUID FK</td><td class="desc">References tenants.id</td></tr>
+                <tr><td class="col">name</td><td class="type">TEXT</td><td class="desc">ชื่องาน event</td></tr>
+                <tr><td class="col">event_date</td><td class="type">DATE</td><td class="desc">วันที่จัดงาน</td></tr>
+                <tr><td class="col">storage_folder_id</td><td class="type">TEXT</td><td class="desc">Drive/Dropbox root folder ID</td></tr>
+                <tr><td class="col">rekognition_collection_id</td><td class="type">TEXT</td><td class="desc">AWS Collection ID สำหรับ event นี้</td></tr>
+                <tr><td class="col">is_indexed</td><td class="type">BOOLEAN</td><td class="desc">ผ่าน Sync &amp; Index แล้วหรือยัง</td></tr>
+                <tr><td class="col">share_link_expires_days</td><td class="type">INT</td><td class="desc">อายุ Guest Link (default: 7)</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+
+          <div class="schema-wrap">
+            <div class="schema-title"><span class="tbl-ico">▤</span> event_storage_folders <span class="tbl-tag">4.3 · table</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">id</td><td class="type">UUID PK</td><td class="desc">Folder mapping identifier</td></tr>
+                <tr><td class="col">event_id</td><td class="type">UUID FK</td><td class="desc">References events.id</td></tr>
+                <tr><td class="col">label</td><td class="type">TEXT</td><td class="desc">ป้ายระบุ (เช่น ทีมหลัก, ทีม Drone) — optional</td></tr>
+                <tr><td class="col">folder_id</td><td class="type">TEXT</td><td class="desc">Google Drive folder ID (ดึงจาก URL อัตโนมัติ)</td></tr>
+                <tr><td class="col">created_at</td><td class="type">TIMESTAMPTZ</td><td class="desc">วันที่เพิ่ม</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+
+          <div class="schema-wrap">
+            <div class="schema-title"><span class="tbl-ico">▤</span> photos <span class="tbl-tag">4.4 · table</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">id</td><td class="type">UUID PK</td><td class="desc">Photo identifier</td></tr>
+                <tr><td class="col">event_id</td><td class="type">UUID FK</td><td class="desc">References events.id</td></tr>
+                <tr><td class="col">storage_file_id</td><td class="type">TEXT</td><td class="desc">Original file ID ใน Drive/Dropbox</td></tr>
+                <tr><td class="col">r2_web_url</td><td class="type">TEXT</td><td class="desc">Cloudflare R2 URL (Web-optimized ~500KB-1MB)</td></tr>
+                <tr><td class="col">r2_full_url</td><td class="type">TEXT</td><td class="desc">Cloudflare R2 URL (Full Resolution 5-20MB)</td></tr>
+                <tr><td class="col">rekognition_face_ids</td><td class="type">TEXT[]</td><td class="desc">Array ของ Face ID ที่ Rekognition ตรวจพบ</td></tr>
+                <tr><td class="col">indexed_at</td><td class="type">TIMESTAMPTZ</td><td class="desc">เวลาที่ index เสร็จ</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+
+          <div class="schema-wrap">
+            <div class="schema-title"><span class="tbl-ico">▤</span> face_blacklist <span class="tbl-tag">4.5 · table</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">id</td><td class="type">UUID PK</td><td class="desc">Blacklist entry identifier</td></tr>
+                <tr><td class="col">event_id</td><td class="type">UUID FK</td><td class="desc">References events.id</td></tr>
+                <tr><td class="col">face_id</td><td class="type">TEXT</td><td class="desc">AWS Rekognition Face ID ที่ต้องการบล็อก</td></tr>
+                <tr><td class="col">note</td><td class="type">TEXT</td><td class="desc">หมายเหตุ (optional) เช่น "VIP Guest"</td></tr>
+                <tr><td class="col">created_at</td><td class="type">TIMESTAMPTZ</td><td class="desc">วันที่เพิ่ม blacklist</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+
+          <div class="schema-wrap">
+            <div class="schema-title"><span class="tbl-ico">▤</span> guest_sessions <span class="tbl-tag">4.6 · table</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">id</td><td class="type">UUID PK</td><td class="desc">Session token (ใช้เป็น URL token)</td></tr>
+                <tr><td class="col">event_id</td><td class="type">UUID FK</td><td class="desc">References events.id</td></tr>
+                <tr><td class="col">selfie_r2_key</td><td class="type">TEXT</td><td class="desc">R2 key ของ selfie ที่ guest อัพโหลด</td></tr>
+                <tr><td class="col">matched_photo_ids</td><td class="type">UUID[]</td><td class="desc">Array ของ photo IDs ที่ match</td></tr>
+                <tr><td class="col">expires_at</td><td class="type">TIMESTAMPTZ</td><td class="desc">วันหมดอายุ (created_at + 7 วัน)</td></tr>
+                <tr><td class="col">created_at</td><td class="type">TIMESTAMPTZ</td><td class="desc">เวลาที่สร้าง session</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============ 5. FEATURES ============ -->
+      <section class="section" id="features">
+        <button class="sec-head"><span class="sec-no">5</span><h2>Feature Requirements</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <div class="subhead">5.1 — Organizer Dashboard</div>
+
+          <div class="feature">
+            <div class="fh"><span class="fid">F-01</span><span class="ftitle">Authentication</span><span class="badge p0">P0</span></div>
+            <div class="fb"><ul class="clean">
+              <li>สมัคร / Login ด้วย Email + Password ผ่าน Supabase Auth</li>
+              <li>รองรับ Password reset</li>
+              <li>Session คงอยู่ข้ามการปิด browser</li>
+            </ul></div>
+          </div>
+
+          <div class="feature">
+            <div class="fh"><span class="fid">F-02</span><span class="ftitle">Event Management + Multi-Folder</span><span class="badge p0">P0</span></div>
+            <div class="fb"><ul class="clean">
+              <li>สร้าง Event: ชื่องาน, วันที่ (Storage provider: Google Drive เท่านั้นใน Phase 1)</li>
+              <li><b>ผูก Google Drive folders ได้หลายอัน</b> (label + URL/ID) ผ่านตาราง <span class="mono">event_storage_folders</span> — รองรับงานที่มีหลายทีม (เช่น ทีมหลัก, ทีม Drone, ทีม Video)</li>
+              <li>Workflow: Organizer สร้าง folder กลางใน Drive ของตัวเอง → share editor access ให้ช่างภาพแต่ละทีม → พวกเขาอัพรูปเข้ามาตรง (ไม่ต้องมี Drive ของตัวเอง)</li>
+              <li>ดูรายการ Event ทั้งหมด พร้อมสถานะ (not synced / synced / link active)</li>
+              <li>ลบ Event (soft delete) พร้อม cleanup Rekognition Collection</li>
+              <li><span class="badge muted">Note</span> ไม่มี <span class="mono">photographers</span> table แล้ว — attribution ของช่างภาพมาจาก EXIF metadata หรือกรอกเองตอน commerce report (Phase 2)</li>
+            </ul></div>
+          </div>
+
+          <div class="feature">
+            <div class="fh"><span class="fid">F-04</span><span class="ftitle">Sync &amp; Index</span><span class="badge p0">P0</span></div>
+            <div class="fb"><ul class="clean">
+              <li>ปุ่ม "Sync &amp; Index" ใน Event detail page</li>
+              <li><b>OAuth Flow:</b> Organizer เชื่อมต่อ Google account ครั้งเดียว — ทุก folder ใน <span class="mono">event_storage_folders</span> ต้องอยู่ใน Drive ของ Organizer หรือ shared editor</li>
+              <li>ระบบ scan ทุก folder ของ event (recursive ถ้าจำเป็น) → ดึงรูปใหม่ที่ยังไม่ได้ index</li>
+              <li>ใช้ <b>Batch Processing + Exponential Backoff</b> รองรับ Google Drive API Rate Limit (HTTP 429) — ไม่ block UI ระหว่าง sync</li>
+              <li>แสดง progress bar ระหว่าง sync (จำนวนรูปที่ประมวลผลแล้ว / ทั้งหมด + folder ปัจจุบัน)</li>
+              <li>Copy รูปไป R2 ทั้ง web-optimized (JPEG 85%, max 1920px) และ full resolution</li>
+              <li>ส่งไปยัง Rekognition เพื่อ detect และ index faces</li>
+              <li>บันทึก <span class="mono">rekognition_face_ids[]</span> ลง photos table</li>
+              <li>รองรับการ re-sync เมื่อช่างภาพเพิ่มรูปเพิ่มเติม</li>
+            </ul></div>
+          </div>
+
+          <div class="feature">
+            <div class="fh"><span class="fid">F-05</span><span class="ftitle">Blacklist Manager</span><span class="badge p0">P0</span></div>
+            <div class="fb"><ul class="clean">
+              <li>หลัง sync เสร็จ Organizer เลือกดูรูปทีละใบใน dashboard</li>
+              <li>ระบบแสดง bounding box รอบใบหน้าแต่ละคนในรูป</li>
+              <li>คลิกที่ใบหน้าเพื่อ "บล็อก" → เพิ่ม Face ID ลง face_blacklist</li>
+              <li>ดูและจัดการรายการ blacklist ทั้งหมดของ event</li>
+              <li><b>ปลดบล็อก (Unblacklist):</b> ลบ Face ID ออกจาก DB เท่านั้น — ไม่ต้อง re-index ใน Rekognition เพราะ blacklist ทำงานที่ query layer</li>
+              <li>ผลของการปลดบล็อกมีผลทันทีในการค้นหาครั้งถัดไปของ Guest (real-time)</li>
+            </ul></div>
+          </div>
+
+          <div class="feature">
+            <div class="fh"><span class="fid">F-06</span><span class="ftitle">Guest Link</span><span class="badge p0">P0</span></div>
+            <div class="fb"><ul class="clean">
+              <li>Generate unique link สำหรับ event (format: <span class="mono">facefind.app/e/{token}</span>)</li>
+              <li>กำหนดอายุ link ได้ (default 7 วัน)</li>
+              <li>แสดงสถานะ: Active / Expired</li>
+              <li>Revoke link และ generate ใหม่ได้</li>
+              <li>Copy link ไปยัง clipboard ได้ทันที</li>
+              <li>Link หมดอายุ = สิทธิ์ค้นหาหมด (token ถูก revoke ที่ API) แต่รูปที่โหลดขึ้น Gallery แล้วยังดูและ download ได้ต่อจนกว่าจะปิด browser เพราะ R2 URL ไม่มีวันหมดอายุ</li>
+            </ul></div>
+          </div>
+
+          <div class="subhead">5.2 — Guest Experience</div>
+
+          <div class="feature">
+            <div class="fh"><span class="fid">F-07</span><span class="ftitle">Landing Page</span><span class="badge p0">P0</span></div>
+            <div class="fb"><ul class="clean">
+              <li>แสดงชื่อ event และ branding เบื้องต้น</li>
+              <li>ปุ่ม "ค้นหารูปของคุณ" พร้อมคำแนะนำการอัพโหลด selfie</li>
+              <li>แสดงข้อความหาก link หมดอายุ</li>
+            </ul></div>
+          </div>
+
+          <div class="feature">
+            <div class="fh"><span class="fid">F-08</span><span class="ftitle">Face Search</span><span class="badge p0">P0</span></div>
+            <div class="fb"><ul class="clean">
+              <li>อัพโหลดรูปจาก camera roll หรือถ่ายสดได้ (mobile)</li>
+              <li>Validate: รูปต้องมีใบหน้าชัดเจนอย่างน้อย 1 ใบ (รองรับเซลฟี่ที่มีหลายคน)</li>
+              <li>กรณีมีหลายใบหน้าในรูป: ใช้ใบหน้าที่มี bounding box ใหญ่ที่สุด (<b>Largest Face</b>) เป็น query</li>
+              <li><b>Similarity Threshold:</b> ตั้งค่าที่ 80% เป็นค่ามาตรฐาน MVP (รองรับแสงงาน event, การแต่งหน้า, มุมกล้องต่างๆ) — ปรับได้หลัง pilot</li>
+              <li>ส่งไปยัง Rekognition SearchFacesByImage</li>
+              <li>กรอง Face ID ที่อยู่ใน blacklist ออกก่อน return</li>
+              <li>แสดง loading state ระหว่างประมวลผล (~2-5 วินาที)</li>
+              <li>แสดงข้อความเหมาะสมเมื่อไม่พบรูป</li>
+            </ul></div>
+          </div>
+
+          <div class="feature">
+            <div class="fh"><span class="fid">F-09</span><span class="ftitle">Photo Gallery</span><span class="badge p0">P0</span></div>
+            <div class="fb"><ul class="clean">
+              <li>แสดงรูป web-optimized แบบ grid layout (responsive)</li>
+              <li>คลิกรูปเพื่อดู full-size preview</li>
+              <li>ปุ่ม Download บนแต่ละรูป: Web Version หรือ Full Resolution</li>
+              <li>Download ทั้งหมดเป็น ZIP (web-optimized)</li>
+              <li>Session ผูกกับ browser ปัจจุบัน — ไม่รองรับ shareable gallery link ใน Phase 1 (Guest ที่เปลี่ยนเครื่องต้องอัพ selfie ใหม่)</li>
+              <li>Session คงอยู่ใน browser จนกว่า link event จะหมดอายุ</li>
+            </ul></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 6. IMAGE STRATEGY ============ -->
+      <section class="section" id="image">
+        <button class="sec-head"><span class="sec-no">6</span><h2>Image Strategy</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <div class="grid g2">
+            <div class="card">
+              <div class="ck">Web-optimized</div>
+              <div class="cv">JPEG 85%, max 1920px long edge</div>
+              <div class="cd">ใช้แสดงใน Gallery + Download ปกติ</div>
+              <div style="margin-top:10px"><span class="badge info">~500KB – 1MB</span></div>
+            </div>
+            <div class="card">
+              <div class="ck">Full Resolution</div>
+              <div class="cv">ต้นฉบับไม่แก้ไข</div>
+              <div class="cd">ใช้เมื่อกด "Download ต้นฉบับ"</div>
+              <div style="margin-top:10px"><span class="badge warn">5 – 20MB</span> <span class="cd" style="display:inline">ขึ้นกับกล้อง</span></div>
+            </div>
+          </div>
+          <div class="note"><span class="ni">⚡</span><div class="nt">ทั้งสองเวอร์ชันเก็บใน <b>Cloudflare R2</b> และ serve ผ่าน CDN URL โดยตรง <b>ไม่ผ่าน Next.js server</b> เพื่อประสิทธิภาพสูงสุด</div></div>
+        </div>
+      </section>
+
+      <!-- ============ 7. MVP SCOPE ============ -->
+      <section class="section" id="mvp">
+        <button class="sec-head"><span class="sec-no">7</span><h2>MVP Scope <span style="font-weight:600;font-size:13px;color:var(--text-muted)">(Phase 1)</span></h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <h3><span class="h3-bar"></span>7.1 รวมใน Phase 1</h3>
+          <div class="table-scroll"><table class="tbl">
+            <thead><tr><th>Feature</th><th>Priority</th><th>หมายเหตุ</th></tr></thead>
+            <tbody>
+              <tr><td>Organizer Auth (Email + Password)</td><td><span class="badge p0">P0</span></td><td>Must have</td></tr>
+              <tr><td>Event Management (CRUD)</td><td><span class="badge p0">P0</span></td><td>Must have</td></tr>
+              <tr><td>Google Drive Integration</td><td><span class="badge p0">P0</span></td><td>Provider เดียวใน Phase 1</td></tr>
+              <tr><td>Photographer Management</td><td><span class="badge p0">P0</span></td><td>Must have</td></tr>
+              <tr><td>Manual Sync &amp; Index (Batch + Retry)</td><td><span class="badge p0">P0</span></td><td>Must have</td></tr>
+              <tr><td>Blacklist Manager</td><td><span class="badge p0">P0</span></td><td>Must have</td></tr>
+              <tr><td>Guest Link Generation</td><td><span class="badge p0">P0</span></td><td>Must have</td></tr>
+              <tr><td>Face Search — Largest Face + 80% Threshold</td><td><span class="badge p0">P0</span></td><td>Must have</td></tr>
+              <tr><td>Photo Gallery + Download</td><td><span class="badge p0">P0</span></td><td>Must have</td></tr>
+              <tr><td>Full Resolution Download</td><td><span class="badge p0">P0</span></td><td>รวมใน Phase 1 — core value</td></tr>
+              <tr><td>Slip Upload + Credit Ledger + Event Activation</td><td><span class="badge p0">P0</span></td><td>แทน Omise ใน Phase 1 — manual verify โดย Super Admin (ดู §12)</td></tr>
+              <tr><td>Super Admin Panel — Slip Verification</td><td><span class="badge p0">P0</span></td><td>Admin panel แยกตามที่ §2 ระบุ</td></tr>
+            </tbody>
+          </table></div>
+
+          <h3><span class="h3-bar"></span>7.2 ไม่รวมใน Phase 1 <span class="badge muted" style="margin-left:6px">Backlog</span></h3>
+          <div class="backlog">
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">Dropbox Integration</div><div class="br">ตัดออก Phase 2 — โฟกัส Google Drive ให้เสถียรก่อน</div></div></div>
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">Webhook Auto-sync (Drive)</div><div class="br">Complex setup, manual trigger เพียงพอสำหรับ MVP</div></div></div>
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">Shareable Gallery Link (Guest)</div><div class="br">Session ผูกกับ browser ปัจจุบันใน Phase 1</div></div></div>
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">Analytics Dashboard</div><div class="br">ไม่จำเป็นสำหรับ internal pilot</div></div></div>
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">Omise Auto-topup / Subscription <span class="badge ph2">Phase 2</span></div><div class="br">Manual slip + credit เพียงพอสำหรับ pilot scale — auto-topup รอ volume คุ้มค่า dev (PaymentService abstraction รอ Phase 2)</div></div></div>
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">Email notification ให้ Guest</div><div class="br">Guest ได้ link โดยตรงจาก Organizer</div></div></div>
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">Watermark on photos</div><div class="br">Nice to have ใน Phase 2</div></div></div>
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">Multi-language UI</div><div class="br">เริ่มด้วยภาษาไทยก่อน</div></div></div>
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">Guest Analytics (ใครดูรูปอะไร)</div><div class="br">Privacy concern ต้องวางแผน PDPA ก่อน</div></div></div>
+            <div class="bl"><span class="bx">↩</span><div><div class="bn">MP4 Highlight Reel (Guest Download) <span class="badge ph2">Phase 2</span></div><div class="br">Paid-tier feature — ต้องมี video rendering pipeline · เตรียม schema / storage ไว้แล้ว (ดู 11.4)</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 8. NFR ============ -->
+      <section class="section" id="nfr">
+        <button class="sec-head"><span class="sec-no">8</span><h2>Non-Functional Requirements</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <div class="grid g2">
+            <div class="card">
+              <div class="cv" style="margin-bottom:6px">⚡ 8.1 Performance</div>
+              <ul class="clean">
+                <li>Face search (selfie → gallery) <b>ไม่เกิน 5 วินาที</b> สำหรับ event 1,000 รูป</li>
+                <li>Gallery load web-optimized ไม่เกิน 2 วินาที (Cloudflare CDN)</li>
+                <li>Sync &amp; Index รองรับ 1,000 รูปต่อ event โดยไม่ timeout — background job + batch</li>
+                <li>Google Drive API Rate Limit: exponential backoff, retry สูงสุด 3 ครั้งต่อ request</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="cv" style="margin-bottom:6px">📈 8.2 Scale</div>
+              <ul class="clean">
+                <li>Concurrent guest: เป้าหมาย <b>50 concurrent users</b> ต่อ event</li>
+                <li>รองรับหลาย event ของหลาย tenant พร้อมกัน</li>
+                <li>Storage R2: ไม่มี hard limit ขยายได้ตามการใช้งาน</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="cv" style="margin-bottom:6px">🔒 8.3 Security &amp; Privacy</div>
+              <ul class="clean">
+                <li>Organizer data แยก tenant ด้วย <b>Row Level Security</b> ใน Supabase</li>
+                <li>Guest session ใช้ UUID token ที่ unguessable</li>
+                <li>Selfie เก็บชั่วคราว ลบหลัง session expire</li>
+                <li>AWS Rekognition: ใบหน้าอยู่ภายใต้ AWS Data Processing Agreement</li>
+                <li>ต้องมี consent notice บนหน้า Guest สำหรับ PDPA compliance</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="cv" style="margin-bottom:6px">🟢 8.4 Availability</div>
+              <ul class="clean">
+                <li>Target uptime <b>99.5%</b> (Vercel + Supabase + Cloudflare SLA)</li>
+                <li>Graceful error handling เมื่อ Rekognition หรือ Drive/Dropbox ไม่ตอบสนอง</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 11. COMMERCE READINESS ============ -->
+      <section class="section" id="commerce">
+        <button class="sec-head"><span class="sec-no">11</span><h2>Commerce Readiness <span class="badge ph2" style="margin-left:4px">Phase 2 Prep</span></h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <p class="lede">ระบบ Phase 1 ถูกออกแบบให้รองรับ commerce layer ใน Phase 2 โดยไม่ต้อง migrate schema ใหญ่ มีการเตรียม nullable columns และ folder structure ไว้ล่วงหน้าแล้ว</p>
+
+          <h3><span class="h3-bar"></span>11.1 Schema ที่เตรียมเผื่อไว้</h3>
+          <div class="schema-wrap">
+            <div class="schema-title new"><span class="tbl-ico">＋</span> photos <span class="tbl-tag">added columns</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Default</th><th>ใช้ใน</th></tr></thead>
+              <tbody>
+                <tr><td class="col">price</td><td class="type">NUMERIC</td><td class="def">NULL</td><td class="desc">Phase 2 — ราคาต่อรูป (NULL = ฟรี)</td></tr>
+                <tr><td class="col">currency</td><td class="type">TEXT</td><td class="def">NULL</td><td class="desc">Phase 2 — THB / USD</td></tr>
+                <tr><td class="col">watermark_url</td><td class="type">TEXT</td><td class="def">NULL</td><td class="desc">Phase 2 — R2 URL ของ watermarked version</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="schema-wrap">
+            <div class="schema-title new"><span class="tbl-ico">＋</span> events <span class="tbl-tag">added columns</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Default</th><th>ใช้ใน</th></tr></thead>
+              <tbody>
+                <tr><td class="col">commerce_enabled</td><td class="type">BOOLEAN</td><td class="def">FALSE</td><td class="desc">Phase 2 — เปิด/ปิดโหมดขายรูปต่อ event</td></tr>
+                <tr><td class="col">payout_info_id</td><td class="type">UUID</td><td class="def">NULL</td><td class="desc">Phase 2 — FK → payout_accounts table</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="schema-wrap">
+            <div class="schema-title new"><span class="tbl-ico">＋</span> guest_sessions <span class="tbl-tag">added column</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Default</th><th>ใช้ใน</th></tr></thead>
+              <tbody>
+                <tr><td class="col">purchased_photo_ids</td><td class="type">UUID[]</td><td class="def">'{}'</td><td class="desc">Phase 2 — รูปที่ Guest ซื้อแล้ว</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+
+          <h3><span class="h3-bar"></span>11.2 R2 Folder Structure</h3>
+          <p>กำหนด path เผื่อไว้ตั้งแต่ Phase 1 แม้จะยังไม่ generate watermark:</p>
+          <div class="paths">
+            <div class="pathrow"><span class="pp">/events/{id}/web/{photo_id}.jpg</span><span class="badge ph1">Phase 1</span><span class="pd">Web-optimized สำหรับ Gallery</span></div>
+            <div class="pathrow"><span class="pp">/events/{id}/full/{photo_id}.jpg</span><span class="badge ph1">Phase 1</span><span class="pd">Full Resolution สำหรับ Download</span></div>
+            <div class="pathrow"><span class="pp">/events/{id}/watermark/{photo_id}.jpg</span><span class="badge ph2">Phase 2</span><span class="pd">Watermarked preview — ยังไม่ generate ใน Phase 1</span></div>
+          </div>
+
+          <h3><span class="h3-bar"></span>11.3 Revenue Model Overview</h3>
+          <div class="grid g3">
+            <div class="card"><div class="ck">ขา 1 · Credit (Pay-per-event)</div><div class="cd" style="margin-top:6px">Phase 1 — Organizer top-up credit ผ่าน slip + ใช้ credit activate event (1 event = X credits)</div><div style="margin-top:10px"><span class="badge ph1">Phase 1</span></div></div>
+            <div class="card"><div class="ck">ขา 1' · Subscription / Auto-topup</div><div class="cd" style="margin-top:6px">Phase 2 — เพิ่ม Omise auto-topup (credit หมด → charge อัตโนมัติ) หรือ recurring subscription</div><div style="margin-top:10px"><span class="badge ph2">Phase 2</span></div></div>
+            <div class="card"><div class="ck">ขา 2 · Commerce %</div><div class="cd" style="margin-top:6px">ถ้า Organizer เปิดขายรูป FaceFind หัก % จากยอดขาย</div><div style="margin-top:10px"><span class="badge ph2">Phase 2</span></div></div>
+          </div>
+
+          <h3><span class="h3-bar"></span>11.4 MP4 Highlight Reel <span class="badge ph2">Phase 2</span></h3>
+          <p class="lede">สร้าง <b>MP4 Highlight Reel</b> อัตโนมัติจากรูปที่ Guest match — รวมเป็นวิดีโอไฮไลต์สั้นๆ ให้ Guest ดาวน์โหลด เป็น <b>paid-tier feature</b>: แต่ละ plan มี <b>โควต้า reel ต่อรอบบิล</b> รวมอยู่แล้ว เกินโควต้าค่อยคิดเงินเพิ่ม (add-on package หรือ per-clip) เตรียม schema + storage เผื่อไว้ตั้งแต่ Phase 1 โดยไม่ต้อง migrate ใหญ่</p>
+
+          <div class="schema-wrap">
+            <div class="schema-title new"><span class="tbl-ico">＋</span> tenants <span class="tbl-tag">added columns · quota</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Default</th><th>ใช้ใน</th></tr></thead>
+              <tbody>
+                <tr><td class="col">reel_quota</td><td class="type">INT</td><td class="def">NULL</td><td class="desc">Phase 2 — จำนวน reel ที่รวมในแผนต่อ billing cycle (NULL = ยังไม่ define · free = 0)</td></tr>
+                <tr><td class="col">reel_quota_used</td><td class="type">INT</td><td class="def">0</td><td class="desc">Phase 2 — ใช้ไปแล้วในรอบบิลปัจจุบัน (reset ตาม billing_cycle_anchor)</td></tr>
+                <tr><td class="col">reel_addon_balance</td><td class="type">INT</td><td class="def">0</td><td class="desc">Phase 2 — โควต้าเสริมที่ซื้อเพิ่ม (add-on package)</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="schema-wrap">
+            <div class="schema-title new"><span class="tbl-ico">＋</span> events <span class="tbl-tag">added columns</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Default</th><th>ใช้ใน</th></tr></thead>
+              <tbody>
+                <tr><td class="col">highlight_reel_enabled</td><td class="type">BOOLEAN</td><td class="def">FALSE</td><td class="desc">Phase 2 — เปิด/ปิด Highlight Reel ต่อ event (ต้องอยู่ใน paid tier)</td></tr>
+                <tr><td class="col">highlight_reel_price</td><td class="type">NUMERIC</td><td class="def">NULL</td><td class="desc">Phase 2 — ราคาต่อ reel เมื่อเกินโควต้า (per-clip overage · NULL = ใช้ราคา default)</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="schema-wrap">
+            <div class="schema-title new"><span class="tbl-ico">＋</span> guest_sessions <span class="tbl-tag">added columns</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Default</th><th>ใช้ใน</th></tr></thead>
+              <tbody>
+                <tr><td class="col">highlight_reel_status</td><td class="type">TEXT</td><td class="def">NULL</td><td class="desc">Phase 2 — queued | processing | ready | failed</td></tr>
+                <tr><td class="col">highlight_reel_url</td><td class="type">TEXT</td><td class="def">NULL</td><td class="desc">Phase 2 — Cloudflare R2 URL ของไฟล์ MP4</td></tr>
+                <tr><td class="col">highlight_reel_source</td><td class="type">TEXT</td><td class="def">NULL</td><td class="desc">Phase 2 — quota | addon | purchase (reel นี้หักมาจากไหน)</td></tr>
+                <tr><td class="col">highlight_reel_payment_id</td><td class="type">UUID FK</td><td class="def">NULL</td><td class="desc">Phase 2 — References payments.id (เฉพาะ overage / per-clip)</td></tr>
+                <tr><td class="col">highlight_reel_generated_at</td><td class="type">TIMESTAMPTZ</td><td class="def">NULL</td><td class="desc">Phase 2 — เวลาที่ render เสร็จ</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+
+          <div class="subhead">R2 Storage Path</div>
+          <div class="paths">
+            <div class="pathrow"><span class="pp">/events/{id}/reels/{session_id}.mp4</span><span class="badge ph2">Phase 2</span><span class="pd">MP4 Highlight Reel ต่อ guest session</span></div>
+          </div>
+
+          <div class="subhead">Monetization Model <span class="badge ok">✅ ตัดสินใจแล้ว</span></div>
+          <p>โควต้าตามแผน + เก็บเงินส่วนเกิน — ลำดับการหักตอน Guest สร้าง reel:</p>
+          <ol class="steps">
+            <li><span class="st"><b>Quota</b> — ถ้า <span class="mono">reel_quota_used &lt; reel_quota</span> → หักโควต้าแผน (<span class="mono">source = quota</span>, used++)</span></li>
+            <li><span class="st"><b>Add-on</b> — โควต้าแผนหมดแต่มี <span class="mono">reel_addon_balance &gt; 0</span> → หักแพคเกจเสริม (<span class="mono">source = addon</span>, balance--)</span></li>
+            <li><span class="st"><b>Per-clip</b> — หมดทั้งคู่ → เก็บเงินต่อคลิปผ่าน <span class="mono">payments</span> (<span class="mono">source = purchase</span> + <span class="mono">payment_id</span>)</span></li>
+          </ol>
+          <div class="note"><span class="ni">💡</span><div class="nt">จำนวนโควต้าต่อแผน + ราคา add-on/per-clip เป็นตัวเลขที่จะ define พร้อม plan tier (ดู <a href="#questions" style="color:var(--accent);font-weight:600">Q4</a>)</div></div>
+
+          <div class="subhead">Generation Pipeline <span class="badge ok">✅ แนวทางที่แนะนำ</span></div>
+          <ul class="clean">
+            <li>Render วิดีโอเป็นงานหนัก (CPU + เวลา) — <b>ไม่ทำใน request เดียว</b> ใช้ background job: Guest กดสร้าง → enqueue → render → อัพ MP4 ขึ้น R2 → set <span class="mono">highlight_reel_status = ready</span></li>
+            <li><b>แนะนำ: Remotion + Lambda</b> — เขียน reel เป็น React composition (transition / เพลง / branding คุมได้เต็ม), render serverless บน AWS (มี account อยู่แล้วจาก Rekognition), จ่ายตามจำนวน render, output ตรงขึ้น R2/S3 — เข้ากับทีม Next.js/React ที่สุด</li>
+            <li><b>Fast-start ทางเลือก: Shotstack / Creatomate</b> — third-party render API (JSON template → MP4) ส่ง Phase 2 ได้เร็วไม่ต้องสร้าง infra เอง ค่อย migrate ไป Remotion เมื่อ volume/cost คุ้ม</li>
+            <li><b>ครอบด้วย <span class="mono">ReelRenderer</span> interface</b> (แพทเทิร์นเดียวกับ <span class="mono">PaymentService</span> ใน §12.2) — สลับ provider ได้โดยไม่แตะ business logic · <b>เลี่ยง</b> self-host ffmpeg (ops หนัก) และ MediaConvert (ถนัด transcode ไม่ถนัดประกอบ montage)</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============ 12. SLIP + CREDIT PAYMENT ============ -->
+      <section class="section" id="payment">
+        <button class="sec-head"><span class="sec-no">12</span><h2>Slip + Credit Payment Architecture</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <h3><span class="h3-bar"></span>12.1 Payment Model — การตัดสินใจ</h3>
+          <div class="note ok"><span class="ni">✅</span><div class="nt"><b>Phase 1 ใช้ Slip Upload + Credit System</b> (manual verify โดย Super Admin) แทน payment gateway</div></div>
+          <ul class="clean">
+            <li><b>Pay-per-event</b> — 1 event = X credits (คงที่) · ไม่มี subscription รายเดือนใน Phase 1</li>
+            <li><b>Top-up แบบ hybrid</b> — preset packages 3-4 ตัว + custom amount</li>
+            <li><b>โอนผ่าน PromptPay / Bank Transfer</b> → แนบ slip → Super Admin verify → ระบบเติม credit</li>
+            <li><b>ใช้ credit activate event</b> — event ที่ยังไม่ activate จะอยู่ใน "Draft" mode (sync/blacklist/guest link ใช้ไม่ได้)</li>
+          </ul>
+          <div class="note"><span class="ni">🎯</span><div class="nt"><b>เหตุผลที่ defer Omise:</b> internal pilot scale ต่ำ — manual verify ไหวสบาย · ตัดเวลารอ Omise verify บริษัท 3-7 วัน · ตัดความ complex ของ webhook/subscription · ทดลอง product-market fit ก่อนผูก infra payment</div></div>
+          <div class="note"><span class="ni">🔜</span><div class="nt"><b>Phase 2</b> — ย้ายไป Omise auto-topup เมื่อ scale > slip verification ไหว (ดู §11 + backlog · PaymentService abstraction รอ Phase 2 ค่อยทำ)</div></div>
+
+          <h3><span class="h3-bar"></span>12.2 Credit System Architecture</h3>
+          <p>3 components หลัก:</p>
+          <div class="grid g3">
+            <div class="card"><div class="ck">Slip Uploads</div><div class="cv">รับโอน + แนบ slip</div><div class="cd" style="margin-top:6px">Organizer โอนเงิน → upload slip → status pending → รอ Super Admin verify</div></div>
+            <div class="card"><div class="ck">Credit Ledger</div><div class="cv">Append-only audit trail</div><div class="cd" style="margin-top:6px">ทุก credit movement (topup / deduct / refund) บันทึก row ใหม่ + balance snapshot · ไม่ allow update/delete</div></div>
+            <div class="card"><div class="ck">Tenant Balance</div><div class="cv">Cached counter</div><div class="cd" style="margin-top:6px">Denormalized integer ใน tenants table · update atomic กับ ledger insert</div></div>
+          </div>
+
+          <div class="subhead">Atomic Operations</div>
+          <ul class="clean">
+            <li><b>Approve slip:</b> update slip status + insert ledger (delta=+credits) + update tenant balance — ใน transaction เดียว</li>
+            <li><b>Activate event:</b> check balance ≥ cost → update event activated_at + insert ledger (delta=-cost) + decrement balance — ใน transaction เดียว (กัน race condition)</li>
+            <li><b>Reject slip:</b> update slip status + reject_reason — ไม่แตะ ledger/balance</li>
+          </ul>
+
+          <h3><span class="h3-bar"></span>12.3 Credit Package Pricing <span class="badge warn" style="margin-left:6px">🔲 รอประชุม (Q4)</span></h3>
+          <p>โครงสร้างกำหนดไว้แล้ว — ตัวเลขรอประชุม business ก่อน Week 4:</p>
+          <div class="plans">
+            <div class="plan"><div class="pn">Starter Pack</div><div class="pdesc">งานเดี่ยว / ทดลองใช้</div><div class="ptbd"><span class="badge muted">TBD credits / TBD ฿</span></div></div>
+            <div class="plan pop"><div class="pn">Standard Pack</div><div class="pdesc">Organizer รายเล็ก / งานไม่บ่อย</div><div class="ptbd"><span class="badge muted">TBD credits / TBD ฿</span></div></div>
+            <div class="plan"><div class="pn">Pro Pack</div><div class="pdesc">Organizer รายใหญ่ / หลาย event/เดือน</div><div class="ptbd"><span class="badge muted">TBD credits / TBD ฿</span></div></div>
+          </div>
+          <div class="note"><span class="ni">💰</span><div class="nt"><b>Custom amount:</b> นอกจาก preset แล้วยังเปิดให้ custom topup ได้ (min/max range รอประชุม) · <b>Per-event cost:</b> 1 event = X credits คงที่ (ไม่แปรตามขนาด event ใน Phase 1)</div></div>
+
+          <h3><span class="h3-bar"></span>12.4 Verification Flow (Super Admin Panel)</h3>
+          <ol class="steps">
+            <li><span class="st">Organizer top-up → ระบบ <b>notify Super Admin</b> (email / LINE / Slack)</span></li>
+            <li><span class="st">Super Admin เปิด <span class="mono">/admin/slips</span> → เห็นรายการ pending</span></li>
+            <li><span class="st">ตรวจ slip image vs amount + เทียบกับ statement bank → <b>Approve</b> หรือ <b>Reject</b> (ใส่ reason)</span></li>
+            <li><span class="st">Approve: ระบบทำ atomic — slip approved + ledger insert + balance +X → notify organizer</span></li>
+            <li><span class="st">Reject: notify organizer พร้อม reason → organizer แก้/upload ใหม่</span></li>
+          </ol>
+          <div class="note warn"><span class="ni">⏱️</span><div class="nt"><b>SLA:</b> ทีมตั้ง internal target — verify ภายใน X ชม. ในเวลาทำการ (ตัวเลขให้ business ตัดสินใจ)</div></div>
+
+          <h3><span class="h3-bar"></span>12.5 Schema สำหรับ Credit System</h3>
+          <div class="schema-wrap">
+            <div class="schema-title new"><span class="tbl-ico">＋</span> tenants <span class="tbl-tag">added column</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">credit_balance</td><td class="type">INT</td><td class="def">0</td><td class="desc">Phase 1 — Cached balance · update atomic กับ ledger insert</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="schema-wrap">
+            <div class="schema-title new"><span class="tbl-ico">＋</span> events <span class="tbl-tag">added columns</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">activated_at</td><td class="type">TIMESTAMPTZ</td><td class="def">NULL</td><td class="desc">Phase 1 — NULL = draft (ใช้ feature ไม่ได้) · != NULL = active</td></tr>
+                <tr><td class="col">credits_used</td><td class="type">INT</td><td class="def">0</td><td class="desc">Phase 1 — credit ที่ใช้ activate event นี้</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="schema-wrap">
+            <div class="schema-title"><span class="tbl-ico">▤</span> slip_uploads <span class="tbl-tag">new table</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">id</td><td class="type">UUID PK</td><td class="desc">Slip upload identifier</td></tr>
+                <tr><td class="col">tenant_id</td><td class="type">UUID FK</td><td class="desc">References tenants.id</td></tr>
+                <tr><td class="col">package_id</td><td class="type">TEXT</td><td class="desc">starter | standard | pro | custom</td></tr>
+                <tr><td class="col">amount_thb</td><td class="type">NUMERIC</td><td class="desc">จำนวนเงินที่ organizer claim ว่าโอน</td></tr>
+                <tr><td class="col">credits_claimed</td><td class="type">INT</td><td class="desc">credit ที่จะได้ตาม package / custom rate</td></tr>
+                <tr><td class="col">slip_image_url</td><td class="type">TEXT</td><td class="desc">R2 URL ของรูป slip (path /slips/{tenant_id}/{slip_id}.jpg)</td></tr>
+                <tr><td class="col">status</td><td class="type">TEXT</td><td class="desc">pending | approved | rejected</td></tr>
+                <tr><td class="col">reject_reason</td><td class="type">TEXT</td><td class="desc">เหตุผลที่ admin reject (NULL ถ้าไม่ reject)</td></tr>
+                <tr><td class="col">uploaded_at</td><td class="type">TIMESTAMPTZ</td><td class="desc">เวลาที่ organizer upload</td></tr>
+                <tr><td class="col">verified_at</td><td class="type">TIMESTAMPTZ</td><td class="desc">เวลาที่ admin verify (approve/reject)</td></tr>
+                <tr><td class="col">verified_by</td><td class="type">UUID FK</td><td class="desc">Super admin user ที่ verify</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="schema-wrap">
+            <div class="schema-title"><span class="tbl-ico">▤</span> credit_ledger <span class="tbl-tag">new table · append-only</span></div>
+            <div class="table-scroll"><table class="schema">
+              <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="col">id</td><td class="type">UUID PK</td><td class="desc">Ledger entry identifier</td></tr>
+                <tr><td class="col">tenant_id</td><td class="type">UUID FK</td><td class="desc">References tenants.id</td></tr>
+                <tr><td class="col">delta</td><td class="type">INT</td><td class="desc">Signed: +500 (topup) | -10 (activate event) | +X (refund)</td></tr>
+                <tr><td class="col">balance_after</td><td class="type">INT</td><td class="desc">Snapshot balance หลัง apply delta (audit/reconciliation)</td></tr>
+                <tr><td class="col">reason</td><td class="type">TEXT</td><td class="desc">topup_slip | activate_event | refund | adjustment</td></tr>
+                <tr><td class="col">ref_id</td><td class="type">UUID</td><td class="desc">References slip_uploads.id หรือ events.id (ตาม reason)</td></tr>
+                <tr><td class="col">note</td><td class="type">TEXT</td><td class="desc">หมายเหตุเพิ่มเติม (optional)</td></tr>
+                <tr><td class="col">created_at</td><td class="type">TIMESTAMPTZ</td><td class="desc">เวลาที่บันทึก ledger</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="note ok"><span class="ni">🔒</span><div class="nt"><b>Append-only enforcement:</b> RLS policy block UPDATE/DELETE บน credit_ledger · ทุก mutation ทำผ่าน INSERT ใหม่ — แก้ผิดด้วย adjustment row (delta แบบกลับทาง)</div></div>
+
+          <h3><span class="h3-bar"></span>12.6 Phase 2 Migration Path</h3>
+          <p>เมื่อ scale > slip verification ไหว — ย้ายไป Omise auto-topup:</p>
+          <ul class="clean">
+            <li>เพิ่ม <span class="mono">payments</span> table + subscription columns ใน tenants (column nullable มีเตรียมใน §11 prep แล้ว)</li>
+            <li>สร้าง <span class="mono">PaymentService</span> interface + <span class="mono">OmiseProvider</span> implementation (charge/subscription/webhook)</li>
+            <li>เพิ่ม auto-topup logic — credit ต่ำกว่า threshold → charge Omise → topup credit อัตโนมัติ</li>
+            <li>UI: organizer manage payment method + view invoices · slip upload ยังคงอยู่ (fallback)</li>
+            <li>Existing tenants กับ credit balance ไม่ต้อง migrate — balance เดิมใช้ต่อได้, auto-topup เป็น opt-in</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============ 13. OPEN QUESTIONS ============ -->
+      <section class="section" id="questions">
+        <button class="sec-head"><span class="sec-no">13</span><h2>Open Questions &amp; Decisions Pending</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <div class="qstats">
+            <span class="badge ok">✅ 6 Resolved</span>
+            <span class="badge warn">🔲 3 Pending</span>
+          </div>
+          <div class="qlist">
+            <div class="q resolved"><span class="qn">1</span><div class="qmain">
+              <div class="qq">Dropbox integration รวมใน Phase 1 หรือ Phase 2?</div>
+              <div class="qmeta"><span class="badge ok">✅ ตัดสินใจแล้ว: Phase 2</span><span class="owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Product Owner</span></div>
+            </div></div>
+            <div class="q resolved"><span class="qn">2</span><div class="qmain">
+              <div class="qq">Full Resolution download รวมใน Phase 1 หรือไม่?</div>
+              <div class="qmeta"><span class="badge ok">✅ ตัดสินใจแล้ว: รวมใน Phase 1</span><span class="owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Product Owner</span></div>
+            </div></div>
+            <div class="q resolved"><span class="qn">3</span><div class="qmain">
+              <div class="qq">Payment gateway: Omise เป็น Phase 1 หลัก</div>
+              <div class="qmeta"><span class="badge ok">✅ ตัดสินใจแล้ว: Phase 1 ใช้ Slip + Credit (manual verify โดย Super Admin) · Omise ย้าย Phase 2 เป็น auto-topup</span><span class="owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Product Owner</span></div>
+            </div></div>
+            <div class="q pending"><span class="qn">4</span><div class="qmain">
+              <div class="qq">Credit package pricing: 1 event = กี่ credit, preset packages กี่ tier + ราคาเท่าไหร่?</div>
+              <div class="qmeta"><span class="badge warn">🔲 Pending — ประชุมครั้งถัดไป</span><span class="owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Business / Product</span></div>
+            </div></div>
+            <div class="q resolved"><span class="qn">5</span><div class="qmain">
+              <div class="qq">Pricing model: คิดราคาต่อ event, ต่อรูป, หรือ subscription รายเดือน?</div>
+              <div class="qmeta"><span class="badge ok">✅ ตัดสินใจแล้ว: Phase 1 = Pay-per-event via Credit (1 event = X credits คงที่ · top-up แบบ hybrid preset + custom) · subscription ย้าย Phase 2</span><span class="owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Business</span></div>
+            </div></div>
+            <div class="q pending"><span class="qn">6</span><div class="qmain">
+              <div class="qq">จำเป็นต้องมี consent form บน guest page เพื่อ PDPA compliance?</div>
+              <div class="qmeta"><span class="badge warn">🔲 Pending — ก่อน launch</span><span class="owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Legal / Product</span></div>
+            </div></div>
+            <div class="q pending"><span class="qn">7</span><div class="qmain">
+              <div class="qq">Rekognition collection จะเก็บนานแค่ไหนหลังงานจบ? ใครเป็นคน trigger ลบ?</div>
+              <div class="qmeta"><span class="badge warn">🔲 Pending — Phase 1</span><span class="owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Product</span></div>
+            </div></div>
+            <div class="q resolved"><span class="qn">8</span><div class="qmain">
+              <div class="qq">MP4 Highlight Reel generate ด้วยวิธีไหน — self-host ffmpeg worker หรือ external render service?</div>
+              <div class="qmeta"><span class="badge ok">✅ ตัดสินใจแล้ว: Remotion + Lambda (ครอบด้วย ReelRenderer · fast-start ด้วย Shotstack ได้)</span><span class="owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Tech / Product</span></div>
+            </div></div>
+            <div class="q resolved"><span class="qn">9</span><div class="qmain">
+              <div class="qq">Highlight Reel monetization — รวมในราคา plan tier หรือคิดเงินต่อ reel แยก (per-reel purchase)?</div>
+              <div class="qmeta"><span class="badge ok">✅ ตัดสินใจแล้ว: quota ตามแผน + overage (add-on / per-clip) · ตัวเลขผูกกับ Q4</span><span class="owner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Business / Product</span></div>
+            </div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 14. COST ESTIMATE ============ -->
+      <section class="section" id="cost">
+        <button class="sec-head"><span class="sec-no">14</span><h2>Cost Estimate <span style="font-weight:600;font-size:13px;color:var(--text-muted)">(per Event)</span></h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <p>สมมติ <b>500 รูปต่อ event</b>, แขก <b>100 คน</b>ค้นหา</p>
+          <div class="table-scroll"><table class="tbl">
+            <thead><tr><th>Service</th><th>การใช้งาน</th><th>ค่าใช้จ่ายโดยประมาณ</th></tr></thead>
+            <tbody>
+              <tr><td>AWS Rekognition — Index</td><td>500 รูป</td><td>~$0.50 <span class="badge ok" style="margin-left:4px">free tier 5K/เดือนแรก</span></td></tr>
+              <tr><td>AWS Rekognition — Search</td><td>100 searches</td><td>~$0.10</td></tr>
+              <tr><td>Cloudflare R2 — Storage</td><td>4GB (500 รูป × 8MB avg)</td><td>~$0.06/เดือน</td></tr>
+              <tr><td>Cloudflare R2 — Egress</td><td>ฟรี</td><td>$0</td></tr>
+              <tr><td>Supabase</td><td>Free tier</td><td>$0 (ช่วง pilot)</td></tr>
+              <tr><td>Vercel</td><td>Free tier / Pro</td><td>$0 – $20/เดือน</td></tr>
+              <tr class="total"><td>รวมต่อ event</td><td>—</td><td>~$0.66 + fixed cost</td></tr>
+            </tbody>
+          </table></div>
+          <div class="note ok"><span class="ni">💰</span><div class="nt"><b>AWS Rekognition Free Tier:</b> 5,000 ภาพ/เดือน และ 1,000 searches/เดือน สำหรับ 12 เดือนแรก — ช่วง internal pilot แทบไม่มีค่าใช้จ่าย</div></div>
+        </div>
+      </section>
+
+      <!-- ============ 15. NEXT STEPS ============ -->
+      <section class="section" id="next">
+        <button class="sec-head"><span class="sec-no">15</span><h2>Next Steps</h2>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="sec-body">
+          <div class="tl-legend">
+            <span class="lg setup"><i></i> Pre-Dev Setup</span>
+            <span class="lg dev"><i></i> Development</span>
+            <span class="lg gate"><i></i> Decision Gate</span>
+            <span class="lg launch"><i></i> Pilot</span>
+          </div>
+          <div class="timeline">
+            <div class="tnode setup"><div class="tdot">1</div><div class="tbody"><div class="ttask"><span class="tk">Setup</span>AWS account + Rekognition access</div><span class="twhen setup">ก่อน dev</span></div></div>
+            <div class="tnode setup"><div class="tdot">2</div><div class="tbody"><div class="ttask"><span class="tk">Setup</span>Cloudflare R2 bucket</div><span class="twhen setup">ก่อน dev</span></div></div>
+            <div class="tnode setup"><div class="tdot">3</div><div class="tbody"><div class="ttask"><span class="tk">Setup</span>Google Drive API OAuth credentials</div><span class="twhen setup">ก่อน dev</span></div></div>
+            <div class="tnode setup"><div class="tdot">4</div><div class="tbody"><div class="ttask"><span class="tk">Setup</span>บัญชีธนาคาร / PromptPay QR สำหรับรับโอน <span class="badge muted" style="margin-left:6px">Omise → Phase 2</span></div><span class="twhen setup">ก่อน dev</span></div></div>
+            <div class="tnode dev"><div class="tdot">5</div><div class="tbody"><div class="ttask"><span class="tk">Setup</span>Supabase local stack (CLI + Docker) + schema migration (รวม credit system tables)</div><span class="twhen dev">Week 1</span></div></div>
+            <div class="tnode dev"><div class="tdot">6</div><div class="tbody"><div class="ttask"><span class="tk">Dev</span>Organizer Auth + Event CRUD</div><span class="twhen dev">Week 1-2</span></div></div>
+            <div class="tnode dev"><div class="tdot">7</div><div class="tbody"><div class="ttask"><span class="tk">Dev</span>Google Drive OAuth + Sync &amp; Index (Batch/Retry)</div><span class="twhen dev">Week 2-3</span></div></div>
+            <div class="tnode dev"><div class="tdot">8</div><div class="tbody"><div class="ttask"><span class="tk">Dev</span>Blacklist Manager</div><span class="twhen dev">Week 3</span></div></div>
+            <div class="tnode dev"><div class="tdot">9</div><div class="tbody"><div class="ttask"><span class="tk">Dev</span>Guest Link + Face Search (Largest Face / 80%) + Gallery</div><span class="twhen dev">Week 3-4</span></div></div>
+            <div class="tnode dev"><div class="tdot">10</div><div class="tbody"><div class="ttask"><span class="tk">Dev</span>Full Resolution Download</div><span class="twhen dev">Week 4</span></div></div>
+            <div class="tnode dev"><div class="tdot">11</div><div class="tbody"><div class="ttask"><span class="tk">Dev</span>Slip Upload + Credit Ledger + Event Activation</div><span class="twhen dev">Week 4-5</span></div></div>
+            <div class="tnode dev"><div class="tdot">12</div><div class="tbody"><div class="ttask"><span class="tk">Dev</span>Super Admin Panel — Slip Verification</div><span class="twhen dev">Week 5</span></div></div>
+            <div class="tnode gate"><div class="tdot">13</div><div class="tbody"><div class="ttask"><span class="tk">Meeting</span>Define credit package pricing (1 event = X credits, preset + custom)</div><span class="twhen gate">ก่อน Week 4</span></div></div>
+            <div class="tnode gate"><div class="tdot">14</div><div class="tbody"><div class="ttask"><span class="tk">Confirm</span>PDPA consent notice บน guest page ก่อน launch</div><span class="twhen gate">ก่อน pilot</span></div></div>
+            <div class="tnode launch"><div class="tdot">15</div><div class="tbody"><div class="ttask"><span class="tk">Pilot</span>Internal pilot test with real event</div><span class="twhen launch">หลัง dev เสร็จ</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="pagefoot">
+        <span>FaceFind — PRD v1.2 · Phase 1 MVP · <b>CONFIDENTIAL · Internal Document</b></span>
+        <span>— End of Document —</span>
+      </footer>
+    </div>
+  </div>
+</div>
+
+<button id="toTop" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m18 15-6-6-6 6"/></svg>
+</button>
+
+<script>
+(function () {
+  "use strict";
+  var root = document.documentElement;
+  var $ = function (s, c) { return (c || document).querySelector(s); };
+  var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
+
+  /* ---- Theme ---- */
+  function curTheme() { return root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+  function paintThemeBtn() { var i = $('#themeBtn .theme-ico'); if (i) i.textContent = curTheme() === 'dark' ? '☀' : '☾'; }
+  paintThemeBtn();
+  $('#themeBtn').addEventListener('click', function () {
+    var next = curTheme() === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('ff-theme', next); } catch (e) {}
+    paintThemeBtn();
+  });
+
+  /* ---- Collapsibles ---- */
+  $$('.section').forEach(function (sec) {
+    $('.sec-head', sec).addEventListener('click', function () { sec.classList.toggle('collapsed'); });
+  });
+  $('#expandAll').addEventListener('click', function () { $$('.section').forEach(function (s) { s.classList.remove('collapsed'); }); });
+  $('#collapseAll').addEventListener('click', function () { $$('.section').forEach(function (s) { s.classList.add('collapsed'); }); });
+
+  /* ---- Mobile sidebar ---- */
+  function closeNav() { document.body.classList.remove('nav-open'); }
+  $('#menuBtn').addEventListener('click', function () { document.body.classList.toggle('nav-open'); });
+  $('.backdrop').addEventListener('click', closeNav);
+
+  /* ---- Scrollspy ---- */
+  var links = {};
+  $$('.nav a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting) {
+        $$('.nav a').forEach(function (a) { a.classList.remove('active'); });
+        var a = links[en.target.id];
+        if (a) {
+          a.classList.add('active');
+          if (a.scrollIntoView) a.scrollIntoView({ block: 'nearest' });
+        }
+      }
+    });
+  }, { rootMargin: '-12% 0px -75% 0px', threshold: 0 });
+  $$('.section').forEach(function (s) { io.observe(s); });
+
+  /* close mobile nav on link click */
+  $$('.nav a').forEach(function (a) { a.addEventListener('click', closeNav); });
+
+  /* ---- Sidebar filter ---- */
+  $('#search').addEventListener('input', function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    $$('.nav li').forEach(function (li) {
+      li.style.display = (!q || li.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+    });
+  });
+
+  /* ---- Progress + back to top ---- */
+  var prog = $('#progress'), toTop = $('#toTop');
+  function onScroll() {
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    var p = max > 0 ? (window.scrollY / max) * 100 : 0;
+    prog.style.width = p + '%';
+    toTop.classList.toggle('show', window.scrollY > 600);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  toTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+  /* ---- Schema syntax highlighting ---- */
+  function esc(s) { return s.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  var TYPE = { UUID: 't-uuid', TEXT: 't-text', BOOLEAN: 't-bool', TIMESTAMPTZ: 't-time', DATE: 't-time', NUMERIC: 't-num', INT: 't-num' };
+  function hlType(raw) {
+    return raw.trim().split(/\s+/).map(function (tok) {
+      var arr = '';
+      if (tok.slice(-2) === '[]') { arr = '<span class="t-dim">[]</span>'; tok = tok.slice(0, -2); }
+      if (tok === 'PK') return '<span class="kbadge pk">PK</span>';
+      if (tok === 'FK') return '<span class="kbadge fk">FK</span>';
+      if (TYPE[tok]) return '<span class="' + TYPE[tok] + '">' + tok + '</span>' + arr;
+      return '<span class="t-plain">' + esc(tok) + '</span>' + arr;
+    }).join(' ');
+  }
+  function hlDef(raw) {
+    var t = raw.trim();
+    if (t === 'NULL') return '<span class="t-null">NULL</span>';
+    if (t === 'TRUE' || t === 'FALSE') return '<span class="t-bool">' + t + '</span>';
+    return '<span class="t-lit">' + esc(t) + '</span>';
+  }
+  function hlDesc(raw) {
+    var s = esc(raw.trim());
+    s = s.replace(/([a-z_]+(?:\s\|\s[a-z_]+)+)/g, function (m) {
+      return m.split(/\s\|\s/).map(function (w) { return '<span class="enum">' + w + '</span>'; }).join(' <span class="pipe">|</span> ');
+    });
+    s = s.replace(/Phase\s2/g, '<span class="phase ph2">Phase 2</span>').replace(/Phase\s1/g, '<span class="phase ph1">Phase 1</span>');
+    s = s.replace(/References\s+([a-z_]+)\.([a-z_]+)/g, 'References <code class="ref">$1.$2</code>');
+    return s;
+  }
+  $$('table.schema').forEach(function (tbl) {
+    $$('td.type', tbl).forEach(function (td) { td.innerHTML = hlType(td.textContent); });
+    $$('td.def', tbl).forEach(function (td) { td.innerHTML = hlDef(td.textContent); });
+    $$('td.desc', tbl).forEach(function (td) { td.innerHTML = hlDesc(td.textContent); });
+  });
+})();
+</script>
+</body>
+</html>

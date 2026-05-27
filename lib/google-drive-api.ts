@@ -1,0 +1,136 @@
+/**
+ * Google Drive API client — lists and downloads files from a folder.
+ *
+ * Configured with:
+ *   GOOGLE_CLIENT_ID       — OAuth 2.0 client ID
+ *   GOOGLE_CLIENT_SECRET   — OAuth 2.0 client secret
+ *   GOOGLE_REDIRECT_URI    — OAuth redirect URI (e.g. /auth/google/callback)
+ *
+ * The organizer's refresh token is stored in `tenants.google_refresh_token`
+ * (column to be added in migration for #7).
+ *
+ * Scope: https://www.googleapis.com/auth/drive.readonly
+ */
+
+import { google } from "googleapis";
+
+/** Build an authorized Google Drive client from an organizer's refresh token. */
+export function getDriveClient(refreshToken: string) {
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } =
+    process.env;
+
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    throw new Error("Google OAuth credentials not configured");
+  }
+
+  const auth = new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI,
+  );
+  auth.setCredentials({ refresh_token: refreshToken });
+
+  return google.drive({ version: "v3", auth });
+}
+
+/** Return the OAuth consent URL for the organizer to connect Google Drive. */
+export function getDriveAuthUrl(state?: string): string {
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } =
+    process.env;
+
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    throw new Error("Google OAuth credentials not configured");
+  }
+
+  const auth = new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI,
+  );
+
+  return auth.generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    scope: ["https://www.googleapis.com/auth/drive.readonly"],
+    state,
+  });
+}
+
+/** Exchange authorization code → { access_token, refresh_token }. */
+export async function exchangeDriveCode(code: string) {
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } =
+    process.env;
+
+  const auth = new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI,
+  );
+
+  const { tokens } = await auth.getToken(code);
+  return tokens;
+}
+
+export type DriveFile = {
+  id: string;
+  name: string;
+  mimeType: string;
+  size?: number;
+  modifiedTime?: string;
+};
+
+/**
+ * List all image files in a Drive folder (non-recursive by default).
+ * Supports pagination automatically — returns full list.
+ * Drive rate limit: ~1,000 req/100sec; use with exponential backoff in #7.
+ */
+export async function listImagesInFolder(
+  drive: ReturnType<typeof getDriveClient>,
+  folderId: string,
+): Promise<DriveFile[]> {
+  const files: DriveFile[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    // eslint-disable-next-line no-await-in-loop
+    const res = await drive.files.list({
+      q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
+      fields: "nextPageToken, files(id, name, mimeType, size, modifiedTime)",
+      pageSize: 1000,
+      pageToken,
+    });
+
+    for (const f of res.data.files ?? []) {
+      if (f.id && f.name && f.mimeType) {
+        files.push({
+          id: f.id,
+          name: f.name,
+          mimeType: f.mimeType,
+          size: f.size ? Number(f.size) : undefined,
+          modifiedTime: f.modifiedTime ?? undefined,
+        });
+      }
+    }
+
+    pageToken = res.data.nextPageToken ?? undefined;
+  } while (pageToken);
+
+  return files;
+}
+
+/**
+ * Download a Drive file as a Buffer.
+ * Use for images before resizing + uploading to R2 in #7.
+ */
+export async function downloadDriveFile(
+  drive: ReturnType<typeof getDriveClient>,
+  fileId: string,
+): Promise<Buffer> {
+  const res = await drive.files.get(
+    { fileId, alt: "media" },
+    { responseType: "arraybuffer" },
+  );
+
+  // `data` is ArrayBuffer when responseType = 'arraybuffer'
+  return Buffer.from(res.data as ArrayBuffer);
+}

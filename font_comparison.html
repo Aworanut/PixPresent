@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FaceFind — Kanit Weight Specimen Spec</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Kanit, Chonburi, Cormorant Garamond, IBM Plex Sans Thai, Pridi, Playfair Display, Niramit, Charmonman -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@100;200;300;400;500;600;700&family=Chonburi&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=IBM+Plex+Sans+Thai:wght@100;200;300;400;500;600;700&family=Pridi:wght@200;300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Niramit:ital,wght@0,200;0,300;0,400;0,500;1,200;1,300&family=Charmonman:wght@400;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#FBF9F6',
+            charcoal: '#111111',
+            champagne: '#D4AF37',
+            goldLight: '#F5EEDC',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Load Local Sao Chingcha font */
+    @font-face {
+      font-family: 'SaoChingcha';
+      src: url('public/fonts/SaoChingcha-Regular.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'SaoChingcha';
+      src: url('public/fonts/SaoChingcha-Bold.otf') format('opentype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'SaoChingcha';
+      src: url('public/fonts/SaoChingcha-Light.otf') format('opentype');
+      font-weight: 300;
+      font-style: normal;
+    }
+
+    .font-saochingcha {
+      font-family: 'SaoChingcha', serif;
+      letter-spacing: -0.01em;
+    }
+
+    .font-charmonman {
+      font-family: 'Charmonman', cursive;
+      letter-spacing: 0.02em;
+    }
+
+    body {
+      background-color: #FBF9F6;
+      color: #111111;
+      font-family: system-ui, sans-serif;
+    }
+
+    /* Kanit Custom Font Weight Helpers */
+    .font-kanit {
+      font-family: 'Kanit', sans-serif;
+      letter-spacing: -0.015em;
+    }
+
+    /* Option 1: Kanit Luxe Loopless (Thin & Geometric) */
+    .font-opt1-heading {
+      font-family: 'Kanit', sans-serif;
+      font-weight: 100;
+      letter-spacing: -0.02em;
+    }
+
+    /* Option 2: Pridi Light (Slab-Serif - Elegant/Thin) */
+    .font-opt2-heading {
+      font-family: 'Pridi', serif;
+      font-weight: 200;
+    }
+
+    /* Option 3: Niramit Light (Calligraphic - Delicate/Thin) */
+    .font-opt3-heading {
+      font-family: 'Niramit', serif;
+      font-weight: 200;
+    }
+
+    /* Option 4: Chonburi (Original - Chunky/Bold) */
+    .font-opt4-heading {
+      font-family: 'Chonburi', serif;
+      font-weight: 400;
+    }
+
+    /* Shared luxury loopless body font */
+    .font-luxury-body {
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      letter-spacing: -0.015em;
+    }
+  </style>
+</head>
+<body class="selection:bg-goldLight min-h-screen flex flex-col py-12 px-6 md:px-12 max-w-7xl mx-auto space-y-16">
+
+  <!-- Header -->
+  <header class="border-b border-charcoal/10 pb-8 space-y-3">
+    <span class="text-xs uppercase tracking-[0.3em] text-champagne font-semibold block">FaceFind Typographic Specimen v4</span>
+    <h1 class="font-serif text-4xl sm:text-5xl font-light tracking-tight text-charcoal">
+      Kanit Weight Specimen Spec
+    </h1>
+    <p class="text-charcoal/60 text-sm max-w-2xl font-light leading-relaxed">
+      เนื่องจากฟอนต์ไร้หัวยอดนิยมอย่าง <strong class="font-medium text-charcoal">Kanit (คณิท)</strong> มีชุดน้ำหนักให้เลือกตั้งแต่บางเฉียบไปจนถึงหนาเข้ม ด้านล่างนี้คือแบบทดสอบเจาะลึกเฉพาะน้ำหนักของ Kanit เพื่อประเมินสุนทรียศาสตร์ที่เหมาะสมที่สุดสำหรับหัวข้อหลักครับ
+    </p>
+  </header>
+
+  <!-- Part 1: Live Weight Simulator for Kanit -->
+  <section class="space-y-6">
+    <div class="flex items-center justify-between border-b border-charcoal/5 pb-4">
+      <h2 class="font-serif text-xl font-light text-charcoal">1. Kanit Font Weights Specimen (เปรียบเทียบน้ำหนักอักษร Kanit แยกเฉพาะตัว)</h2>
+      <span class="text-[10px] text-charcoal/40 uppercase tracking-widest font-mono">Observe stroke thickness and balance</span>
+    </div>
+
+    <div class="border border-charcoal/10 bg-white p-8 md:p-12 space-y-10">
+      
+      <!-- Weight 100 -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-charcoal/5 pb-8">
+        <div class="space-y-1">
+          <span class="bg-champagne/10 text-champagne text-[9px] font-bold tracking-widest font-mono px-2 py-0.5 uppercase">Kanit Thin (100)</span>
+          <h4 class="font-sans font-medium text-xs text-charcoal/50">ลักชัวรีมินิมัลเฉียบคม (หรูหรา โปร่งเบาที่สุด)</h4>
+        </div>
+        <p class="font-kanit font-[100] text-3xl md:text-4xl text-charcoal flex-1 md:text-right">
+          ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+        </p>
+      </div>
+
+      <!-- Weight 300 -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-charcoal/5 pb-8">
+        <div class="space-y-1">
+          <span class="bg-charcoal/5 text-charcoal/70 text-[9px] font-bold tracking-widest font-mono px-2 py-0.5 uppercase">Kanit Light (300)</span>
+          <h4 class="font-sans font-medium text-xs text-charcoal/50">บางเบาเรียบเก๋ (อ่านง่ายเป็นระเบียบ)</h4>
+        </div>
+        <p class="font-kanit font-[300] text-3xl md:text-4xl text-charcoal flex-1 md:text-right">
+          ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+        </p>
+      </div>
+
+      <!-- Weight 400 -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-charcoal/5 pb-8">
+        <div class="space-y-1">
+          <span class="bg-charcoal/5 text-charcoal/70 text-[9px] font-bold tracking-widest font-mono px-2 py-0.5 uppercase">Kanit Regular (400)</span>
+          <h4 class="font-sans font-medium text-xs text-charcoal/50">ขนาดมาตรฐานปกติ (คมชัด ได้สัดส่วนสากล)</h4>
+        </div>
+        <p class="font-kanit font-[400] text-3xl md:text-4xl text-charcoal flex-1 md:text-right">
+          ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+        </p>
+      </div>
+
+      <!-- Weight 500 -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-charcoal/5 pb-8">
+        <div class="space-y-1">
+          <span class="bg-charcoal/5 text-charcoal/70 text-[9px] font-bold tracking-widest font-mono px-2 py-0.5 uppercase">Kanit Medium (500)</span>
+          <h4 class="font-sans font-medium text-xs text-charcoal/50">หนาปานกลาง (ดูมีพลังและเป็นทางการขึ้น)</h4>
+        </div>
+        <p class="font-kanit font-[500] text-3xl md:text-4xl text-charcoal flex-1 md:text-right">
+          ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+        </p>
+      </div>
+
+      <!-- Weight 750 (Bold) -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <span class="bg-charcoal/10 text-charcoal text-[9px] font-bold tracking-widest font-mono px-2 py-0.5 uppercase">Kanit Bold (700)</span>
+          <h4 class="font-sans font-medium text-xs text-charcoal/50">ตัวหนาทรงพลัง (สะดุดตาชัดเจน มีน้ำหนักเน้นย้ำ)</h4>
+        </div>
+        <p class="font-kanit font-[700] text-3xl md:text-4xl text-charcoal flex-1 md:text-right">
+          ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Part 2: Interactive Header Simulator -->
+  <section class="space-y-6">
+    <div class="flex items-center justify-between border-b border-charcoal/5 pb-4">
+      <h2 class="font-serif text-xl font-light text-charcoal">2. Live Specimen Simulator (ทดลองสลับน้ำหนัก Kanit บนพอร์ทัลหลัก)</h2>
+      <span class="text-[10px] text-charcoal/40 uppercase tracking-widest font-mono font-semibold">Click to preview active simulator fonts</span>
+    </div>
+
+    <!-- Active Selection Tabs -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <!-- Kanit Thin -->
+      <button onclick="setSimulatedWeight(100)" id="tab-w100" class="border border-charcoal/10 hover:border-champagne hover:bg-cream text-charcoal/70 px-4 py-3 text-left transition-all duration-300">
+        <span class="text-[9px] uppercase tracking-widest text-charcoal/40 block">WEIGHT 100</span>
+        <span class="text-xs font-semibold block">Thin (บางพิเศษ)</span>
+      </button>
+
+      <!-- Kanit Light -->
+      <button onclick="setSimulatedWeight(300)" id="tab-w300" class="border border-charcoal/10 hover:border-champagne hover:bg-cream text-charcoal/70 px-4 py-3 text-left transition-all duration-300">
+        <span class="text-[9px] uppercase tracking-widest text-charcoal/40 block">WEIGHT 300</span>
+        <span class="text-xs font-semibold block">Light (บางเบา)</span>
+      </button>
+
+      <!-- Kanit Regular -->
+      <button onclick="setSimulatedWeight(400)" id="tab-w400" class="border border-champagne bg-goldLight text-charcoal px-4 py-3 text-left transition-all duration-300">
+        <span class="text-[9px] uppercase tracking-widest text-champagne font-bold block">WEIGHT 400</span>
+        <span class="text-xs font-semibold block">Regular (ขนาดปกติ)</span>
+      </button>
+
+      <!-- Kanit Bold -->
+      <button onclick="setSimulatedWeight(700)" id="tab-w700" class="border border-charcoal/10 hover:border-champagne hover:bg-cream text-charcoal/70 px-4 py-3 text-left transition-all duration-300">
+        <span class="text-[9px] uppercase tracking-widest text-charcoal/40 block">WEIGHT 700</span>
+        <span class="text-xs font-semibold block">Bold (ตัวหนาเข้ม)</span>
+      </button>
+    </div>
+
+    <!-- Simulated Preview Box -->
+    <div id="preview-box" class="w-full border border-charcoal/10 p-8 md:p-16 bg-white flex flex-col lg:flex-row items-center gap-12 transition-all duration-500">
+      
+      <!-- Preview Typography Area -->
+      <div class="flex-1 space-y-6 text-left">
+        <span class="text-[10px] uppercase tracking-[0.35em] text-champagne font-semibold block">AI-Powered Event Photo Retrieval</span>
+        
+        <h3 id="sim-heading" class="font-kanit text-4xl sm:text-5xl lg:text-6xl leading-[1.2] text-charcoal transition-all duration-300" style="font-weight: 400;">
+          ค้นพบช่วงเวลาของคุณ<br>
+          ในพริบตาเดียว
+        </h3>
+        
+        <p class="font-luxury-body text-charcoal/60 text-sm md:text-base font-light tracking-wide leading-relaxed max-w-lg">
+          แพลตฟอร์มระบุตัวตนด้วยใบหน้าอันหรูหรา ออกแบบมาเป็นพิเศษสำหรับงานแต่งงานระดับลักชัวรีและงานเฉลิมฉลองสุดอลังการ ค้นหารูปภาพของคุณท่ามกลางรูปถ่ายนับพันได้อย่างแม่นยำและราบรื่นทันทีในเสี้ยววินาที
+        </p>
+      </div>
+
+      <!-- Preview Mock UI Element -->
+      <div class="w-72 h-48 border border-champagne/30 p-6 flex flex-col items-center justify-center text-center bg-cream relative">
+        <div class="w-12 h-12 border border-champagne/50 rounded-full flex items-center justify-center mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+          </svg>
+        </div>
+        <span class="font-luxury-body text-xs font-semibold text-charcoal tracking-widest uppercase border-b border-champagne pb-1">
+          อัปโหลดภาพใบหน้า
+        </span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Part 2.5: Deep Dive Regular vs Bold -->
+  <section class="space-y-6">
+    <div class="flex items-center justify-between border-b border-charcoal/5 pb-4">
+      <h2 class="font-serif text-xl font-light text-charcoal">2.5 Kanit Duo Battle: ขนาดปกติ (400) vs ตัวหนา (700)</h2>
+      <span class="text-[10px] text-charcoal/40 uppercase tracking-widest font-mono font-semibold">Side-by-side Editorial Layout Review</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      
+      <!-- Regular 400 Showcase Card -->
+      <div class="border border-charcoal/10 bg-white p-8 md:p-10 flex flex-col justify-between space-y-8 relative overflow-hidden">
+        <div class="absolute top-0 left-0 bg-champagne text-white text-[9px] font-mono tracking-widest uppercase px-3 py-1 font-bold">
+          RECOMMENDED FOR HEADINGS (400)
+        </div>
+        
+        <div class="space-y-6 pt-4">
+          <div class="border-b border-charcoal/5 pb-3">
+            <span class="text-[10px] tracking-[0.25em] font-mono uppercase text-champagne block">SPEC: KANIT REGULAR (400)</span>
+            <h3 class="text-charcoal/40 text-xs font-medium">ลักชัวรีมินิมัลแบบเรียบกริบ (สไตล์นิตยสารแฟชั่น)</h3>
+          </div>
+          
+          <div class="space-y-4">
+            <!-- Simulated Headline -->
+            <h1 class="font-kanit text-4xl sm:text-5xl leading-tight text-charcoal" style="font-weight: 400;">
+              ค้นพบรูปถ่ายของคุณ<br>ด้วยระบบอัจฉริยะ
+            </h1>
+            <!-- Content -->
+            <p class="font-luxury-body text-charcoal/60 text-sm leading-relaxed font-light">
+              การจัดเรียงน้ำหนักตัวอักษร 400 (Regular) ช่วยให้หน้าจอมีพื้นที่หายใจ (Negative Space) มากขึ้น เส้นสายของตัวอักษรมีความสม่ำเสมอเป็นเนื้อเดียว ดูเป็นกันเองแต่ยังคงไว้ซึ่งความหรูหราแบบโมเดิร์น ไม่ทำลายสุนทรียศาสตร์ความประณีตของภาพถ่ายแต่งงาน
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-4 pt-6 border-t border-charcoal/5">
+          <ul class="text-xs text-charcoal/60 space-y-2 list-disc list-inside font-luxury-body">
+            <li><strong class="text-charcoal">ความโปร่งเบา:</strong> สูงมาก ช่วยให้ดีไซน์ดูหรูหราแบบโปร่งสบาย</li>
+            <li><strong class="text-charcoal">ความสมดุล:</strong> ดีเยี่ยมเมื่อจับคู่กับเนื้อหาที่เป็น IBM Plex Sans Thai</li>
+            <li><strong class="text-charcoal">การประยุกต์ใช้:</strong> เหมาะมากสำหรับหัวข้อหลักขนาดใหญ่ (H1, H2)</li>
+          </ul>
+          
+          <!-- CTA Button Preview -->
+          <a href="#" class="inline-block border border-charcoal px-6 py-2.5 text-center text-xs tracking-widest uppercase transition-colors hover:bg-charcoal hover:text-white font-mono w-full">
+            Inquire (หัวข้อขนาดปกติ)
+          </a>
+        </div>
+      </div>
+
+      <!-- Bold 700 Showcase Card -->
+      <div class="border border-charcoal/10 bg-white p-8 md:p-10 flex flex-col justify-between space-y-8 relative overflow-hidden">
+        <div class="absolute top-0 left-0 bg-charcoal text-white text-[9px] font-mono tracking-widest uppercase px-3 py-1 font-bold">
+          HIGH CONTRAST & TECH-LOOK (700)
+        </div>
+        
+        <div class="space-y-6 pt-4">
+          <div class="border-b border-charcoal/5 pb-3">
+            <span class="text-[10px] tracking-[0.25em] font-mono uppercase text-charcoal/60 block">SPEC: KANIT BOLD (700)</span>
+            <h3 class="text-charcoal/40 text-xs font-medium">โดดเด่น หนักแน่น ทรงพลัง (สไตล์แบรนด์เทคโนโลยีระดับสูง)</h3>
+          </div>
+          
+          <div class="space-y-4">
+            <!-- Simulated Headline -->
+            <h1 class="font-kanit text-4xl sm:text-5xl leading-tight text-charcoal" style="font-weight: 700;">
+              ค้นพบรูปถ่ายของคุณ<br>ด้วยระบบอัจฉริยะ
+            </h1>
+            <!-- Content -->
+            <p class="font-luxury-body text-charcoal/60 text-sm leading-relaxed font-light">
+              การใช้น้ำหนักตัวอักษร 700 (Bold) จะดึงความสนใจของผู้เข้าชมได้อย่างทันทีทันควัน เส้นของตัวอักษรมีความหนาแน่นสูง เหมาะมากสำหรับการจัดสุนทรียภาพที่ต้องการความชัดเจนหรือสร้างความมั่นใจในเชิงระบบซอฟต์แวร์ แต่ต้องจัดวางเนื้อหารอบข้างให้กว้างเป็นพิเศษเพื่อไม่ให้รู้สึกอึดอัด
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-4 pt-6 border-t border-charcoal/5">
+          <ul class="text-xs text-charcoal/60 space-y-2 list-disc list-inside font-luxury-body">
+            <li><strong class="text-charcoal">ความโปร่งเบา:</strong> ค่อนข้างน้อย แต่ชดเชยด้วยความคมชัดสะดุดตา</li>
+            <li><strong class="text-charcoal">ความสมดุล:</strong> สร้างคอนทราสต์ที่รุนแรงและชัดเจนกับเนื้อหาปกติ</li>
+            <li><strong class="text-charcoal">การประยุกต์ใช้:</strong> เหมาะสำหรับแบรนดิ้ง, จุดเน้นสำคัญ หรือปุ่ม Action</li>
+          </ul>
+          
+          <!-- CTA Button Preview -->
+          <a href="#" class="inline-block bg-charcoal text-white px-6 py-2.5 text-center text-xs tracking-widest uppercase transition-colors hover:bg-champagne font-mono w-full">
+            Inquire (หัวข้อขนาดหนา)
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Part 3: Sao Chingcha (เสาชิงช้า) vs Kanit Regular vs Charmonman Showdown -->
+  <section class="space-y-6">
+    <div class="flex items-center justify-between border-b border-charcoal/5 pb-4">
+      <h2 class="font-serif text-xl font-light text-charcoal">3. Special Showdown: ฟอนต์เสาชิงช้า vs Kanit Regular vs ชามอนมาน</h2>
+      <span class="text-[10px] text-champagne uppercase tracking-widest font-mono font-bold">New Heritage vs Vanguard Minimalist vs Romantic Script</span>
+    </div>
+
+    <!-- Live Text Sync Controller -->
+    <div class="border border-champagne/30 bg-goldLight/30 p-6 space-y-4">
+      <span class="text-[10px] tracking-[0.25em] font-mono uppercase text-champagne block">LIVE EXPERIMENTAL INPUT (ลองพิมพ์ข้อความเพื่อเปรียบเทียบสด)</span>
+      <div class="flex flex-col md:flex-row gap-4 items-center">
+        <input type="text" id="live-compare-input" value="ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว" placeholder="พิมพ์ข้อความของคุณที่นี่..." class="flex-1 w-full border-b border-charcoal/20 bg-transparent text-charcoal text-lg font-light py-2 px-1 focus:outline-none focus:border-champagne font-luxury-body transition-colors">
+        <div class="text-[10px] text-charcoal/40 font-mono uppercase tracking-wider">Type to see instant synchronization below</div>
+      </div>
+    </div>
+
+    <!-- Side by Side Comparative Stack -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Sao Chingcha (เสาชิงช้า) Card -->
+      <div class="border border-charcoal/10 bg-white p-8 md:p-10 space-y-8 flex flex-col justify-between">
+        <div class="space-y-6">
+          <div class="border-b border-charcoal/5 pb-3">
+            <span class="bg-charcoal text-white text-[9px] font-mono tracking-widest uppercase px-2.5 py-0.5 font-bold">SAO CHINGCHA (เสาชิงช้า)</span>
+            <p class="text-charcoal/50 text-[11px] font-medium mt-1">ฟอนต์ประจำกรุงเทพมหานคร - อัตลักษณ์ไทยประณีต (นริศรานุวัดติวงศ์)</p>
+          </div>
+
+          <!-- Specimen Preview Area -->
+          <div class="space-y-8">
+            <!-- Regular (400) -->
+            <div class="space-y-1">
+              <span class="text-[9px] uppercase tracking-widest text-charcoal/40 font-mono block">Sao Chingcha Regular (400)</span>
+              <p id="sao-reg-preview" class="font-saochingcha text-3xl sm:text-4xl text-charcoal tracking-wide leading-relaxed" style="font-weight: 400;">
+                ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+              </p>
+            </div>
+
+            <!-- Bold (700) -->
+            <div class="space-y-1">
+              <span class="text-[9px] uppercase tracking-widest text-charcoal/40 font-mono block">Sao Chingcha Bold (700)</span>
+              <p id="sao-bold-preview" class="font-saochingcha text-3xl sm:text-4xl text-charcoal tracking-wide leading-relaxed" style="font-weight: 700;">
+                ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Critique analysis -->
+        <div class="space-y-4 pt-6 border-t border-charcoal/5">
+          <h4 class="text-xs uppercase font-mono tracking-widest text-champagne font-bold">DESIGN DESIGNATION:</h4>
+          <p class="font-luxury-body text-xs text-charcoal/60 leading-relaxed font-light">
+            <strong class="text-charcoal block mb-1">สุนทรียศาสตร์แบบไทยวิจิตรชั้นสูง (High Thai Heritage)</strong>
+            ฟอนต์เสาชิงช้ามีลายเส้นแบบอักษรนริศ ซึ่งเป็นแบบประเพณีชั้นสูง มีความโค้งกึ่งริบบิ้นและมีความเปรียบต่างสูง (High Contrast) ทำให้มีความงดงาม อ่อนช้อย ปราณีตขั้นสุดและมีความเป็นทางการสูงมาก เหมาะกับพิธีการแบบไทยดั้งเดิม แต่หากนำมาวางร่วมกับหน้าจอแอพพลิเคชั่นแบบมินิมัลซอฟต์แวร์ อาจให้ภาพลักษณ์ที่ดูคลาสสิกหรือย้อนยุค (Retro-Classic) มากกว่าความร่วมสมัยสากล
+          </p>
+        </div>
+      </div>
+
+      <!-- Kanit (คณิท) Card -->
+      <div class="border border-charcoal/10 bg-white p-8 md:p-10 space-y-8 flex flex-col justify-between">
+        <div class="space-y-6">
+          <div class="border-b border-charcoal/5 pb-3">
+            <span class="bg-champagne text-white text-[9px] font-mono tracking-widest uppercase px-2.5 py-0.5 font-bold">KANIT REGULAR (คณิท)</span>
+            <p class="text-charcoal/50 text-[11px] font-medium mt-1">ฟอนต์เรขาคณิตไร้หัว - ลักชัวรีมินิมัลระดับสากลร่วมสมัย (Vogue-Style)</p>
+          </div>
+
+          <!-- Specimen Preview Area -->
+          <div class="space-y-8">
+            <!-- Regular (400) -->
+            <div class="space-y-1">
+              <span class="text-[9px] uppercase tracking-widest text-charcoal/40 font-mono block">Kanit Regular (400)</span>
+              <p id="kanit-reg-preview" class="font-kanit text-3xl sm:text-4xl text-charcoal tracking-normal leading-relaxed" style="font-weight: 400;">
+                ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+              </p>
+            </div>
+
+            <!-- Bold (700) -->
+            <div class="space-y-1">
+              <span class="text-[9px] uppercase tracking-widest text-charcoal/40 font-mono block">Kanit Bold (700)</span>
+              <p id="kanit-bold-preview" class="font-kanit text-3xl sm:text-4xl text-charcoal tracking-normal leading-relaxed" style="font-weight: 700;">
+                ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Critique analysis -->
+        <div class="space-y-4 pt-6 border-t border-charcoal/5">
+          <h4 class="text-xs uppercase font-mono tracking-widest text-champagne font-bold">DESIGN DESIGNATION:</h4>
+          <p class="font-luxury-body text-xs text-charcoal/60 leading-relaxed font-light">
+            <strong class="text-charcoal block mb-1">ลักชัวรีมินิมัลร่วมสมัยระดับสากล (Global Vanguard Minimalist)</strong>
+            Kanit Regular มอบความลงตัวสูงสุดในแง่ของแบรนดิ้งเทคโนโลยีชั้นเลิศ (SaaS) ด้วยรูปทรงอักษรไร้หัวเชิงเรขาคณิต (Geometric Loopless) ที่เข้าคู่กับฟอนต์ตะวันตกอย่าง Cormorant Garamond หรือ Inter ได้อย่างแนบเนียน เส้นตัวอักษรมีความสม่ำเสมอสากล ทำให้ตัวแอปพลิเคชันยังมีความเป็นซอฟต์แวร์ยุคใหม่ (Premium Tech SaaS) ที่ใช้งานง่าย รวดเร็ว และหรูหราแบบเงียบสงบ (Quiet Luxury)
+          </p>
+        </div>
+      </div>
+
+      <!-- Charmonman (ชามอนมาน) Card -->
+      <div class="border border-charcoal/10 bg-white p-8 md:p-10 space-y-8 flex flex-col justify-between">
+        <div class="space-y-6">
+          <div class="border-b border-charcoal/5 pb-3">
+            <span class="bg-amber-600 text-white text-[9px] font-mono tracking-widest uppercase px-2.5 py-0.5 font-bold">CHARMONMAN (ชามอนมาน)</span>
+            <p class="text-charcoal/50 text-[11px] font-medium mt-1">ฟอนต์เขียนลายมือคัดลายเส้นพริ้วไหว — สุนทรียภาพแห่งความโรแมนติกอ่อนหวาน (Romantic Calligraphy)</p>
+          </div>
+
+          <!-- Specimen Preview Area -->
+          <div class="space-y-8">
+            <!-- Regular (400) -->
+            <div class="space-y-1">
+              <span class="text-[9px] uppercase tracking-widest text-charcoal/40 font-mono block">Charmonman Regular (400)</span>
+              <p id="charmonman-reg-preview" class="font-charmonman text-4xl text-charcoal tracking-wide leading-relaxed" style="font-weight: 400;">
+                ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+              </p>
+            </div>
+
+            <!-- Bold (700) -->
+            <div class="space-y-1">
+              <span class="text-[9px] uppercase tracking-widest text-charcoal/40 font-mono block">Charmonman Bold (700)</span>
+              <p id="charmonman-bold-preview" class="font-charmonman text-4xl text-charcoal tracking-wide leading-relaxed" style="font-weight: 700;">
+                ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Critique analysis -->
+        <div class="space-y-4 pt-6 border-t border-charcoal/5">
+          <h4 class="text-xs uppercase font-mono tracking-widest text-champagne font-bold">DESIGN DESIGNATION:</h4>
+          <p class="font-luxury-body text-xs text-charcoal/60 leading-relaxed font-light">
+            <strong class="text-charcoal block mb-1">ความโรแมนติกพริ้วไหวของงานฝีมือ (Artisanal Romance Calligraphy)</strong>
+            ฟอนต์ชามอนมานได้รับแรงบันดาลใจจากอักษรตะวันตก Zapfino มอบลวดลายเขียนหางพริ้วไหว อารมณ์คล้ายบัตรเชิญแต่งงานราคาสูง หรืองานฝีมือชั้นเยี่ยม (Artisanal Craft) เหมาะอย่างยิ่งสำหรับหน้าจอแกลเลอรีที่ต้องการสื่อถึงความรัก ความอบอุ่น ความประทับใจส่วนตัว แต่ควรใช้เฉพาะในหัวข้อหลักขนาดใหญ่ ห้ามใช้เป็นเนื้อหาปกติเด็ดขาดเพราะจะทำให้อ่านยาก
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Part 4: Alphabetic Specimen -->
+  <section class="space-y-6">
+    <div class="border-b border-charcoal/5 pb-4">
+      <h2 class="font-serif text-xl font-light text-charcoal">4. Full Character Set Specimens (Kanit Glyphs)</h2>
+    </div>
+
+    <!-- Comparative Glyphs Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Regular 400 -->
+      <div class="border border-charcoal/10 bg-white p-6 space-y-4">
+        <h4 class="text-xs bg-charcoal text-white font-mono px-2 py-0.5 inline-block">Kanit Regular (400) Glyph Set</h4>
+        <p class="font-kanit font-[400] text-3xl text-charcoal tracking-wide leading-loose">
+          กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ<br>
+          abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>
+          1234567890 ๑๒๓๔๕๖๗๘๙๐
+        </p>
+      </div>
+
+      <!-- Bold 700 -->
+      <div class="border border-charcoal/10 bg-white p-6 space-y-4">
+        <h4 class="text-xs bg-charcoal text-white font-mono px-2 py-0.5 inline-block">Kanit Bold (700) Glyph Set</h4>
+        <p class="font-kanit font-[700] text-3xl text-charcoal tracking-wide leading-loose">
+          กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ<br>
+          abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>
+          1234567890 ๑๒๓๔๕๖๗๘๙๐
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-charcoal/10 pt-8 text-center text-xs text-charcoal/40 font-mono tracking-widest uppercase">
+    © 2026 FACEFIND. DESIGN SYSTEM SPECIMEN LAB.
+  </footer>
+
+  <!-- Simulator controller script -->
+  <script>
+    function setSimulatedWeight(w) {
+      // 1. Reset all buttons
+      const weights = [100, 300, 400, 700];
+      weights.forEach(wt => {
+        const btn = document.getElementById('tab-w' + wt);
+        btn.className = "border border-charcoal/10 hover:border-champagne hover:bg-cream text-charcoal/70 px-4 py-3 text-left transition-all duration-300";
+        btn.querySelector('span:first-child').className = "text-[9px] uppercase tracking-widest text-charcoal/40 block";
+      });
+
+      // 2. Select active button
+      const activeBtn = document.getElementById('tab-w' + w);
+      activeBtn.className = "border border-champagne bg-goldLight text-charcoal px-4 py-3 text-left transition-all duration-300";
+      activeBtn.querySelector('span:first-child').className = "text-[9px] uppercase tracking-widest text-champagne font-bold block";
+
+      // 3. Update heading weight directly via JS style injection for bulletproof performance
+      const heading = document.getElementById('sim-heading');
+      heading.style.fontWeight = w;
+    }
+
+    // Interactive Real-time text comparison sync
+    const compareInput = document.getElementById('live-compare-input');
+    const previews = [
+      document.getElementById('sao-reg-preview'),
+      document.getElementById('sao-bold-preview'),
+      document.getElementById('kanit-reg-preview'),
+      document.getElementById('kanit-bold-preview'),
+      document.getElementById('charmonman-reg-preview'),
+      document.getElementById('charmonman-bold-preview')
+    ];
+
+    compareInput.addEventListener('input', (e) => {
+      const text = e.target.value.trim() || 'ค้นพบช่วงเวลาของคุณ ในพริบตาเดียว';
+      previews.forEach(p => {
+        if (p) p.textContent = text;
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,527 @@
+/**
+ * POST /api/events/[id]/sync
+ *
+ * Streams sync progress as Server-Sent Events (SSE).
+ * The client subscribes and receives:
+ *   { type: 'progress', folder: string, done: number, total: number }
+ *   { type: 'done', photoCount: number }
+ *   { type: 'error', message: string }
+ *
+ * Auth: organizer must own the event (verified via RLS query).
+ *
+ * Full flow (requires #2 credentials):
+ *  1. Verify organizer owns the event
+ *  2. Get Drive refresh token from tenant
+ *  3. For each folder in event_storage_folders:
+ *     a. List images
+ *     b. Skip already-indexed (storage_file_id in photos)
+ *     c. Download → resize → upload to R2 → IndexFaces → insert photo row
+ *  4. Update events.sync_completed_at + is_indexed = true
+ *
+ * Graceful stubs when env vars are missing (dev mode).
+ */
+
+import { type NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id: eventId } = await params;
+
+  // 1. Auth check — use user Supabase client so RLS applies
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // 2. Verify event belongs to this organizer + get tenant info
+  const admin = createServiceRoleClient();
+
+  const { data: event } = await admin
+    .from("events")
+    .select("id, name, rekognition_collection_id, tenant_id")
+    .eq("id", eventId)
+    .is("deleted_at", null)
+    .single();
+
+  if (!event) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  // Verify ownership via tenant
+  const { data: tenant } = await admin
+    .from("tenants")
+    .select("id, owner_user_id, google_refresh_token")
+    .eq("id", event.tenant_id)
+    .single();
+
+  if (!tenant || tenant.owner_user_id !== user.id) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  // 3. Get folder list
+  const { data: folders } = await admin
+    .from("event_storage_folders")
+    .select("id, label, folder_id")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: true });
+
+  if (!folders || folders.length === 0) {
+    return new Response("No folders configured for this event", { status: 400 });
+  }
+
+  // 4. Mark sync started
+  await admin
+    .from("events")
+    .update({ sync_started_at: new Date().toISOString(), sync_completed_at: null })
+    .eq("id", eventId);
+
+  // 5. SSE stream
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (data: Record<string, unknown>) => {
+        // Don't write to a closed/cancelled stream
+        try {
+          controller.enqueue(
+            new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`),
+          );
+        } catch {
+          // controller already closed (client disconnected)
+        }
+      };
+
+      try {
+        const totalPhotos = await runSync({
+          eventId,
+          folders,
+          tenantId: tenant.id,
+          googleRefreshToken: tenant.google_refresh_token,
+          admin,
+          send,
+          signal: request.signal,  // propagate abort signal into the loop
+        });
+
+        // Mark sync complete
+        await admin
+          .from("events")
+          .update({
+            sync_completed_at: new Date().toISOString(),
+            sync_photo_count: totalPhotos,
+            is_indexed: true,
+          })
+          .eq("id", eventId);
+
+        send({ type: "done", photoCount: totalPhotos });
+      } catch (err) {
+        if ((err as Error).name === "AbortError") {
+          // Client disconnected — exit cleanly without sending error
+          return;
+        }
+        console.error("[sync] Unhandled error:", err);
+        send({
+          type: "error",
+          message: err instanceof Error ? err.message : "Unknown error",
+        });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no", // Nginx: disable buffering
+    },
+  });
+}
+
+// ─── Core sync logic ──────────────────────────────────────────────────────────
+
+type Folder = { id: string; label: string | null; folder_id: string };
+type SendFn = (data: Record<string, unknown>) => void;
+
+async function runSync({
+  eventId,
+  folders,
+  tenantId,
+  googleRefreshToken,
+  admin,
+  send,
+  signal,
+}: {
+  eventId: string;
+  folders: Folder[];
+  tenantId: string;
+  googleRefreshToken: string | null;
+  admin: ReturnType<typeof createServiceRoleClient>;
+  send: SendFn;
+  signal: AbortSignal;
+}): Promise<number> {
+  const hasGoogle = !!googleRefreshToken && !!process.env.GOOGLE_CLIENT_ID;
+  const hasAWS =
+    !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY;
+  const hasR2 =
+    !!process.env.R2_ACCESS_KEY_ID &&
+    !!(process.env.R2_BUCKET ?? process.env.R2_BUCKET_NAME);
+
+  if (!hasGoogle) {
+    send({ type: "warn", message: "Google Drive not connected — skipping file sync (stub mode)" });
+  }
+
+  // Ensure Rekognition collection exists for this event
+  const collectionId = await ensureRekognitionCollection(eventId, admin);
+
+  let totalProcessed = 0;
+
+  for (const folder of folders) {
+    const folderLabel = folder.label ?? folder.folder_id;
+
+    if (!hasGoogle) {
+      send({ type: "progress", folder: folderLabel, done: 0, total: 0, stub: true });
+      continue;
+    }
+
+    // Lazy import to avoid loading googleapis when not needed
+    const { getDriveClient, listImagesInFolder, downloadDriveFile } =
+      await import("@/lib/google-drive-api");
+
+    const drive = getDriveClient(googleRefreshToken!);
+
+    send({ type: "progress", folder: folderLabel, done: 0, total: -1, phase: "listing" });
+
+    // List images in this folder
+    const driveFiles = await listImagesInFolder(drive, folder.folder_id);
+
+    send({
+      type: "progress",
+      folder: folderLabel,
+      done: 0,
+      total: driveFiles.length,
+      phase: "syncing",
+    });
+
+    // Load already-indexed file IDs + R2 URL status
+    const { data: existingPhotos } = await admin
+      .from("photos")
+      .select("id, storage_file_id, r2_web_url")
+      .eq("event_id", eventId);
+
+    // Fully done: indexed + has R2 URL → skip entirely
+    const doneSet = new Set(
+      (existingPhotos ?? [])
+        .filter((p) => p.r2_web_url)
+        .map((p) => p.storage_file_id),
+    );
+    // Partially done: indexed but missing R2 URL → re-upload only (no Rekognition)
+    const needsUrlMap = new Map(
+      (existingPhotos ?? [])
+        .filter((p) => !p.r2_web_url)
+        .map((p) => [p.storage_file_id, p.id]),
+    );
+
+    let doneFolderCount = 0;
+
+    for (const file of driveFiles) {
+      // Check if client cancelled — stop immediately
+      signal.throwIfAborted();
+
+      if (doneSet.has(file.id)) {
+        doneFolderCount++;
+        send({
+          type: "progress",
+          folder: folderLabel,
+          done: doneFolderCount,
+          total: driveFiles.length,
+          skipped: true,
+        });
+        continue;
+      }
+
+      try {
+        if (needsUrlMap.has(file.id)) {
+          // Already indexed — only backfill R2 URLs (skip Rekognition)
+          await backfillR2Url({
+            file,
+            existingPhotoId: needsUrlMap.get(file.id)!,
+            eventId,
+            drive,
+            downloadDriveFile,
+            admin,
+            hasR2,
+          });
+          // backfill ไม่ใช่รูปใหม่ — ไม่นับเข้า totalProcessed
+        } else {
+          // New file — full process: download → resize → R2 → Rekognition
+          await processOnePhoto({
+            file,
+            eventId,
+            collectionId,
+            drive,
+            downloadDriveFile,
+            admin,
+            hasR2,
+            hasAWS,
+          });
+          totalProcessed++; // นับเฉพาะรูปใหม่จริงๆ
+        }
+
+        doneFolderCount++;
+        send({
+          type: "progress",
+          folder: folderLabel,
+          done: doneFolderCount,
+          total: driveFiles.length,
+        });
+      } catch (err) {
+        // Log but don't abort the whole sync on single-file error
+        console.error(`[sync] Failed to process file ${file.id}:`, err);
+        send({
+          type: "file_error",
+          folder: folderLabel,
+          fileId: file.id,
+          message: err instanceof Error ? err.message : "Unknown error",
+        });
+        doneFolderCount++;
+      }
+    }
+  }
+
+  return totalProcessed;
+}
+
+/** Backfill R2 URLs for photos that were indexed but never uploaded to R2. */
+async function backfillR2Url({
+  file,
+  existingPhotoId,
+  eventId,
+  drive,
+  downloadDriveFile,
+  admin,
+  hasR2,
+}: {
+  file: { id: string; name: string; mimeType: string };
+  existingPhotoId: string;
+  eventId: string;
+  drive: Awaited<ReturnType<typeof import("@/lib/google-drive-api").getDriveClient>>;
+  downloadDriveFile: typeof import("@/lib/google-drive-api").downloadDriveFile;
+  admin: ReturnType<typeof createServiceRoleClient>;
+  hasR2: boolean;
+}): Promise<void> {
+  if (!hasR2) return;
+
+  const original = await withRetry(() => downloadDriveFile(drive, file.id), 3);
+
+  const { processImage } = await import("@/lib/image-processing");
+  const { web, full } = await processImage(original);
+
+  const { uploadToR2, r2Paths } = await import("@/lib/r2");
+  const webKey = r2Paths.photoWeb(eventId, existingPhotoId);
+  const fullKey = r2Paths.photoFull(eventId, existingPhotoId);
+
+  const [webUpload, fullUpload] = await Promise.all([
+    uploadToR2(webKey, web, "image/jpeg"),
+    uploadToR2(fullKey, full, "image/jpeg"),
+  ]);
+
+  await admin
+    .from("photos")
+    .update({
+      r2_web_url: webUpload.ok ? webUpload.url : null,
+      r2_full_url: fullUpload.ok ? fullUpload.url : null,
+    })
+    .eq("id", existingPhotoId);
+}
+
+async function processOnePhoto({
+  file,
+  eventId,
+  collectionId,
+  drive,
+  downloadDriveFile,
+  admin,
+  hasR2,
+  hasAWS,
+}: {
+  file: { id: string; name: string; mimeType: string };
+  eventId: string;
+  collectionId: string;
+  drive: Awaited<ReturnType<typeof import("@/lib/google-drive-api").getDriveClient>>;
+  downloadDriveFile: typeof import("@/lib/google-drive-api").downloadDriveFile;
+  admin: ReturnType<typeof createServiceRoleClient>;
+  hasR2: boolean;
+  hasAWS: boolean;
+}): Promise<void> {
+  // 1. Download original from Drive (with exponential backoff on 429)
+  const original = await withRetry(() => downloadDriveFile(drive, file.id), 3);
+
+  // 2. Resize into web + full variants
+  const { processImage } = await import("@/lib/image-processing");
+  const { web, full } = await processImage(original);
+
+  // 3. Generate a photo ID
+  const photoId = crypto.randomUUID();
+
+  // 4. Upload to R2
+  let webUrl: string | null = null;
+  let fullUrl: string | null = null;
+
+  if (hasR2) {
+    const { uploadToR2, r2Paths } = await import("@/lib/r2");
+
+    const webKey = r2Paths.photoWeb(eventId, photoId);
+    const fullKey = r2Paths.photoFull(eventId, photoId);
+
+    const [webUpload, fullUpload] = await Promise.all([
+      uploadToR2(webKey, web, "image/jpeg"),
+      uploadToR2(fullKey, full, "image/jpeg"),
+    ]);
+
+    webUrl = webUpload.ok ? webUpload.url : null;
+    fullUrl = fullUpload.ok ? fullUpload.url : null;
+  }
+
+  // 5. Rekognition IndexFaces
+  const faceIds: string[] = [];
+  type FaceDetail = { face_id: string; bbox: { left: number; top: number; width: number; height: number } };
+  const faceDetails: FaceDetail[] = [];
+
+  if (hasAWS && collectionId) {
+    const { RekognitionClient, IndexFacesCommand } = await import(
+      "@aws-sdk/client-rekognition"
+    );
+
+    const client = new RekognitionClient({
+      region: process.env.AWS_REGION!,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+
+    const indexResult = await client.send(
+      new IndexFacesCommand({
+        CollectionId: collectionId,
+        Image: { Bytes: new Uint8Array(web) },
+        ExternalImageId: photoId,
+        MaxFaces: 20,
+        QualityFilter: "AUTO",
+        DetectionAttributes: ["DEFAULT"],
+      }),
+    );
+
+    for (const fr of indexResult.FaceRecords ?? []) {
+      const faceId = fr.Face?.FaceId;
+      const bb = fr.Face?.BoundingBox;
+      if (faceId) {
+        faceIds.push(faceId);
+        if (bb?.Left != null && bb?.Top != null && bb?.Width != null && bb?.Height != null) {
+          faceDetails.push({
+            face_id: faceId,
+            bbox: { left: bb.Left, top: bb.Top, width: bb.Width, height: bb.Height },
+          });
+        }
+      }
+    }
+  }
+
+  // 6. Insert photo row
+  await admin.from("photos").insert({
+    id: photoId,
+    event_id: eventId,
+    storage_file_id: file.id,
+    r2_web_url: webUrl,
+    r2_full_url: fullUrl,
+    rekognition_face_ids: faceIds,
+    face_details: faceDetails,
+    indexed_at: new Date().toISOString(),
+  });
+}
+
+/** Ensure the Rekognition collection exists; create if missing. */
+async function ensureRekognitionCollection(
+  eventId: string,
+  admin: ReturnType<typeof createServiceRoleClient>,
+): Promise<string> {
+  const { data: event } = await admin
+    .from("events")
+    .select("rekognition_collection_id")
+    .eq("id", eventId)
+    .single();
+
+  if (event?.rekognition_collection_id) {
+    return event.rekognition_collection_id;
+  }
+
+  if (!process.env.AWS_ACCESS_KEY_ID) {
+    // No AWS — use event ID as stub collection ID
+    return `stub-${eventId}`;
+  }
+
+  const { RekognitionClient, CreateCollectionCommand } = await import(
+    "@aws-sdk/client-rekognition"
+  );
+
+  const collectionId = `facefind-event-${eventId}`;
+  const client = new RekognitionClient({
+    region: process.env.AWS_REGION!,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    },
+  });
+
+  // CreateCollection is idempotent-ish; ResourceInUseException = already exists
+  try {
+    await client.send(
+      new CreateCollectionCommand({ CollectionId: collectionId }),
+    );
+  } catch (err: unknown) {
+    if (
+      !(err instanceof Error && err.name === "ResourceInUseException")
+    ) {
+      throw err;
+    }
+  }
+
+  await admin
+    .from("events")
+    .update({ rekognition_collection_id: collectionId })
+    .eq("id", eventId);
+
+  return collectionId;
+}
+
+/** Simple exponential backoff retry for Drive 429 errors. */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number,
+  baseDelay = 1000,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      lastErr = err;
+      // Retry on rate limit (429) or transient 5xx
+      const isRetryable =
+        err instanceof Error &&
+        (err.message.includes("429") ||
+          err.message.includes("500") ||
+          err.message.includes("503"));
+      if (!isRetryable || attempt === maxRetries) throw err;
+      await new Promise((r) => setTimeout(r, baseDelay * 2 ** attempt));
+    }
+  }
+  throw lastErr;
+}
