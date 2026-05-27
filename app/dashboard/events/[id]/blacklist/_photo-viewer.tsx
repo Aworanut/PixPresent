@@ -23,13 +23,21 @@ type Props = {
 export function PhotoViewer({ eventId, photos }: Props) {
   const [selected, setSelected] = useState<Photo | null>(null);
 
+  // Shared blocked set across ALL modals — initialized from page-load snapshot.
+  // Lifted here so toggling in one modal is immediately reflected
+  // when opening another modal for a photo with the same face.
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(
+    () => new Set(photos[0]?.blockedFaceIds ?? []),
+  );
+
   return (
     <>
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {photos.map((photo) => {
-          const blockedCount = photo.face_details.filter(
-            (f) => photo.blockedFaceIds.has(f.face_id),
+          // Use shared state — reflects live toggles made in any previous modal
+          const blockedCount = photo.face_details.filter((f) =>
+            blockedIds.has(f.face_id),
           ).length;
           return (
             <button
@@ -68,6 +76,8 @@ export function PhotoViewer({ eventId, photos }: Props) {
         <FaceViewerModal
           eventId={eventId}
           photo={selected}
+          blockedIds={blockedIds}
+          onBlockedChange={setBlockedIds}
           onClose={() => setSelected(null)}
         />
       )}
@@ -78,29 +88,30 @@ export function PhotoViewer({ eventId, photos }: Props) {
 function FaceViewerModal({
   eventId,
   photo,
+  blockedIds,
+  onBlockedChange,
   onClose,
 }: {
   eventId: string;
   photo: Photo;
+  blockedIds: Set<string>;
+  onBlockedChange: React.Dispatch<React.SetStateAction<Set<string>>>;
   onClose: () => void;
 }) {
-  const [blocked, setBlocked] = useState<Set<string>>(
-    new Set(photo.blockedFaceIds),
-  );
   const [pending, startTransition] = useTransition();
 
   const toggle = (faceId: string) => {
     startTransition(async () => {
-      if (blocked.has(faceId)) {
+      if (blockedIds.has(faceId)) {
         await removeFromBlacklist(eventId, faceId);
-        setBlocked((prev) => {
+        onBlockedChange((prev) => {
           const next = new Set(prev);
           next.delete(faceId);
           return next;
         });
       } else {
         await addToBlacklist(eventId, faceId);
-        setBlocked((prev) => new Set(prev).add(faceId));
+        onBlockedChange((prev) => new Set(prev).add(faceId));
       }
     });
   };
@@ -133,9 +144,9 @@ function FaceViewerModal({
             sizes="672px"
           />
 
-          {/* Bounding boxes */}
+          {/* Bounding boxes — use shared blockedIds */}
           {photo.face_details.map((face) => {
-            const isBlocked = blocked.has(face.face_id);
+            const isBlocked = blockedIds.has(face.face_id);
             return (
               <button
                 key={face.face_id}
@@ -169,13 +180,13 @@ function FaceViewerModal({
             </p>
             <div className="flex flex-wrap gap-2">
               {photo.face_details.map((face) => {
-                const isBlocked = blocked.has(face.face_id);
+                const isBlocked = blockedIds.has(face.face_id);
                 return (
                   <Button
                     key={face.face_id}
                     type="button"
                     size="sm"
-                    variant={isBlocked ? "outline" : "outline"}
+                    variant="outline"
                     disabled={pending}
                     onClick={() => toggle(face.face_id)}
                     className={

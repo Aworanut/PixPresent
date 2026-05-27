@@ -443,8 +443,8 @@ function Lightbox({
           </span>
           <div className="flex items-center gap-3">
             <a
-              href={`/api/download/zip?ids=${photo.id}&token=${shareToken}`}
-              download
+              href={photo.webUrl || photo.fullUrl}
+              download={`photo-${index + 1}.jpg`}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 text-xs font-medium text-white transition-colors"
             >

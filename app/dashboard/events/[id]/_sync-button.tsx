@@ -182,6 +182,11 @@ export function SyncButton({
             หยุดแล้ว — รูปที่ sync ไปแล้วยังคงอยู่
           </span>
         )}
+        {status.phase === "warned" && (
+          <span className="text-sm text-amber-600 dark:text-amber-400">
+            ⚠ {status.message}
+          </span>
+        )}
         {status.phase === "error" && (
           <span className="text-sm text-rose-600 dark:text-rose-400">
             ⚠ {status.message}
@@ -228,7 +233,7 @@ function handleSyncEvent(
       setStatus({ phase: "error", message: String(event.message ?? "Unknown error") });
       break;
     case "warn":
-      setStatus({ phase: "done", photoCount: 0 });
+      setStatus({ phase: "warned", message: String(event.message ?? "Google Drive ไม่ได้ต่อ — stub mode") });
       break;
   }
 }
