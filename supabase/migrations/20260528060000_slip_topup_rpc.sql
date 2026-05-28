@@ -20,14 +20,14 @@ alter table public.slip_uploads
 
 
 -- =============================================================================
--- 1b. approve_topup_credit(p_slip_id uuid, p_credits_claimed integer)
+-- 1b. approve_topup_credit(p_slip_id uuid)
 --     Called after SlipOK verification passes.
 --     Atomically: approves slip → updates tenant balance → writes ledger entry.
+--     credits_claimed is read from the locked slip row, not from a parameter.
 -- =============================================================================
 
 create or replace function public.approve_topup_credit(
-  p_slip_id       uuid,
-  p_credits_claimed integer
+  p_slip_id uuid
 )
 returns void
 language plpgsql
@@ -35,13 +35,12 @@ security definer
 set search_path = public
 as $$
 declare
-  v_tenant_id   uuid;
-  v_current_bal integer;
-  v_new_bal     integer;
+  v_slip    slip_uploads%rowtype;
+  v_balance integer;
 begin
   -- 1. Lock slip row; verify it exists and is still pending
-  select tenant_id
-    into v_tenant_id
+  select *
+    into v_slip
     from public.slip_uploads
    where id = p_slip_id
      for update;
@@ -50,13 +49,7 @@ begin
     raise exception 'slip_not_found: slip_id=% does not exist', p_slip_id;
   end if;
 
-  -- Re-read status inside the lock to guard against double-processing
-  perform 1
-    from public.slip_uploads
-   where id     = p_slip_id
-     and status = 'pending';
-
-  if not found then
+  if v_slip.status <> 'pending' then
     raise exception 'slip_not_pending: slip_id=% is not in pending status', p_slip_id;
   end if;
 
@@ -68,40 +61,41 @@ begin
 
   -- 3. Lock tenant row and read current balance
   select credit_balance
-    into v_current_bal
+    into v_balance
     from public.tenants
-   where id = v_tenant_id
+   where id = v_slip.tenant_id
      for update;
 
   if not found then
-    raise exception 'tenant_not_found: tenant_id=% does not exist', v_tenant_id;
+    raise exception 'tenant_not_found: tenant_id=% does not exist', v_slip.tenant_id;
   end if;
 
-  -- 4. Compute new balance
-  v_new_bal := v_current_bal + p_credits_claimed;
+  -- 4. Compute new balance using credits_claimed from the slip row
+  v_balance := v_balance + v_slip.credits_claimed;
 
   -- 5. Update tenant credit balance
   update public.tenants
-     set credit_balance = v_new_bal
-   where id = v_tenant_id;
+     set credit_balance = v_balance
+   where id = v_slip.tenant_id;
 
   -- 6. Append ledger entry
   insert into public.credit_ledger
     (tenant_id, delta, balance_after, reason, ref_id, note)
   values
-    (v_tenant_id, p_credits_claimed, v_new_bal, 'topup_slip', p_slip_id,
+    (v_slip.tenant_id, v_slip.credits_claimed, v_balance, 'topup_slip', p_slip_id,
      'Auto-approved via SlipOK');
 end;
 $$;
 
-comment on function public.approve_topup_credit(uuid, integer) is
+comment on function public.approve_topup_credit(uuid) is
   'Atomically approves a pending slip_uploads row and credits the tenant balance. '
+  'credits_claimed is read from the slip row itself — no caller-supplied amount. '
   'Must be called from service-role only (execute revoked from public/anon/authenticated).';
 
 -- Revoke execute from all default roles; only service_role (SECURITY DEFINER owner) may call
-revoke execute on function public.approve_topup_credit(uuid, integer) from public;
-revoke execute on function public.approve_topup_credit(uuid, integer) from anon;
-revoke execute on function public.approve_topup_credit(uuid, integer) from authenticated;
+revoke execute on function public.approve_topup_credit(uuid) from public;
+revoke execute on function public.approve_topup_credit(uuid) from anon;
+revoke execute on function public.approve_topup_credit(uuid) from authenticated;
 
 
 -- =============================================================================
