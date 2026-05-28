@@ -24,11 +24,12 @@ comment on column public.events.link_active_days is
 comment on column public.events.data_retention_days is
   'How long photos are kept after link expires';
 
+-- Add index on tier column for efficient querying
+create index events_tier_idx on public.events (tier);
+
 -- 2. Update credit_ledger reason constraint เพื่อรองรับ welcome_bonus
 alter table public.credit_ledger
-  drop constraint if exists credit_ledger_reason_check;
-
-alter table public.credit_ledger
+  drop constraint if exists credit_ledger_reason_check,
   add constraint credit_ledger_reason_check
     check (reason in (
       'topup_slip',
