@@ -4,14 +4,35 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* @font-face rules for Local Sao Chingcha fonts */
+@font-face {
+  font-family: 'Sao Chingcha';
+  src: url('/fonts/SaoChingcha-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Sao Chingcha';
+  src: url('/fonts/SaoChingcha-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Sao Chingcha';
+  src: url('/fonts/SaoChingcha-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ibm-plex-thai);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-cormorant);
+  --font-heading: var(--font-cormorant), var(--font-heading-thai), serif;
   --font-heading-thai: var(--font-kanit);
   --font-heading-thai-script: var(--font-charmonman);
+  --font-heading-thai-heritage: 'Sao Chingcha';
   --font-body-thai: var(--font-ibm-plex-thai);
   --color-ring: var(--ring);
   --color-input: var(--input);
@@ -39,46 +60,55 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --background: #FBF9F6;
+  --foreground: #111111;
+  --card: #FBF9F6;
+  --card-foreground: #111111;
+  --popover: #FBF9F6;
+  --popover-foreground: #111111;
+  --primary: #111111;
+  --primary-foreground: #FBF9F6;
+  --secondary: #F5EEDC; /* Soft Champagne Light for selection/secondary */
+  --secondary-foreground: #111111;
+  --muted: #F5EEDC;
+  --muted-foreground: #666666;
+  --accent: #D4AF37; /* Champagne Gold */
+  --accent-foreground: #111111;
+  --border: rgba(17, 17, 17, 0.1); /* Hairline */
+  --input: rgba(17, 17, 17, 0.1);
+  --ring: #D4AF37;
+  --radius: 0.25rem;
+
+  /* Specimen Custom Component Variables */
+  --cta-bg: transparent;
+  --cta-text: #111111;
+  --cta-border: rgba(17, 17, 17, 0.3);
+  --cta-hover-border: #D4AF37;
+  --cta-hover-bg: rgba(212, 175, 55, 0.08);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: #111111;
+  --foreground: #FBF9F6;
+  --card: #111111;
+  --card-foreground: #FBF9F6;
+  --popover: #111111;
+  --popover-foreground: #FBF9F6;
+  --primary: #FBF9F6;
+  --primary-foreground: #111111;
+  --secondary: #27272A; /* Muted zinc-800 selection */
+  --secondary-foreground: #FBF9F6;
+  --muted: #27272A;
+  --muted-foreground: #A1A1AA;
+  --accent: #D4AF37;
+  --accent-foreground: #FBF9F6;
+  --border: rgba(251, 249, 246, 0.1);
+  --input: rgba(251, 249, 246, 0.1);
+  --ring: #D4AF37;
+
+  /* Specimen Custom Component Variables (Dark) */
+  --cta-text: #FBF9F6;
+  --cta-border: rgba(251, 249, 246, 0.3);
 }
 
 @layer base {
@@ -87,11 +117,129 @@
   }
   body {
     @apply bg-background text-foreground;
+    letter-spacing: -0.015em; /* tight, clean editorial alignment */
   }
   html {
     @apply font-sans;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading), var(--font-heading-thai), serif;
+    /* English headings in Cormorant Garamond, fallback to Thai Display font and serif */
+    font-family: var(--font-heading) !important;
   }
+}
+
+/* Thai Letter-Spacing Stack Rule to prevent vowel/tone spacing issues */
+html[lang="th"] [data-i18n],
+html[lang="th"] .tracking-widest,
+html[lang="th"] .tracking-mega {
+  letter-spacing: -0.01em !important;
+}
+
+/* Reusable Component Specimens (Locked CSS) */
+
+/* 3.1 Primary & Secondary Buttons (Style 2: Minimalist Hairline) */
+.cta-button {
+  background-color: var(--cta-bg);
+  border: 1px solid var(--cta-border);
+  color: var(--cta-text);
+  font-family: var(--font-mono), monospace;
+  letter-spacing: 0.125em;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cta-button:hover {
+  border-color: var(--cta-hover-border);
+  background-color: var(--cta-hover-bg);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+/* 3.2 Skeleton Card Loader (Style 1: Golden Shimmer) */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-card {
+  background: linear-gradient(90deg, #F5F3ED 25%, #EFEBE0 50%, #F5F3ED 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+.dark .skeleton-card {
+  background: linear-gradient(90deg, #1A1A1A 25%, #27272A 50%, #1A1A1A 75%);
+}
+
+/* 3.3 Form Inputs (Style 1: Bottom Hairline) */
+.luxury-input {
+  background: transparent;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.2);
+  transition: border-bottom-color 0.4s ease;
+  border-radius: 0;
+}
+.dark .luxury-input {
+  border-bottom-color: rgba(251, 249, 246, 0.2);
+}
+.luxury-input:focus {
+  outline: none;
+  border-bottom-color: #D4AF37;
+}
+
+/* Prestige Alternative — Style 3: Double Bottom Focus (4px double) */
+.luxury-input-double {
+  background: transparent;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.2);
+  transition: border-bottom-color 0.4s ease, border-bottom-width 0.4s ease;
+  border-radius: 0;
+}
+.dark .luxury-input-double {
+  border-bottom-color: rgba(251, 249, 246, 0.2);
+}
+.luxury-input-double:focus {
+  outline: none;
+  border-bottom: 4px double #D4AF37 !important; /* Two clean parallel 1px gold lines */
+  padding-bottom: 4px;
+}
+
+/* 3.4 Status Toasts (Style 3: Center-Top Gold-Bordered White Banner) */
+@keyframes slideDownCenter {
+  from { transform: translate(-50%, -100%); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+.toast-top-banner {
+  position: fixed;
+  top: 6.5rem; /* Just below header */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(212, 175, 55, 0.3); /* Gold border */
+  color: #111111; /* Dark text */
+  padding: 1rem 1.5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  width: 90%;
+  max-width: 500px;
+  animation: slideDownCenter 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.dark .toast-top-banner {
+  background-color: rgba(17, 17, 17, 0.95);
+  color: #FBF9F6;
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+/* 3.5 Photo Lightbox Viewport (Theme 1: Luxury Blur) */
+.photo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: none; /* Block click tree when hidden */
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  background-color: rgba(17, 17, 17, 0.88);
+  backdrop-filter: blur(12px); /* Luxury backdrop blur */
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.photo-modal-overlay.active {
+  display: flex;
+  opacity: 1;
 }

@@ -207,3 +207,25 @@ export async function softDeleteEvent(id: string) {
   revalidatePath("/dashboard");
   redirect("/dashboard");
 }
+
+/** อัปเดตเฉพาะชื่อ event — ใช้สำหรับ inline edit */
+export async function updateEventName(
+  id: string,
+  name: string,
+): Promise<{ error?: string }> {
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "กรุณากรอกชื่อ event" };
+  if (trimmed.length > 120) return { error: "ชื่อ event ยาวเกิน 120 ตัวอักษร" };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ name: trimmed })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/events/${id}`);
+  return {};
+}

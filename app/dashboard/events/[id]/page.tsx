@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CameraIcon, FolderIcon, LinkSlashIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { CameraIcon, FolderIcon, LinkSlashIcon, ArrowPathIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { buttonVariants } from "@/components/ui/button";
 import { DeleteEventButton } from "./_delete-button";
 import { EventToolbar } from "./_event-toolbar";
+import { EventTitleEditor } from "./_event-title-editor";
 import { PhotoGallery, type GalleryPhoto } from "./_photo-gallery";
 
 export default async function EventDetailPage({
@@ -86,17 +87,15 @@ export default async function EventDetailPage({
               ← Events
             </Link>
           </nav>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
-              {event.name}
-            </h1>
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <EventTitleEditor eventId={event.id} initialName={event.name} />
+            {formattedDate && (
+              <span className="text-sm text-zinc-400 dark:text-zinc-500 select-none font-sans mt-0.5">
+                {formattedDate}
+              </span>
+            )}
             <StatusBadge isIndexed={event.is_indexed} />
           </div>
-          {formattedDate && (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-              {formattedDate}
-            </p>
-          )}
         </div>
 
         {/* Action icons + Edit/Delete */}
@@ -115,13 +114,14 @@ export default async function EventDetailPage({
             appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}
           />
 
-          <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-1" />
+          <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-1.5" />
 
           <Link
             href={`/dashboard/events/${event.id}/edit`}
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
+            className="cta-button h-8 px-2.5 sm:px-3 text-[10px] sm:text-xs rounded-[2px] text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 flex items-center justify-center gap-1.5 transition-all duration-300 font-mono leading-none"
           >
-            แก้ไข
+            <PencilSquareIcon className="h-4 w-4 stroke-[1.5] flex-shrink-0 relative top-[-0.5px]" />
+            <span className="hidden sm:inline relative top-[0.5px]">Edit</span>
           </Link>
           <DeleteEventButton id={event.id} name={event.name} />
         </div>

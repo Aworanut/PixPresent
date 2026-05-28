@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
+import { FolderIcon, ArrowPathIcon, ArrowUpOnSquareIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,24 +41,30 @@ export function EventToolbar(props: ToolbarProps) {
 
   return (
     <>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         {/* Drive */}
         <IconButton
           label="Google Drive folders"
           onClick={() => setOpen("drive")}
-        >
-          <DriveIcon />
-        </IconButton>
+          icon={FolderIcon}
+          text="Folders"
+        />
 
         {/* Import */}
-        <IconButton label="Import & Index" onClick={() => setOpen("sync")}>
-          <SyncIcon />
-        </IconButton>
+        <IconButton
+          label="Import & Index"
+          onClick={() => setOpen("sync")}
+          icon={ArrowPathIcon}
+          text="Sync"
+        />
 
         {/* Share */}
-        <IconButton label="Share link & QR" onClick={() => setOpen("share")}>
-          <ShareIcon />
-        </IconButton>
+        <IconButton
+          label="Share link & QR"
+          onClick={() => setOpen("share")}
+          icon={ArrowUpOnSquareIcon}
+          text="Share"
+        />
       </div>
 
       {/* Modals */}
@@ -98,20 +105,23 @@ export function EventToolbar(props: ToolbarProps) {
 function IconButton({
   label,
   onClick,
-  children,
+  icon: Icon,
+  text,
 }: {
   label: string;
   onClick: () => void;
-  children: React.ReactNode;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  text: string;
 }) {
   return (
     <button
       type="button"
       title={label}
       onClick={onClick}
-      className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+      className="cta-button h-8 px-2.5 sm:px-3 text-[10px] sm:text-xs rounded-[2px] text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer font-mono leading-none"
     >
-      {children}
+      <Icon className="h-4 w-4 stroke-[1.5] flex-shrink-0 relative top-[-0.5px]" />
+      <span className="hidden sm:inline relative top-[0.5px]">{text}</span>
     </button>
   );
 }
@@ -675,30 +685,4 @@ function ShareModal({
   );
 }
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
 
-function DriveIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-      <path d="M6.28 3h11.44l5.28 9-5.28 9H6.28L1 12z" fillOpacity={0} stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round"/>
-      <path d="M1 12h22M6.28 3l5.72 9-5.72 9" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" fill="none"/>
-    </svg>
-  );
-}
-
-function SyncIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4.5 12a7.5 7.5 0 0 1 14.25-3.25M19.5 12a7.5 7.5 0 0 1-14.25 3.25"/>
-      <path d="M16.5 5.25 19.5 8.75l-3.5 1.25M7.5 18.75 4.5 15.25l3.5-1.25"/>
-    </svg>
-  );
-}
-
-function ShareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 1 1 0-5.368m0 5.368a3 3 0 0 0 4.632 2.026m-4.632-7.394a3 3 0 0 1 4.632-2.026m0 0a3 3 0 1 1 4.632 2.026M15.316 10.658m0 2.684a3 3 0 1 0 0-2.684"/>
-    </svg>
-  );
-}
