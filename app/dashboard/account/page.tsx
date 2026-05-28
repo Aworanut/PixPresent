@@ -9,8 +9,8 @@ type Tab = "profile" | "security";
 const TABS = [
   { id: "profile", label: "Profile" },
   { id: "security", label: "Security" },
-  { id: "billing", label: "Billing", comingSoon: true },
-  { id: "usage", label: "Usage", comingSoon: true },
+  { id: "credits", label: "Credits", href: "/dashboard/account/credits" },
+  { id: "topup", label: "Top-up", href: "/dashboard/account/topup" },
 ] as const;
 
 export default async function AccountPage({
@@ -39,14 +39,14 @@ export default async function AccountPage({
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
         {TABS.map((t) =>
-          "comingSoon" in t ? (
-            <span
+          "href" in t ? (
+            <Link
               key={t.id}
-              className="px-4 py-2 text-sm text-zinc-300 dark:text-zinc-600 cursor-not-allowed select-none"
+              href={t.href}
+              className="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
             >
-              {t.label}{" "}
-              <span className="text-xs">(coming soon)</span>
-            </span>
+              {t.label}
+            </Link>
           ) : (
             <Link
               key={t.id}
