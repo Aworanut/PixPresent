@@ -103,7 +103,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // 8. Verify with SlipOK
-    const verification = await verifySlipWithSlipOK(slipBuffer, amountThb)
+    const verification = await verifySlipWithSlipOK(slipBuffer, amountThb, slipFile.type)
 
     // 9a. Auto-approved path
     if (verification.verified) {

@@ -69,6 +69,7 @@ export function validateTopupRequest(
 export async function verifySlipWithSlipOK(
   slipImageBuffer: Buffer,
   amountThb: number,
+  mimeType = 'application/octet-stream',
 ): Promise<{ verified: boolean; transactionId?: string; error?: string }> {
   const apiUrl = process.env.SLIPOK_API_URL
   if (!apiUrl) {
@@ -79,10 +80,10 @@ export async function verifySlipWithSlipOK(
     // Build multipart/form-data payload
     const formData = new FormData()
 
-    // Attach slip image as a Blob with octet-stream type so SlipOK accepts it
-    // Use Uint8Array to avoid Buffer<ArrayBufferLike> vs ArrayBuffer mismatch
-    const slipBlob = new Blob([new Uint8Array(slipImageBuffer)], { type: 'application/octet-stream' })
-    formData.append('files', slipBlob, 'slip.jpg')
+    // Attach slip image with the actual MIME type so SlipOK can identify the format
+    const slipBlob = new Blob([new Uint8Array(slipImageBuffer)], { type: mimeType })
+    const ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg'
+    formData.append('files', slipBlob, `slip.${ext}`)
     formData.append('log', 'true')
 
     // Optional: amount field for amount verification (SlipOK supports this)
