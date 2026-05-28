@@ -156,8 +156,11 @@ export async function POST(request: Request): Promise<Response> {
       })
       if (rejectErr) console.error('[upload-slip] reject_topup RPC failed:', rejectErr)
 
+      const rejectMsg = (verification.error ?? 'กรุณาตรวจสอบยอดโอนและลองใหม่')
+        .replace(/Indochina Time/g, 'Bangkok Time')
+
       return Response.json(
-        { error: `สลิปไม่ผ่านการตรวจสอบ: ${verification.error ?? 'กรุณาตรวจสอบยอดโอนและลองใหม่'}` },
+        { error: `สลิปไม่ผ่านการตรวจสอบ: ${rejectMsg}` },
         { status: 400 },
       )
     }
