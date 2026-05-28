@@ -57,8 +57,16 @@ export async function POST(request: Request): Promise<Response> {
     if (!slipFile || typeof slipFile === 'string') {
       return Response.json({ error: 'slip_image is required' }, { status: 400 })
     }
-    if (!slipFile.type.startsWith('image/')) {
-      return Response.json({ error: 'slip_image must be an image file' }, { status: 400 })
+    const ALLOWED_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'] as const
+    if (!ALLOWED_MIME.includes(slipFile.type as typeof ALLOWED_MIME[number])) {
+      return Response.json({ error: 'Unsupported image type. Use JPEG, PNG, WebP or HEIC.' }, { status: 400 })
+    }
+    const MAX_SLIP_BYTES = 5 * 1024 * 1024; // 5 MB
+    if (slipFile.size > MAX_SLIP_BYTES) {
+      return Response.json(
+        { error: 'slip_image must be under 5 MB' },
+        { status: 400 },
+      );
     }
 
     // 4. Validate package/amount/credits
@@ -69,6 +77,9 @@ export async function POST(request: Request): Promise<Response> {
 
     // 5. Generate slip ID
     const slipId = randomUUID()
+
+    // TODO(#13-race): For production, store verification.transactionId in slip_uploads
+    // and add a unique constraint to prevent double-credit on duplicate slip uploads.
 
     // 6. Upload slip to R2 (non-blocking — fallback to placeholder if R2 not configured)
     const slipBuffer = Buffer.from(await slipFile.arrayBuffer())
@@ -97,14 +108,23 @@ export async function POST(request: Request): Promise<Response> {
     // 9a. Auto-approved path
     if (verification.verified) {
       // Call approve_topup_credit RPC with service role (bypasses RLS)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: rpcError } = await (admin as any).rpc('approve_topup_credit', {
+      const { error: rpcError } = await admin.rpc('approve_topup_credit', {
         p_slip_id: slipId,
       })
 
       if (rpcError) {
-        console.error('[upload-slip] approve_topup_credit RPC failed:', rpcError)
-        return Response.json({ error: 'Failed to approve credits' }, { status: 500 })
+        console.error('[upload-slip] approve_topup_credit RPC failed, falling back to pending:', rpcError)
+        // Slip stays 'pending' — admin will review manually
+        await sendAdminSlipPending({
+          slipId,
+          tenantName: tenant.name,
+          amountThb,
+          credits: creditsClaimed,
+        }).catch((e) => console.error('[upload-slip] admin email failed:', e))
+        return Response.json({
+          status: 'pending',
+          message: 'Slip อยู่ระหว่างการตรวจสอบ กรุณารอภายใน 24 ชั่วโมง',
+        })
       }
 
       // Fetch updated balance
@@ -117,11 +137,13 @@ export async function POST(request: Request): Promise<Response> {
       const newBalance = updatedTenant?.credit_balance ?? tenant.credit_balance + creditsClaimed
 
       // Send approval email (non-blocking — don't fail if email fails)
-      await sendOrganizerTopupApproved({
-        toEmail: user.email!,
-        credits: creditsClaimed,
-        newBalance,
-      }).catch((err) => console.error('[upload-slip] sendOrganizerTopupApproved failed:', err))
+      if (user.email) {
+        await sendOrganizerTopupApproved({
+          toEmail: user.email,
+          credits: creditsClaimed,
+          newBalance,
+        }).catch((e) => console.error('[upload-slip] organizer email failed:', e))
+      }
 
       return Response.json({ status: 'approved', credits: creditsClaimed, newBalance })
     }

@@ -434,8 +434,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_topup_credit: { Args: { p_slip_id: string }; Returns: undefined }
       current_tenant_id: { Args: never; Returns: string }
       is_super_admin: { Args: never; Returns: boolean }
+      reject_topup: {
+        Args: { p_reason: string; p_slip_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
