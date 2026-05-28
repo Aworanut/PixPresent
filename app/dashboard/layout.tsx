@@ -25,14 +25,17 @@ export default async function DashboardLayout({
           </Link>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex flex-col items-end leading-tight">
+            <Link
+              href="/dashboard/account"
+              className="hidden sm:flex flex-col items-end leading-tight hover:opacity-70 transition-opacity"
+            >
               <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 {ctx.tenant.name}
               </span>
               <span className="text-xs text-zinc-500 dark:text-zinc-400">
                 {ctx.user.email}
               </span>
-            </div>
+            </Link>
             <form action={signOut}>
               <Button type="submit" variant="ghost" size="sm">
                 Sign out

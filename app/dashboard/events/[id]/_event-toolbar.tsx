@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
@@ -49,8 +49,8 @@ export function EventToolbar(props: ToolbarProps) {
           <DriveIcon />
         </IconButton>
 
-        {/* Sync */}
-        <IconButton label="Sync & Index" onClick={() => setOpen("sync")}>
+        {/* Import */}
+        <IconButton label="Import & Index" onClick={() => setOpen("sync")}>
           <SyncIcon />
         </IconButton>
 
@@ -158,6 +158,8 @@ function Modal({
 
 type FolderRow = { label: string; folder_id: string };
 
+type FetchStatus = "fetching" | TestResult;
+
 function DriveModal({
   eventId,
   driveConnected,
@@ -174,22 +176,22 @@ function DriveModal({
       ? folders.map((f) => ({ label: f.label ?? "", folder_id: f.folder_id }))
       : [{ label: "", folder_id: "" }],
   );
-  const [testResults, setTestResults] = useState<Record<number, TestResult | "testing">>({});
+  // per-row fetch status: undefined=ยังไม่ตรวจ, "fetching"=กำลังตรวจ, TestResult=ผลลัพธ์
+  const [fetchStatuses, setFetchStatuses] = useState<Record<number, FetchStatus>>({});
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const router = useRouter();
 
   const update = (idx: number, key: keyof FolderRow, val: string) => {
-    // เคลียร์ผลทดสอบเมื่อแก้ไข URL
     if (key === "folder_id") {
-      setTestResults((prev) => { const next = { ...prev }; delete next[idx]; return next; });
+      // เคลียร์ status เมื่อแก้ไข URL
+      setFetchStatuses((prev) => { const next = { ...prev }; delete next[idx]; return next; });
     }
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [key]: val } : r)));
   };
 
   const remove = (idx: number) => {
-    setTestResults((prev) => {
+    setFetchStatuses((prev) => {
       const next: typeof prev = {};
       Object.entries(prev).forEach(([k, v]) => {
         const n = Number(k);
@@ -206,27 +208,36 @@ function DriveModal({
 
   const add = () => setRows((prev) => [...prev, { label: "", folder_id: "" }]);
 
-  const test = (idx: number) => {
+  // Auto-fetch folder name เมื่อ user ออกจาก field
+  const onFolderBlur = (idx: number) => {
     const folderId = rows[idx].folder_id.trim();
-    if (!folderId) return;
-    setTestResults((prev) => ({ ...prev, [idx]: "testing" }));
-    startTransition(async () => {
-      const result = await testDriveFolder(eventId, folderId);
-      setTestResults((prev) => ({ ...prev, [idx]: result }));
+    const currentLabel = rows[idx].label.trim();
+    if (!folderId || !driveConnected) return;
+    // ถ้ามีผลลัพธ์อยู่แล้วจาก URL เดิม ไม่ต้อง fetch ซ้ำ
+    const existing = fetchStatuses[idx];
+    if (existing && existing !== "fetching") return;
+
+    setFetchStatuses((prev) => ({ ...prev, [idx]: "fetching" }));
+    testDriveFolder(eventId, folderId).then((result) => {
+      setFetchStatuses((prev) => ({ ...prev, [idx]: result }));
+      // Auto-fill label ด้วยชื่อ folder จาก Drive ถ้า label ว่างอยู่ตอนที่ blur
+      if (result.ok && !currentLabel) {
+        setRows((prev) =>
+          prev.map((r, i) => (i === idx ? { ...r, label: result.name } : r)),
+        );
+      }
     });
   };
 
   const save = () => {
     setError(null);
-    setSaved(false);
     startTransition(async () => {
       const result = await updateEventFolders(eventId, rows);
       if (result.error) {
         setError(result.error);
       } else {
-        setSaved(true);
         router.refresh();
-        setTimeout(() => setSaved(false), 2000);
+        onClose();
       }
     });
   };
@@ -235,13 +246,13 @@ function DriveModal({
     <Modal title="Google Drive Folders" onClose={onClose}>
       <div className="space-y-4">
         {!driveConnected && (
-          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2.5 text-sm text-amber-700 dark:text-amber-400 flex items-center justify-between gap-3">
-            <span>ยังไม่ได้เชื่อมต่อ Google Drive</span>
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-400 flex items-center justify-between gap-3">
+            <span>ต้องเชื่อมต่อ Google account ก่อนจึงจะตรวจสอบ folder ได้</span>
             <a
               href={`/api/auth/google?redirect=/dashboard/events/${eventId}`}
-              className="font-medium underline underline-offset-2 whitespace-nowrap"
+              className="font-semibold underline underline-offset-2 whitespace-nowrap"
             >
-              เชื่อมต่อ ↗
+              Connect Google →
             </a>
           </div>
         )}
@@ -249,7 +260,11 @@ function DriveModal({
         {/* Editable folder table */}
         <div className="space-y-3">
           {rows.map((row, idx) => {
-            const testResult = testResults[idx];
+            const status = fetchStatuses[idx];
+            const isOk = status && status !== "fetching" && status.ok;
+            const isFail = status && status !== "fetching" && !status.ok;
+            const isFetching = status === "fetching";
+
             return (
               <div key={idx} className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -261,30 +276,38 @@ function DriveModal({
                     className="w-24 flex-shrink-0 h-8 text-sm"
                     maxLength={60}
                   />
-                  <Input
-                    type="text"
-                    value={row.folder_id}
-                    onChange={(e) => update(idx, "folder_id", e.target.value)}
-                    placeholder="URL หรือ Folder ID"
-                    className={[
-                      "flex-1 min-w-0 h-8 text-sm font-mono",
-                      testResult && testResult !== "testing"
-                        ? testResult.ok
-                          ? "border-emerald-400 dark:border-emerald-600"
-                          : "border-rose-400 dark:border-rose-600"
-                        : "",
-                    ].join(" ")}
-                  />
-                  {/* ทดสอบ button */}
-                  <button
-                    type="button"
-                    onClick={() => test(idx)}
-                    disabled={!row.folder_id.trim() || !driveConnected || pending}
-                    className="flex-shrink-0 h-8 px-2 rounded-md border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-30 transition-colors whitespace-nowrap"
-                  >
-                    {testResult === "testing" ? "…" : "ทดสอบ"}
-                  </button>
-                  {/* ลบ */}
+                  <div className="relative flex-1 min-w-0">
+                    <Input
+                      type="text"
+                      value={row.folder_id}
+                      onChange={(e) => update(idx, "folder_id", e.target.value)}
+                      onBlur={() => onFolderBlur(idx)}
+                      placeholder="URL หรือ Folder ID"
+                      className={[
+                        "w-full h-8 text-sm font-mono pr-7",
+                        isOk ? "border-emerald-400 dark:border-emerald-600" : "",
+                        isFail ? "border-rose-400 dark:border-rose-600" : "",
+                      ].join(" ")}
+                    />
+                    {/* inline status indicator */}
+                    {isFetching && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400 animate-pulse">
+                        ⋯
+                      </span>
+                    )}
+                    {isOk && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-emerald-600 dark:text-emerald-400">
+                        ✓
+                      </span>
+                    )}
+                    {isFail && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-rose-500">
+                        ✗
+                      </span>
+                    )}
+                  </div>
+
+                  {/* ลบ row */}
                   <button
                     type="button"
                     onClick={() => remove(idx)}
@@ -296,17 +319,6 @@ function DriveModal({
                   </button>
                 </div>
 
-                {/* ผลทดสอบ */}
-                {testResult && testResult !== "testing" && (
-                  <p className={[
-                    "text-xs pl-1",
-                    testResult.ok
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-rose-600 dark:text-rose-400",
-                  ].join(" ")}>
-                    {testResult.ok ? `✓ ${testResult.name}` : `✗ ${testResult.message}`}
-                  </p>
-                )}
               </div>
             );
           })}
@@ -328,11 +340,6 @@ function DriveModal({
           <Button type="button" size="sm" onClick={save} disabled={pending}>
             {pending ? "กำลังบันทึก..." : "บันทึก"}
           </Button>
-          {saved && (
-            <span className="text-xs text-emerald-600 dark:text-emerald-400">
-              ✓ บันทึกแล้ว
-            </span>
-          )}
         </div>
       </div>
     </Modal>
@@ -367,7 +374,7 @@ function SyncModal({
 }) {
   const [status, setStatus] = useState<SyncPhase>({ phase: "idle" });
   const router = useRouter();
-  const abortRef = { current: null as AbortController | null };
+  const abortRef = useRef<AbortController | null>(null);
 
   const isRunning = status.phase === "listing" || status.phase === "syncing";
 
@@ -453,11 +460,11 @@ function SyncModal({
   };
 
   return (
-    <Modal title="Sync & Index" onClose={onClose}>
+    <Modal title="Import & Index" onClose={onClose}>
       <div className="space-y-4">
         {lastSyncAt && (
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Sync ล่าสุด:{" "}
+            Import ล่าสุด:{" "}
             {new Date(lastSyncAt).toLocaleString("th-TH", {
               dateStyle: "medium",
               timeStyle: "short",
@@ -487,7 +494,7 @@ function SyncModal({
         )}
         {status.phase === "done" && (
           <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-            ✓ Sync สำเร็จ — {status.photoCount.toLocaleString()} รูปใหม่
+            ✓ Import สำเร็จ — {status.photoCount.toLocaleString()} รูปใหม่
           </p>
         )}
         {status.phase === "cancelled" && (
@@ -509,7 +516,7 @@ function SyncModal({
             disabled={isRunning || !driveConnected}
             size="sm"
           >
-            {isRunning ? "กำลัง Sync..." : isIndexed ? "Re-sync" : "Sync & Index"}
+            {isRunning ? "กำลัง Import..." : isIndexed ? "Import ใหม่" : "Import & Index"}
           </Button>
           {isRunning && (
             <Button

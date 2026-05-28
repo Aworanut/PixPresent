@@ -1,0 +1,74 @@
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { getCurrentTenant } from "@/lib/auth/current-tenant";
+import { ProfileSection } from "./_profile-section";
+import { SecuritySection } from "./_security-section";
+
+type Tab = "profile" | "security";
+
+const TABS = [
+  { id: "profile", label: "Profile" },
+  { id: "security", label: "Security" },
+  { id: "billing", label: "Billing", comingSoon: true },
+  { id: "usage", label: "Usage", comingSoon: true },
+] as const;
+
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab: rawTab = "profile" } = await searchParams;
+  const tab: Tab = rawTab === "security" ? "security" : "profile";
+
+  const ctx = await getCurrentTenant();
+  if (!ctx) redirect("/login");
+
+
+  return (
+    <div className="space-y-8 max-w-2xl">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          Account
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          {ctx.user.email}
+        </p>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
+        {TABS.map((t) =>
+          "comingSoon" in t ? (
+            <span
+              key={t.id}
+              className="px-4 py-2 text-sm text-zinc-300 dark:text-zinc-600 cursor-not-allowed select-none"
+            >
+              {t.label}{" "}
+              <span className="text-xs">(coming soon)</span>
+            </span>
+          ) : (
+            <Link
+              key={t.id}
+              href={`/dashboard/account?tab=${t.id}`}
+              className={[
+                "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                tab === t.id
+                  ? "border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100"
+                  : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300",
+              ].join(" ")}
+            >
+              {t.label}
+            </Link>
+          ),
+        )}
+      </div>
+
+      {/* Content */}
+      {tab === "profile" && (
+        <ProfileSection tenant={ctx.tenant} email={ctx.user.email ?? ""} />
+      )}
+      {tab === "security" && <SecuritySection />}
+    </div>
+  );
+}
