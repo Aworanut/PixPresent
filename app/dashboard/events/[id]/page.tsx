@@ -23,7 +23,7 @@ export default async function EventDetailPage({
       supabase
         .from("events")
         .select(
-          "id, name, event_date, is_indexed, share_link_expires_days, rekognition_collection_id, share_token, share_token_expires_at, sync_started_at, sync_completed_at, sync_photo_count, tenant_id",
+          "id, name, event_date, is_indexed, share_link_expires_days, rekognition_collection_id, share_token, share_token_expires_at, sync_started_at, sync_completed_at, sync_photo_count, tenant_id, credits_used",
         )
         .eq("id", id)
         .is("deleted_at", null)
@@ -123,7 +123,12 @@ export default async function EventDetailPage({
             <PencilSquareIcon className="h-4 w-4 stroke-[1.5] flex-shrink-0 relative top-[-0.5px]" />
             <span className="hidden sm:inline relative top-[0.5px]">Edit</span>
           </Link>
-          <DeleteEventButton id={event.id} name={event.name} />
+          <DeleteEventButton
+            id={event.id}
+            name={event.name}
+            hasStartedSync={!!event.sync_started_at}
+            creditsUsed={event.credits_used ?? 0}
+          />
         </div>
       </header>
 

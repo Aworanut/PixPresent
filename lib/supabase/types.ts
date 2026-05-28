@@ -435,7 +435,24 @@ export type Database = {
     }
     Functions: {
       approve_topup_credit: { Args: { p_slip_id: string }; Returns: undefined }
+      create_event_deduct_credit: {
+        Args: {
+          p_tenant_id: string
+          p_name: string
+          p_event_date: string | null
+          p_tier: string
+          p_storage_limit_gb: number
+          p_link_active_days: number
+          p_data_retention_days: number
+          p_credit_cost: number
+        }
+        Returns: string
+      }
       current_tenant_id: { Args: never; Returns: string }
+      delete_event_with_refund: {
+        Args: { p_event_id: string; p_tenant_id: string }
+        Returns: undefined
+      }
       is_super_admin: { Args: never; Returns: boolean }
       reject_topup: {
         Args: { p_reason: string; p_slip_id: string }

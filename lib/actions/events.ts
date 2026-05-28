@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { deleteRekognitionCollection } from "@/lib/aws/rekognition";
 import { extractDriveFolderId } from "@/lib/google-drive";
 import { isValidTier, TIER_CONFIG, type EventTier } from "@/lib/credit-packages";
@@ -87,50 +88,73 @@ export async function createEvent(
   if (invalid) return invalid;
 
   const supabase = await createClient();
-  const { data: tenant, error: tenantError } = await supabase
+  const admin = createServiceRoleClient();
+
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
+  if (!user) return { error: "ไม่พบ session (กรุณา login ใหม่)" };
+
+  const { data: tenant, error: tenantError } = await admin
     .from("tenants")
-    .select("id")
+    .select("id, credit_balance")
+    .eq("owner_user_id", user.id)
     .single();
   if (tenantError || !tenant) {
     return { error: "ไม่พบ tenant ของคุณ (อาจ session หมดอายุ)" };
   }
 
   const tierCfg = TIER_CONFIG[input.tier];
-  const { data: created, error } = await supabase
-    .from("events")
-    .insert({
-      tenant_id: tenant.id,
-      name: input.name,
-      event_date: input.event_date,
-      tier: input.tier,
-      storage_limit_gb: tierCfg.storageLimitGb,
-      link_active_days: tierCfg.linkActiveDays,
-      data_retention_days: tierCfg.dataRetentionDays,
-    })
-    .select("id")
-    .single();
 
-  if (error || !created) return { error: error?.message ?? "Insert failed" };
+  if (tenant.credit_balance < tierCfg.creditCost) {
+    return {
+      error: `เครดิตไม่พอ — ต้องการ ${tierCfg.creditCost} cr แต่มีเพียง ${tenant.credit_balance} cr กรุณาเติมเครดิตก่อนสร้าง event`,
+    };
+  }
+
+  const { data: eventId, error: rpcError } = await admin.rpc(
+    "create_event_deduct_credit",
+    {
+      p_tenant_id: tenant.id,
+      p_name: input.name,
+      p_event_date: input.event_date,
+      p_tier: input.tier,
+      p_storage_limit_gb: tierCfg.storageLimitGb,
+      p_link_active_days: tierCfg.linkActiveDays,
+      p_data_retention_days: tierCfg.dataRetentionDays,
+      p_credit_cost: tierCfg.creditCost,
+    },
+  );
+
+  if (rpcError) {
+    if (rpcError.message.includes("insufficient_credits")) {
+      return {
+        error: `เครดิตไม่พอ — ต้องการ ${tierCfg.creditCost} cr แต่มีเพียง ${tenant.credit_balance} cr กรุณาเติมเครดิตก่อนสร้าง event`,
+      };
+    }
+    return { error: rpcError.message };
+  }
+
+  if (!eventId) return { error: "สร้าง event ไม่สำเร็จ" };
 
   if (input.folders.length > 0) {
-    const { error: folderErr } = await supabase
+    const { error: folderErr } = await admin
       .from("event_storage_folders")
       .insert(
         input.folders.map((f) => ({
-          event_id: created.id,
+          event_id: eventId as string,
           label: f.label,
           folder_id: f.folder_id,
         })),
       );
     if (folderErr) {
       // Roll back the event so the user can retry without orphans.
-      await supabase.from("events").delete().eq("id", created.id);
+      await admin.from("events").delete().eq("id", eventId as string);
       return { error: `เพิ่ม folder ไม่สำเร็จ: ${folderErr.message}` };
     }
   }
 
   revalidatePath("/dashboard");
-  redirect(`/dashboard/events/${created.id}`);
+  redirect(`/dashboard/events/${eventId as string}`);
 }
 
 export async function updateEvent(
@@ -181,23 +205,32 @@ export async function updateEvent(
 
 export async function softDeleteEvent(id: string) {
   const supabase = await createClient();
+  const admin = createServiceRoleClient();
 
-  const { data: event } = await supabase
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
+  if (!user) throw new Error("ไม่พบ session (กรุณา login ใหม่)");
+
+  const { data: tenant, error: tenantError } = await admin
+    .from("tenants")
+    .select("id")
+    .eq("owner_user_id", user.id)
+    .single();
+  if (tenantError || !tenant) throw new Error("ไม่พบ tenant ของคุณ");
+
+  const { data: event } = await admin
     .from("events")
     .select("rekognition_collection_id")
     .eq("id", id)
     .single();
 
-  const { error } = await supabase
-    .from("events")
-    .update({
-      deleted_at: new Date().toISOString(),
-      rekognition_collection_id: null,
-    })
-    .eq("id", id);
+  const { error: rpcError } = await admin.rpc("delete_event_with_refund", {
+    p_event_id: id,
+    p_tenant_id: tenant.id,
+  });
 
-  if (error) {
-    throw new Error(error.message);
+  if (rpcError) {
+    throw new Error(rpcError.message);
   }
 
   if (event?.rekognition_collection_id) {

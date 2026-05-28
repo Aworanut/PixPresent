@@ -7,22 +7,27 @@ import { softDeleteEvent } from "@/lib/actions/events";
 export function DeleteEventButton({
   id,
   name,
+  hasStartedSync,
+  creditsUsed,
 }: {
   id: string;
   name: string;
+  hasStartedSync: boolean;
+  creditsUsed: number;
 }) {
   const [pending, startTransition] = useTransition();
+
+  const confirmMessage =
+    !hasStartedSync && creditsUsed > 0
+      ? `ลบ event "${name}"? จะได้รับคืน ${creditsUsed} cr (soft-delete — ไม่สามารถ undo ได้)`
+      : `ลบ event "${name}"? ไม่สามารถคืนเครดิตได้เนื่องจากมีการ import รูปแล้ว (soft-delete — ไม่สามารถ undo ได้)`;
 
   return (
     <button
       type="button"
       disabled={pending}
       onClick={() => {
-        if (
-          !window.confirm(
-            `ลบ event "${name}"? (soft-delete + ลบ Rekognition collection — ไม่สามารถ undo ได้)`,
-          )
-        ) {
+        if (!window.confirm(confirmMessage)) {
           return;
         }
         startTransition(async () => {
