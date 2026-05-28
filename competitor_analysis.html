@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Competitive Analysis — FaceFind vs Sikram</title>
+<style>
+  :root {
+    --bg:#f5f7fb; --surface:#fff; --surface-2:#f0f4fa; --surface-3:#e5ecf7;
+    --border:#dde3ef; --border-strong:#b8c5dc;
+    --text:#0f1623; --text-muted:#5a6785; --text-dim:#8fa0bb;
+    --accent:#2563eb; --accent-2:#1d4ed8;
+    --green:#059669; --green-bg:#ecfdf5; --green-border:#a7f3d0;
+    --red:#dc2626; --red-bg:#fef2f2; --red-border:#fca5a5;
+    --yellow:#d97706; --yellow-bg:#fffbeb; --yellow-border:#fde68a;
+    --purple:#7c3aed; --purple-bg:#f5f3ff; --purple-border:#c4b5fd;
+    --shadow:0 2px 8px rgba(0,0,0,.06);
+    --shadow-md:0 4px 16px rgba(0,0,0,.10);
+    --ff-color:#2563eb; --sk-color:#e85c0d;
+  }
+  [data-theme="dark"] {
+    --bg:#0d1117; --surface:#161b22; --surface-2:#1a2030; --surface-3:#202838;
+    --border:#2d3748; --border-strong:#4a5568;
+    --text:#e2e8f0; --text-muted:#8fa0bb; --text-dim:#4a5568;
+    --accent:#3b82f6; --accent-2:#60a5fa;
+    --green:#34d399; --green-bg:#064e3b; --green-border:#065f46;
+    --red:#f87171; --red-bg:#450a0a; --red-border:#7f1d1d;
+    --yellow:#fbbf24; --yellow-bg:#451a03; --yellow-border:#78350f;
+    --purple:#a78bfa; --purple-bg:#2e1065; --purple-border:#4c1d95;
+    --shadow:0 2px 8px rgba(0,0,0,.3);
+    --shadow-md:0 4px 16px rgba(0,0,0,.4);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:15px}
+
+  /* Header */
+  .page-header{background:var(--surface);border-bottom:1px solid var(--border);padding:20px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
+  .header-title{font-size:17px;font-weight:700;color:var(--text)}
+  .header-meta{font-size:12px;color:var(--text-muted)}
+  .theme-btn{border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px;transition:.15s}
+  .theme-btn:hover{background:var(--surface-3);color:var(--text)}
+
+  .container{max-width:1100px;margin:0 auto;padding:28px 24px}
+
+  /* Product banners */
+  .product-banners{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
+  .product-banner{border-radius:16px;padding:22px 24px;border:1px solid var(--border)}
+  .product-banner.ff{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:#bfdbfe}
+  .product-banner.sk{background:linear-gradient(135deg,#fff7ed,#fed7aa);border-color:#fdba74}
+  [data-theme="dark"] .product-banner.ff{background:linear-gradient(135deg,#1e3a5f,#1e40af20);border-color:#1d4ed8}
+  [data-theme="dark"] .product-banner.sk{background:linear-gradient(135deg,#431407,#c2410c20);border-color:#c2410c}
+  .pb-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;opacity:.7}
+  .pb-name{font-size:22px;font-weight:800;margin-bottom:4px}
+  .pb-tagline{font-size:13px;color:var(--text-muted)}
+  .ff .pb-name{color:var(--ff-color)}
+  .sk .pb-name{color:var(--sk-color)}
+  .pb-stats{display:flex;gap:16px;margin-top:14px}
+  .pb-stat{text-align:center}
+  .pb-stat .sv{font-size:18px;font-weight:800}
+  .pb-stat .sl{font-size:11px;color:var(--text-muted)}
+  .ff .pb-stat .sv{color:var(--ff-color)}
+  .sk .pb-stat .sv{color:var(--sk-color)}
+
+  /* Section */
+  .section-title{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin:28px 0 14px;display:flex;align-items:center;gap:8px}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  /* Comparison table */
+  .cmp-table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:20px}
+  .cmp-table thead tr{background:var(--surface-3)}
+  .cmp-table th{padding:13px 18px;text-align:left;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border)}
+  .cmp-table th.ff-col{color:var(--ff-color)}
+  .cmp-table th.sk-col{color:var(--sk-color)}
+  .cmp-table td{padding:13px 18px;vertical-align:top;border-bottom:1px solid var(--border);font-size:14px}
+  .cmp-table tr:last-child td{border-bottom:none}
+  .cmp-table tr:hover td{background:var(--surface-2)}
+  .cmp-table td.row-label{font-weight:600;color:var(--text-muted);font-size:13px;white-space:nowrap;width:170px}
+  .cmp-table td.row-label .cat{display:block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);margin-bottom:2px}
+
+  /* Badges */
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .badge.win{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+  .badge.lose{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+  .badge.tie{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
+  .badge.diff{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border)}
+  .badge.tbd{background:var(--surface-3);color:var(--text-dim);border:1px solid var(--border)}
+
+  /* Cells */
+  .cell-val{display:flex;flex-direction:column;gap:5px}
+  .cell-main{font-weight:500}
+  .cell-sub{font-size:12px;color:var(--text-muted)}
+  .check{color:var(--green);font-weight:700}
+  .cross{color:var(--red);font-weight:700}
+  .neu{color:var(--yellow);font-weight:700}
+
+  /* Insight cards */
+  .insights{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+  .insight{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:18px;box-shadow:var(--shadow)}
+  .insight .ik{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+  .insight .iv{font-size:14px;line-height:1.6}
+  .insight.ff-card .ik{color:var(--ff-color)}
+  .insight.sk-card .ik{color:var(--sk-color)}
+  .insight.warn-card{border-color:var(--yellow-border);background:var(--yellow-bg)}
+  .insight.warn-card .ik{color:var(--yellow)}
+  .insight.opp-card{border-color:var(--green-border);background:var(--green-bg)}
+  .insight.opp-card .ik{color:var(--green)}
+
+  /* Positioning matrix */
+  .matrix{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:var(--shadow);margin-bottom:20px}
+  .matrix-title{font-weight:700;margin-bottom:16px;font-size:15px}
+  .axis-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .axis-item{background:var(--surface-2);border-radius:10px;padding:14px;border:1px solid var(--border)}
+  .axis-item .ai-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:6px}
+  .axis-item .ai-val{font-size:14px;font-weight:600}
+  .axis-item .ai-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+  .dot-ff{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--ff-color);margin-right:5px}
+  .dot-sk{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--sk-color);margin-right:5px}
+
+  /* Pricing comparison */
+  .price-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  .price-col{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+  .price-col-title{font-weight:800;font-size:15px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+  .price-col.ff-pc .price-col-title{color:var(--ff-color)}
+  .price-col.sk-pc .price-col-title{color:var(--sk-color)}
+  .price-tier{border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:10px}
+  .price-tier:last-child{margin-bottom:0}
+  .pt-name{font-weight:700;font-size:13px}
+  .pt-price{font-size:20px;font-weight:800;margin:4px 0}
+  .pt-unit{font-size:11px;color:var(--text-muted);font-weight:400}
+  .pt-features{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+  .pt-feature{font-size:12px;color:var(--text-muted);display:flex;align-items:flex-start;gap:6px}
+  .pt-feature::before{content:'·';color:var(--text-dim);flex-shrink:0}
+
+  /* Scorecard */
+  .scorecard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;box-shadow:var(--shadow);margin-bottom:20px}
+  .score-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .score-row:last-child{border-bottom:none}
+  .score-dimension{flex:0 0 160px;font-size:13px;font-weight:600;color:var(--text-muted)}
+  .score-bars{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .score-bar-wrap{display:flex;flex-direction:column;gap:4px}
+  .score-bar-label{font-size:11px;color:var(--text-muted)}
+  .score-bar-track{height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden}
+  .score-bar-fill{height:100%;border-radius:4px;transition:.6s ease}
+  .score-bar-fill.ff{background:var(--ff-color)}
+  .score-bar-fill.sk{background:var(--sk-color)}
+  .score-val{flex:0 0 60px;font-size:13px;font-weight:700;text-align:right}
+
+  /* Summary box */
+  .summary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-radius:14px;padding:24px;color:#fff;margin-bottom:20px}
+  .summary h3{font-size:17px;font-weight:800;margin-bottom:12px}
+  .summary ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .summary li{font-size:14px;display:flex;gap:10px;align-items:flex-start;opacity:.95}
+  .summary li::before{content:'→';flex-shrink:0;font-weight:700}
+
+  .footer{text-align:center;padding:24px;color:var(--text-dim);font-size:12px}
+
+  @media(max-width:700px){
+    .product-banners,.insights,.price-grid,.axis-grid{grid-template-columns:1fr}
+    .cmp-table td.row-label{width:120px}
+    .page-header{padding:14px 16px}
+    .container{padding:16px}
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div>
+    <div class="header-title">Competitive Analysis: FaceFind vs Sikram</div>
+    <div class="header-meta">จัดทำ 28 พ.ค. 2569 · สำหรับ internal use</div>
+  </div>
+  <button class="theme-btn" id="themeBtn">🌙 Dark</button>
+</header>
+
+<div class="container">
+
+  <!-- Product Banners -->
+  <div class="product-banners">
+    <div class="product-banner ff">
+      <div class="pb-label">ผลิตภัณฑ์ของเรา</div>
+      <div class="pb-name">FaceFind</div>
+      <div class="pb-tagline">Self-service photo distribution สำหรับ event organizer — ผู้เข้าร่วมค้นหารูปตัวเองด้วย selfie, ไม่ต้องสมัคร</div>
+      <div class="pb-stats">
+        <div class="pb-stat"><div class="sv">🚧</div><div class="sl">MVP Stage</div></div>
+        <div class="pb-stat"><div class="sv">B2B</div><div class="sl">Target</div></div>
+        <div class="pb-stat"><div class="sv">Web</div><div class="sl">Platform</div></div>
+      </div>
+    </div>
+    <div class="product-banner sk">
+      <div class="pb-label">คู่แข่ง</div>
+      <div class="pb-name">Sikram</div>
+      <div class="pb-tagline">Photo management & sharing สำหรับ event photographer — display real-time, ส่งให้ client ผ่าน LINE</div>
+      <div class="pb-stats">
+        <div class="pb-stat"><div class="sv">1,000+</div><div class="sl">ช่างภาพ</div></div>
+        <div class="pb-stat"><div class="sv">5,000+</div><div class="sl">Events</div></div>
+        <div class="pb-stat"><div class="sv">10M+</div><div class="sl">รูปภาพ</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Positioning -->
+  <div class="section-title">ตำแหน่งตลาด (Market Positioning)</div>
+  <div class="matrix">
+    <div class="matrix-title">ใครเป็นลูกค้า และ pain point ต่างกันอย่างไร?</div>
+    <div class="axis-grid">
+      <div class="axis-item">
+        <div class="ai-label">Primary Customer</div>
+        <div class="ai-val"><span class="dot-ff"></span>FaceFind: Event Organizer</div>
+        <div class="ai-sub">งานบริษัท, งานแต่ง, งานวิ่ง — คนที่จัด event อยากให้ผู้เข้าร่วมได้รูปตัวเองง่ายๆ</div>
+        <div class="ai-val" style="margin-top:10px"><span class="dot-sk"></span>Sikram: Event Photographer</div>
+        <div class="ai-sub">ช่างภาพมืออาชีพที่อยากโชว์งานแบบ real-time และส่งรูปให้ลูกค้าได้สะดวก</div>
+      </div>
+      <div class="axis-item">
+        <div class="ai-label">Core Pain Solved</div>
+        <div class="ai-val"><span class="dot-ff"></span>FaceFind: "ผู้เข้าร่วมหารูปตัวเองไม่เจอใน 1,000 รูป"</div>
+        <div class="ai-sub">ค้นหาด้วย selfie ทันที ไม่ต้องไล่ดูทุกรูป</div>
+        <div class="ai-val" style="margin-top:10px"><span class="dot-sk"></span>Sikram: "ช่างภาพส่งรูปให้ client ยุ่งยาก"</div>
+        <div class="ai-sub">Sync ขึ้นจอ real-time + ส่งผ่าน LINE โดยอัตโนมัติ</div>
+      </div>
+      <div class="axis-item">
+        <div class="ai-label">End User Experience</div>
+        <div class="ai-val"><span class="dot-ff"></span>FaceFind: ผู้เข้าร่วม (Guest)</div>
+        <div class="ai-sub">เปิด link → upload selfie → เจอรูปตัวเอง ไม่ต้องสมัคร LINE หรือ app ใดๆ</div>
+        <div class="ai-val" style="margin-top:10px"><span class="dot-sk"></span>Sikram: Client ของช่างภาพ</div>
+        <div class="ai-sub">ต้องใช้ LINE (ข้อจำกัดสำหรับ event ที่มีผู้เข้าร่วมไม่ได้ใช้ LINE)</div>
+      </div>
+      <div class="axis-item">
+        <div class="ai-label">Distribution Model</div>
+        <div class="ai-val"><span class="dot-ff"></span>FaceFind: Link-based (Web)</div>
+        <div class="ai-sub">แชร์ link เดียว ทำงานทุก device ทุก OS ทุกประเทศ</div>
+        <div class="ai-val" style="margin-top:10px"><span class="dot-sk"></span>Sikram: LINE Official Account</div>
+        <div class="ai-sub">ดี มีฐานผู้ใช้ใหญ่ในไทย แต่ lock-in กับ LINE ecosystem</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature Comparison Table -->
+  <div class="section-title">เปรียบเทียบ Features</div>
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th style="width:170px">Feature</th>
+        <th class="ff-col">FaceFind</th>
+        <th class="sk-col">Sikram</th>
+        <th style="width:120px">ข้อสังเกต</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Face Recognition -->
+      <tr>
+        <td class="row-label"><span class="cat">Core Tech</span>Face Recognition</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> AWS Rekognition</span><span class="cell-sub">Selfie → ค้นหารูปใน event ทันที · API-based ไม่ต้อง manage model</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> AI Proprietary</span><span class="cell-sub">Find photo via LINE · "Find in a blink"</span></div></td>
+        <td><span class="badge tie">ทั้งคู่ทำได้</span></td>
+      </tr>
+      <!-- No signup guest -->
+      <tr>
+        <td class="row-label"><span class="cat">Guest UX</span>ไม่ต้องสมัคร</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> ไม่ต้อง login ใดๆ</span><span class="cell-sub">เปิด link → upload selfie → เสร็จ</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="cross">–</span> ต้องมี LINE</span><span class="cell-sub">ต้องเพิ่ม LINE Official Account ของช่างภาพก่อน</span></div></td>
+        <td><span class="badge win">FF ได้เปรียบ</span></td>
+      </tr>
+      <!-- Real-time display -->
+      <tr>
+        <td class="row-label"><span class="cat">Event Day</span>Real-time Screen Display</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="cross">–</span> ไม่มีใน Phase 1</span><span class="cell-sub">เน้น self-service download ไม่ใช่ live display</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> Instant screen display</span><span class="cell-sub">รูปขึ้นจอทันทีหลังถ่าย — wow factor ในงาน</span></div></td>
+        <td><span class="badge lose">Sikram ได้เปรียบ</span></td>
+      </tr>
+      <!-- Storage -->
+      <tr>
+        <td class="row-label"><span class="cat">Storage</span>แหล่งเก็บรูป</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> Google Drive / Dropbox</span><span class="cell-sub">Organizer ใช้ storage ที่มีอยู่แล้ว ไม่ต้องอัพโหลดใหม่</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="neu">○</span> Proprietary Cloud</span><span class="cell-sub">ต้องอัพโหลดเข้าระบบ Sikram (10–60 GB/plan)</span></div></td>
+        <td><span class="badge win">FF ได้เปรียบ</span></td>
+      </tr>
+      <!-- Photo editing -->
+      <tr>
+        <td class="row-label"><span class="cat">Workflow</span>Photo Editing</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="cross">–</span> ไม่มี</span><span class="cell-sub">FaceFind ไม่ใช่ editing tool — แค่ distribute</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> Lightroom Plugin</span><span class="cell-sub">Auto-edit ใน workflow ปกติของช่างภาพ</span></div></td>
+        <td><span class="badge diff">คนละ segment</span></td>
+      </tr>
+      <!-- Desktop app -->
+      <tr>
+        <td class="row-label"><span class="cat">Workflow</span>Desktop App</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="cross">–</span> ไม่มี</span><span class="cell-sub">Web-only, organizer ตั้งค่าผ่าน dashboard</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> Fast Sync App</span><span class="cell-sub">Sync + edit + print management (Windows/Mac)</span></div></td>
+        <td><span class="badge diff">คนละ segment</span></td>
+      </tr>
+      <!-- Multi-team -->
+      <tr>
+        <td class="row-label"><span class="cat">Event Mgmt</span>หลายทีมถ่าย</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> หลาย folder / Drive</span><span class="cell-sub">รองรับทีม Drone, ทีมหลัก ฯลฯ แยก folder</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="neu">?</span> ไม่ชัดเจน</span><span class="cell-sub">ไม่พบข้อมูลการรองรับหลายช่างภาพใน event เดียว</span></div></td>
+        <td><span class="badge win">FF ได้เปรียบ</span></td>
+      </tr>
+      <!-- Content moderation -->
+      <tr>
+        <td class="row-label"><span class="cat">Safety</span>Content Moderation</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> Face Blacklist</span><span class="cell-sub">Organizer บล็อก face ที่ไม่ต้องการแสดงได้</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="neu">?</span> ไม่ชัดเจน</span><span class="cell-sub">ไม่พบ feature นี้ในหน้าเว็บ</span></div></td>
+        <td><span class="badge win">FF ได้เปรียบ</span></td>
+      </tr>
+      <!-- Highlight reel -->
+      <tr>
+        <td class="row-label"><span class="cat">Value-add</span>Highlight Reel</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="neu">○</span> Phase 2</span><span class="cell-sub">MP4 video ไฮไลต์สำหรับ guest — schema เตรียมไว้แล้ว</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="cross">–</span> ไม่มี</span><span class="cell-sub">ไม่พบ feature นี้</span></div></td>
+        <td><span class="badge diff">FaceFind Phase 2</span></td>
+      </tr>
+      <!-- International -->
+      <tr>
+        <td class="row-label"><span class="cat">Scale</span>ใช้ได้ต่างประเทศ</td>
+        <td><div class="cell-val"><span class="cell-main"><span class="check">✓</span> Web-based ทุก region</span><span class="cell-sub">ไม่ผูกกับ platform ใดๆ</span></div></td>
+        <td><div class="cell-val"><span class="cell-main"><span class="neu">○</span> จำกัด LINE market</span><span class="cell-sub">LINE dominant ในไทย, ญี่ปุ่น, ไต้หวัน เท่านั้น</span></div></td>
+        <td><span class="badge win">FF ได้เปรียบ</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Pricing Comparison -->
+  <div class="section-title">เปรียบเทียบ Pricing</div>
+  <div class="price-grid">
+    <div class="price-col ff-pc">
+      <div class="price-col-title">FaceFind — Credit System</div>
+      <div class="price-tier">
+        <div class="pt-name">Starter Pack</div>
+        <div class="pt-price">TBD <span class="pt-unit">฿ / pack</span></div>
+        <div class="pt-features">
+          <div class="pt-feature">Pay-per-event, ไม่มี subscription</div>
+          <div class="pt-feature">Credit = activate 1 event</div>
+          <div class="pt-feature">Top-up ผ่าน PromptPay / Bank Transfer</div>
+        </div>
+      </div>
+      <div class="price-tier">
+        <div class="pt-name">Standard Pack</div>
+        <div class="pt-price">TBD <span class="pt-unit">฿ / pack</span></div>
+        <div class="pt-features">
+          <div class="pt-feature">Volume discount สำหรับ organizer รายเล็ก</div>
+          <div class="pt-feature">Custom topup amount</div>
+        </div>
+      </div>
+      <div class="price-tier">
+        <div class="pt-name">Pro Pack</div>
+        <div class="pt-price">TBD <span class="pt-unit">฿ / pack</span></div>
+        <div class="pt-features">
+          <div class="pt-feature">Organizer รายใหญ่ / หลาย event ต่อเดือน</div>
+          <div class="pt-feature">Phase 2: Subscription + auto-topup (Omise)</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px;background:var(--surface-2);border-radius:8px;font-size:12px;color:var(--text-muted)">
+        <strong>หมายเหตุ:</strong> ราคายังไม่กำหนด (TBD) — รอประชุม business ก่อน launch pilot
+      </div>
+    </div>
+    <div class="price-col sk-pc">
+      <div class="price-col-title">Sikram — Hybrid Model</div>
+      <div class="price-tier">
+        <div class="pt-name">Hobby</div>
+        <div class="pt-price">฿499 <span class="pt-unit">/ 48 ชั่วโมง</span></div>
+        <div class="pt-features">
+          <div class="pt-feature">10 GB storage</div>
+          <div class="pt-feature">1,000 AI face credits</div>
+          <div class="pt-feature">เหมาะสำหรับงานเดี่ยว ทดลองใช้</div>
+        </div>
+      </div>
+      <div class="price-tier">
+        <div class="pt-name">Hobby Plus</div>
+        <div class="pt-price">฿999 <span class="pt-unit">/ 48 ชั่วโมง</span></div>
+        <div class="pt-features">
+          <div class="pt-feature">20 GB storage</div>
+          <div class="pt-feature">3,000 AI face credits</div>
+        </div>
+      </div>
+      <div class="price-tier">
+        <div class="pt-name">Starter</div>
+        <div class="pt-price">฿1,890 <span class="pt-unit">/ เดือน</span></div>
+        <div class="pt-features">
+          <div class="pt-feature">20 GB storage</div>
+          <div class="pt-feature">7,000 face credits</div>
+        </div>
+      </div>
+      <div class="price-tier">
+        <div class="pt-name">Premium</div>
+        <div class="pt-price">฿3,990 <span class="pt-unit">/ เดือน</span></div>
+        <div class="pt-features">
+          <div class="pt-feature">60 GB storage</div>
+          <div class="pt-feature">20,000 face credits</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scorecard -->
+  <div class="section-title">Competitive Scorecard (ประเมิน 1–10)</div>
+  <div class="scorecard">
+    <div class="score-row">
+      <div class="score-dimension">Guest Experience</div>
+      <div class="score-bars">
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-ff"></span>FaceFind</div>
+          <div class="score-bar-track"><div class="score-bar-fill ff" style="width:90%"></div></div>
+        </div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-sk"></span>Sikram</div>
+          <div class="score-bar-track"><div class="score-bar-fill sk" style="width:60%"></div></div>
+        </div>
+      </div>
+      <div class="score-val" style="color:var(--ff-color)">9 vs 6</div>
+    </div>
+    <div class="score-row">
+      <div class="score-dimension">Photographer Tools</div>
+      <div class="score-bars">
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-ff"></span>FaceFind</div>
+          <div class="score-bar-track"><div class="score-bar-fill ff" style="width:20%"></div></div>
+        </div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-sk"></span>Sikram</div>
+          <div class="score-bar-track"><div class="score-bar-fill sk" style="width:90%"></div></div>
+        </div>
+      </div>
+      <div class="score-val" style="color:var(--sk-color)">2 vs 9</div>
+    </div>
+    <div class="score-row">
+      <div class="score-dimension">Market Reach</div>
+      <div class="score-bars">
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-ff"></span>FaceFind</div>
+          <div class="score-bar-track"><div class="score-bar-fill ff" style="width:80%"></div></div>
+        </div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-sk"></span>Sikram</div>
+          <div class="score-bar-track"><div class="score-bar-fill sk" style="width:50%"></div></div>
+        </div>
+      </div>
+      <div class="score-val" style="color:var(--ff-color)">8 vs 5</div>
+    </div>
+    <div class="score-row">
+      <div class="score-dimension">Traction / Proven</div>
+      <div class="score-bars">
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-ff"></span>FaceFind</div>
+          <div class="score-bar-track"><div class="score-bar-fill ff" style="width:10%"></div></div>
+        </div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-sk"></span>Sikram</div>
+          <div class="score-bar-track"><div class="score-bar-fill sk" style="width:90%"></div></div>
+        </div>
+      </div>
+      <div class="score-val" style="color:var(--sk-color)">1 vs 9</div>
+    </div>
+    <div class="score-row">
+      <div class="score-dimension">Integration Flex</div>
+      <div class="score-bars">
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-ff"></span>FaceFind</div>
+          <div class="score-bar-track"><div class="score-bar-fill ff" style="width:80%"></div></div>
+        </div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-sk"></span>Sikram</div>
+          <div class="score-bar-track"><div class="score-bar-fill sk" style="width:40%"></div></div>
+        </div>
+      </div>
+      <div class="score-val" style="color:var(--ff-color)">8 vs 4</div>
+    </div>
+    <div class="score-row">
+      <div class="score-dimension">Pricing Simplicity</div>
+      <div class="score-bars">
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-ff"></span>FaceFind</div>
+          <div class="score-bar-track"><div class="score-bar-fill ff" style="width:70%"></div></div>
+        </div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span class="dot-sk"></span>Sikram</div>
+          <div class="score-bar-track"><div class="score-bar-fill sk" style="width:65%"></div></div>
+        </div>
+      </div>
+      <div class="score-val">7 vs 6.5</div>
+    </div>
+  </div>
+
+  <!-- Insights -->
+  <div class="section-title">Key Insights</div>
+  <div class="insights">
+    <div class="insight ff-card">
+      <div class="ik">จุดแข็งของ FaceFind</div>
+      <div class="iv">
+        <strong>คนละตลาดกัน</strong> — Sikram serve ช่างภาพ, FaceFind serve organizer และ guest โดยตรง ไม่ได้แย่ง segment เดียวกันโดยตรง<br><br>
+        ข้อได้เปรียบสำคัญ: <strong>ไม่ต้องมี LINE</strong>, ใช้ web link ธรรมดา → ครอบคลุม B2B event ระดับองค์กร, งาน international, งานที่ผู้เข้าร่วมหลากหลายอายุ<br><br>
+        <strong>Google Drive integration</strong> = organizer ไม่ต้องอัพโหลดซ้ำ ลด friction มาก
+      </div>
+    </div>
+    <div class="insight sk-card">
+      <div class="ik">ความได้เปรียบของ Sikram</div>
+      <div class="iv">
+        <strong>Proven product</strong> — 1,000+ ช่างภาพ, 5,000+ งาน, Shark Tank funded → social proof แข็งแกร่งมาก<br><br>
+        <strong>Real-time display</strong> บนจอระหว่างงาน = ขาย wow factor ให้ลูกค้าได้ชัดเจน เป็น differentiator ที่ photographer นำไปขายต่อ client ได้<br><br>
+        <strong>Desktop app + Lightroom</strong> = fit เข้า workflow ช่างภาพได้เลย ไม่ต้องเปลี่ยนพฤติกรรม
+      </div>
+    </div>
+    <div class="insight warn-card">
+      <div class="ik">⚠️ ความเสี่ยงที่ต้องระวัง</div>
+      <div class="iv">
+        Sikram อาจ <strong>expand ไป Organizer market</strong> ได้ในอนาคต — ถ้าพวกเขาเพิ่ม "share link to attendees" แทน LINE ก็จะ overlap โดยตรง<br><br>
+        FaceFind ยัง <strong>ไม่มี traction</strong> เลย vs Sikram ที่มี 5,000+ งาน → ถ้าช่างภาพพา organizer มาใช้ Sikram แทน ก็เสียโอกาส
+      </div>
+    </div>
+    <div class="insight opp-card">
+      <div class="ik">🎯 โอกาสที่ชัดเจน</div>
+      <div class="iv">
+        FaceFind เหมาะกับ <strong>งาน corporate / marathon / conference</strong> ที่ organizer จ้างช่างภาพหลายคน และต้องการ distribute รูปให้ผู้เข้าร่วมหลักร้อยถึงหลักพัน — ตลาดนี้ Sikram ไม่ได้ target ตรงๆ<br><br>
+        <strong>Partnership angle:</strong> ช่างภาพที่ใช้ Sikram อยู่แล้ว → เสนอ FaceFind เป็น "attendee-facing layer" ที่เพิ่มเติมได้
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategic Summary -->
+  <div class="section-title">บทสรุปเชิงกลยุทธ์</div>
+  <div class="summary">
+    <h3>FaceFind ไม่ใช่คู่แข่งตรงของ Sikram — แต่ต้องเร่ง prove market</h3>
+    <ul>
+      <li>Sikram = photographer tool, FaceFind = organizer + attendee tool → คนละ buyer คนละ pain point</li>
+      <li>จุดขายที่แข็งสุดของ FaceFind คือ "ไม่ต้อง LINE ไม่ต้องสมัคร" — ต้องเน้นใน messaging ให้ชัด</li>
+      <li>เร่ง pilot กับ corporate event / marathon ก่อน — เป็น segment ที่ Sikram ไม่ได้โฟกัสและ proof ง่าย</li>
+      <li>ติดตาม Sikram ต่อเนื่อง — ถ้าเขา launch "attendee portal" หรือ "web link sharing" ต้องปรับกลยุทธ์ทันที</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="footer">FaceFind Competitive Analysis · Internal Document · 28 พ.ค. 2569</div>
+
+<script>
+(function(){
+  const root = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  const stored = localStorage.getItem('ca-theme');
+  if(stored) root.setAttribute('data-theme', stored);
+
+  btn.addEventListener('click', function(){
+    const current = root.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('ca-theme', next);
+    btn.textContent = next === 'dark' ? '☀️ Light' : '🌙 Dark';
+  });
+
+  if(stored === 'dark') btn.textContent = '☀️ Light';
+})();
+</script>
+</body>
+</html>

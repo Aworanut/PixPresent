@@ -8,6 +8,40 @@ import { extractDriveFolderId } from "@/lib/google-drive";
 
 export type EventActionState = { error: string } | undefined;
 
+/** อัปเดตเฉพาะ folder list — ใช้จาก Drive modal */
+export async function updateEventFolders(
+  eventId: string,
+  folders: { label: string; folder_id: string }[],
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+
+  // Dedup + extract real folder IDs
+  const seen = new Set<string>();
+  const clean = folders
+    .map((f) => ({ label: f.label.trim(), folder_id: extractDriveFolderId(f.folder_id.trim()) }))
+    .filter((f) => {
+      if (!f.folder_id || seen.has(f.folder_id)) return false;
+      seen.add(f.folder_id);
+      return true;
+    });
+
+  const { error: delErr } = await supabase
+    .from("event_storage_folders")
+    .delete()
+    .eq("event_id", eventId);
+  if (delErr) return { error: delErr.message };
+
+  if (clean.length > 0) {
+    const { error: insErr } = await supabase
+      .from("event_storage_folders")
+      .insert(clean.map((f) => ({ event_id: eventId, label: f.label, folder_id: f.folder_id })));
+    if (insErr) return { error: insErr.message };
+  }
+
+  revalidatePath(`/dashboard/events/${eventId}`);
+  return {};
+}
+
 type ParsedFolder = { label: string; folder_id: string };
 type ParsedForm = {
   name: string;

@@ -276,6 +276,7 @@ export type Database = {
           face_details: Json
           id: string
           indexed_at: string | null
+          is_hidden: boolean
           price: number | null
           r2_full_url: string | null
           r2_web_url: string | null
@@ -289,6 +290,7 @@ export type Database = {
           face_details?: Json
           id?: string
           indexed_at?: string | null
+          is_hidden?: boolean
           price?: number | null
           r2_full_url?: string | null
           r2_web_url?: string | null
@@ -302,6 +304,7 @@ export type Database = {
           face_details?: Json
           id?: string
           indexed_at?: string | null
+          is_hidden?: boolean
           price?: number | null
           r2_full_url?: string | null
           r2_web_url?: string | null

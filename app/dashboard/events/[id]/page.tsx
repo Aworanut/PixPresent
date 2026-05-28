@@ -3,10 +3,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { buttonVariants } from "@/components/ui/button";
-import { driveFolderUrl } from "@/lib/google-drive";
 import { DeleteEventButton } from "./_delete-button";
-import { ShareLinkPanel } from "./_share-link-panel";
-import { SyncButton } from "./_sync-button";
+import { EventToolbar } from "./_event-toolbar";
+import { PhotoGallery, type GalleryPhoto } from "./_photo-gallery";
 
 export default async function EventDetailPage({
   params,
@@ -15,15 +14,14 @@ export default async function EventDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-
   const admin = createServiceRoleClient();
 
-  const [{ data: event, error }, { data: folders }, authResult] =
+  const [{ data: event, error }, { data: folders }, { data: photos }, authResult] =
     await Promise.all([
       supabase
         .from("events")
         .select(
-          "id, name, event_date, is_indexed, share_link_expires_days, rekognition_collection_id, activated_at, created_at, share_token, share_token_expires_at, sync_started_at, sync_completed_at, sync_photo_count, tenant_id",
+          "id, name, event_date, is_indexed, share_link_expires_days, rekognition_collection_id, share_token, share_token_expires_at, sync_started_at, sync_completed_at, sync_photo_count, tenant_id",
         )
         .eq("id", id)
         .is("deleted_at", null)
@@ -33,12 +31,17 @@ export default async function EventDetailPage({
         .select("id, label, folder_id")
         .eq("event_id", id)
         .order("created_at", { ascending: true }),
+      supabase
+        .from("photos")
+        .select("id, r2_web_url, is_hidden, face_details, storage_file_id")
+        .eq("event_id", id)
+        .order("created_at", { ascending: true }),
       supabase.auth.getUser(),
     ]);
 
   if (error || !event) notFound();
 
-  // Check if this organizer has connected Google Drive
+  // Check Drive connection
   let driveConnected = false;
   const currentUser = authResult.data?.user ?? null;
   if (currentUser && event.tenant_id) {
@@ -50,47 +53,72 @@ export default async function EventDetailPage({
     driveConnected = !!tenant?.google_refresh_token;
   }
 
+  const photoList: GalleryPhoto[] = (photos ?? []).map((p) => ({
+    id: p.id,
+    r2_web_url: p.r2_web_url,
+    is_hidden: p.is_hidden ?? false,
+    face_details: (p.face_details as GalleryPhoto["face_details"]) ?? [],
+    storage_file_id: p.storage_file_id ?? "",
+  }));
+
+  const folderList = folders ?? [];
+  const hasPhotos = photoList.length > 0;
+
   const formattedDate = event.event_date
     ? new Date(event.event_date).toLocaleDateString("th-TH", {
         year: "numeric",
         month: "long",
         day: "numeric",
       })
-    : "—";
-
-  const folderList = folders ?? [];
+    : null;
 
   return (
-    <div className="max-w-3xl space-y-8">
-      <nav className="text-sm">
-        <Link
-          href="/dashboard"
-          className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-        >
-          ← Events
-        </Link>
-      </nav>
-
-      <header className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <StatusBadge isIndexed={event.is_indexed} />
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {event.name}
-          </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            {formattedDate}
-          </p>
+    <div className="space-y-5">
+      {/* ── Header ── */}
+      <header className="flex items-start gap-4">
+        <div className="flex-1 min-w-0">
+          <nav className="text-sm mb-2">
+            <Link
+              href="/dashboard"
+              className="text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300"
+            >
+              ← Events
+            </Link>
+          </nav>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+              {event.name}
+            </h1>
+            <StatusBadge isIndexed={event.is_indexed} />
+          </div>
+          {formattedDate && (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+              {formattedDate}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/dashboard/events/${event.id}/blacklist`}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            Blacklist
-          </Link>
+
+        {/* Action icons + Edit/Delete */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <EventToolbar
+            eventId={event.id}
+            eventName={event.name}
+            driveConnected={driveConnected}
+            folders={folderList}
+            isIndexed={event.is_indexed}
+            lastSyncAt={event.sync_completed_at ?? null}
+            lastSyncCount={event.sync_photo_count ?? 0}
+            shareToken={event.share_token}
+            shareExpiresAt={event.share_token_expires_at}
+            defaultDays={event.share_link_expires_days}
+            appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}
+          />
+
+          <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-1" />
+
           <Link
             href={`/dashboard/events/${event.id}/edit`}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             แก้ไข
           </Link>
@@ -98,120 +126,108 @@ export default async function EventDetailPage({
         </div>
       </header>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-          Google Drive folders ({folderList.length})
-        </h2>
-        {folderList.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400 text-center">
-            ยังไม่มี folder — กด <Link href={`/dashboard/events/${event.id}/edit`} className="underline">แก้ไข</Link> เพื่อเพิ่ม
-          </p>
-        ) : (
-          <ul className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-800">
-            {folderList.map((folder) => (
-              <li key={folder.id} className="px-4 py-3 sm:px-6 flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  {folder.label && (
-                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                      {folder.label}
-                    </p>
-                  )}
-                  <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 truncate">
-                    {folder.folder_id}
-                  </p>
-                </div>
-                <a
-                  href={driveFolderUrl(folder.folder_id)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                >
-                  เปิด ↗
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-          Sync &amp; Index
-        </h2>
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-4 sm:px-6">
-          <SyncButton
-            eventId={event.id}
-            driveConnected={driveConnected}
-            isIndexed={event.is_indexed}
-            lastSyncCount={event.sync_photo_count ?? 0}
-            lastSyncAt={event.sync_completed_at ?? null}
-          />
-        </div>
-      </section>
-
-      <ShareLinkPanel
-        eventId={event.id}
-        token={event.share_token}
-        expiresAt={event.share_token_expires_at}
-        defaultDays={event.share_link_expires_days}
-        appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}
-      />
-
-      <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-800">
-        <Detail
-          label="Rekognition Collection"
-          value={
-            event.rekognition_collection_id ??
-            "ยังไม่ได้สร้าง — จะถูกสร้างตอน Sync (#7)"
-          }
+      {/* ── Gallery / Empty state ── */}
+      {hasPhotos ? (
+        <PhotoGallery eventId={event.id} photos={photoList} />
+      ) : (
+        <EmptyGallery
+          eventId={event.id}
+          driveConnected={driveConnected}
+          hasFolders={folderList.length > 0}
         />
-        <Detail
-          label="สถานะ activate"
-          value={
-            event.activated_at
-              ? new Date(event.activated_at).toLocaleString("th-TH")
-              : "Draft (ยัง activate — #14)"
-          }
-        />
-      </section>
-
-      <section className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 p-6 text-sm text-zinc-500 dark:text-zinc-400">
-        <p className="font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-          ขั้นถัดไป
-        </p>
-        <p>
-          Sync &amp; Index รูปจาก folder (#7) → จัดการ blacklist (#8) → Generate
-          guest link (#9)
-        </p>
-      </section>
+      )}
     </div>
   );
 }
 
+// ─── Empty state ──────────────────────────────────────────────────────────────
+
+function EmptyGallery({
+  eventId,
+  driveConnected,
+  hasFolders,
+}: {
+  eventId: string;
+  driveConnected: boolean;
+  hasFolders: boolean;
+}) {
+  if (!driveConnected) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 py-20 gap-4 text-center px-6">
+        <div className="text-5xl">🔗</div>
+        <div className="space-y-1.5">
+          <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+            ยังไม่ได้เชื่อมต่อ Google Drive
+          </p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            เชื่อมต่อ Drive เพื่อเริ่ม sync รูปภาพ
+          </p>
+        </div>
+        <a
+          href={`/api/auth/google?redirect=/dashboard/events/${eventId}`}
+          className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
+        >
+          เชื่อมต่อ Google Drive
+        </a>
+      </div>
+    );
+  }
+
+  if (!hasFolders) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 py-20 gap-4 text-center px-6">
+        <div className="text-5xl">📁</div>
+        <div className="space-y-1.5">
+          <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+            ยังไม่มี Drive folder
+          </p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            เพิ่ม folder ของช่างภาพก่อน แล้วค่อย sync
+          </p>
+        </div>
+        <Link
+          href={`/dashboard/events/${eventId}/edit`}
+          className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
+        >
+          เพิ่ม folder
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 py-20 gap-4 text-center px-6">
+      <div className="text-5xl">📷</div>
+      <div className="space-y-1.5">
+        <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+          ยังไม่มีรูปภาพ
+        </p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          กด Sync เพื่อดึงรูปจาก Google Drive มา index
+        </p>
+      </div>
+      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+        คลิกไอคอน 🔄 ด้านบนขวาเพื่อเริ่ม Sync
+      </p>
+    </div>
+  );
+}
+
+// ─── Status badge ─────────────────────────────────────────────────────────────
+
 function StatusBadge({ isIndexed }: { isIndexed: boolean }) {
   if (isIndexed) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
         Synced
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
       <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
       Not synced
     </span>
-  );
-}
-
-function Detail({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="px-4 py-3 sm:px-6 grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-4">
-      <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
-      <dd className="text-sm text-zinc-900 dark:text-zinc-100 break-all">
-        {value ?? "—"}
-      </dd>
-    </div>
   );
 }
