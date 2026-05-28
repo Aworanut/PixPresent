@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { PhotoBadge } from "@/components/ui/photo-badge";
 import { addToBlacklist, removeFromBlacklist } from "@/lib/actions/blacklist";
 
 type BBox = { left: number; top: number; width: number; height: number };
@@ -56,13 +57,9 @@ export function PhotoViewer({ eventId, photos }: Props) {
               {/* Face count badge */}
               {photo.face_details.length > 0 && (
                 <div className="absolute bottom-1 left-1 flex gap-1">
-                  <span className="rounded px-1 py-0.5 text-[10px] font-medium bg-black/60 text-white">
-                    {photo.face_details.length} ใบหน้า
-                  </span>
+                  <PhotoBadge variant="face">{photo.face_details.length} ใบหน้า</PhotoBadge>
                   {blockedCount > 0 && (
-                    <span className="rounded px-1 py-0.5 text-[10px] font-medium bg-rose-600/80 text-white">
-                      {blockedCount} บล็อก
-                    </span>
+                    <PhotoBadge variant="blocked">{blockedCount} บล็อก</PhotoBadge>
                   )}
                 </div>
               )}

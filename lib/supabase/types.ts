@@ -276,12 +276,12 @@ export type Database = {
           face_details: Json
           id: string
           indexed_at: string | null
-          is_hidden: boolean
           price: number | null
           r2_full_url: string | null
           r2_web_url: string | null
           rekognition_face_ids: string[]
           storage_file_id: string
+          visibility: string
           watermark_url: string | null
         }
         Insert: {
@@ -290,12 +290,12 @@ export type Database = {
           face_details?: Json
           id?: string
           indexed_at?: string | null
-          is_hidden?: boolean
           price?: number | null
           r2_full_url?: string | null
           r2_web_url?: string | null
           rekognition_face_ids?: string[]
           storage_file_id: string
+          visibility?: string
           watermark_url?: string | null
         }
         Update: {
@@ -304,12 +304,12 @@ export type Database = {
           face_details?: Json
           id?: string
           indexed_at?: string | null
-          is_hidden?: boolean
           price?: number | null
           r2_full_url?: string | null
           r2_web_url?: string | null
           rekognition_face_ids?: string[]
           storage_file_id?: string
+          visibility?: string
           watermark_url?: string | null
         }
         Relationships: [

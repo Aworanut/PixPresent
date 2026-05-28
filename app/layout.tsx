@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Cormorant_Garamond, Kanit, Charmonman, IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -10,6 +10,30 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  weight: ["300", "400", "600"],
+});
+
+const kanit = Kanit({
+  variable: "--font-kanit",
+  subsets: ["thai", "latin"],
+  weight: ["400", "700"],
+});
+
+const charmonman = Charmonman({
+  variable: "--font-charmonman",
+  subsets: ["thai", "latin"],
+  weight: ["400", "700"],
+});
+
+const ibmPlexThai = IBM_Plex_Sans_Thai({
+  variable: "--font-ibm-plex-thai",
+  subsets: ["thai", "latin"],
+  weight: ["300", "400"],
 });
 
 export const metadata: Metadata = {
@@ -25,7 +49,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} ${kanit.variable} ${charmonman.variable} ${ibmPlexThai.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

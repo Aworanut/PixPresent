@@ -60,15 +60,15 @@ export default async function BlacklistPage({ params }: Props) {
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-            Blacklist Manager
+            ซ่อนใบหน้าจากการค้นหา
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            คลิกรูปเพื่อดูใบหน้า → คลิกกล่องสีเขียวเพื่อบล็อก
+            คลิกรูปเพื่อดูใบหน้า → คลิกกล่องสีเขียวเพื่อซ่อน — guest จะค้นหาไม่พบ แต่ทีมงานยังเห็น
           </p>
         </div>
         {blockedCount > 0 && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 dark:bg-rose-950/40 px-3 py-1 text-sm font-medium text-rose-700 dark:text-rose-400">
-            🚫 บล็อกแล้ว {blockedCount} ใบหน้า
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-3 py-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+            🚫 ซ่อนไว้ {blockedCount} ใบหน้า
           </span>
         )}
       </header>

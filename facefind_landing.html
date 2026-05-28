@@ -257,16 +257,15 @@
       z-index: 50;
       background-color: rgba(17, 17, 17, 0.88);
       backdrop-filter: blur(12px);
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       opacity: 0;
-      pointer-events: none;
       transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .photo-modal-overlay.active {
+      display: flex;
       opacity: 1;
-      pointer-events: auto;
     }
   </style>
   <script>
@@ -754,14 +753,20 @@
 
   <!-- Photo Detail Lightbox Modal -->
   <div id="photo-modal" class="photo-modal-overlay" onclick="closePhotoModal()">
-    <div class="max-w-4xl max-h-[85vh] w-full p-4 relative flex flex-col items-center justify-center pointer-events-auto" onclick="event.stopPropagation()">
+    <div class="max-w-4xl max-h-[85vh] w-full p-4 relative flex flex-col items-center justify-center pointer-events-auto transition-all duration-500" onclick="event.stopPropagation()">
       <!-- Close Button -->
       <button class="absolute -top-10 right-4 text-white hover:text-champagne transition-colors font-mono text-xs tracking-widest uppercase flex items-center gap-2" onclick="closePhotoModal()">
         <span>CLOSE</span> <span class="text-lg leading-none">&times;</span>
       </button>
-      <!-- Image Frame -->
-      <div class="border border-champagne/30 bg-zinc-950 p-2 md:p-3 max-h-[75vh] flex items-center justify-center overflow-hidden">
-        <img id="modal-image" src="" alt="Full Screen Preview" class="max-w-full max-h-[70vh] object-contain">
+      <!-- Image Frame Wrapper with Loading State -->
+      <div class="border border-champagne/30 bg-zinc-950 p-2 md:p-3 max-h-[75vh] min-h-[300px] w-full max-w-3xl flex items-center justify-center overflow-hidden relative">
+        <!-- Sleek Loading Spinner -->
+        <div id="modal-image-spinner" class="absolute inset-0 flex items-center justify-center bg-zinc-950 z-20 transition-opacity duration-300">
+          <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10" stroke-dasharray="24" stroke-dashoffset="6"/>
+          </svg>
+        </div>
+        <img id="modal-image" src="" alt="Full Screen Preview" class="max-w-full max-h-[70vh] object-contain opacity-0 scale-95 transition-all duration-500 ease-out z-10">
       </div>
       <!-- Details -->
       <div class="mt-4 text-center space-y-1">
@@ -984,26 +989,86 @@
       }, 4000);
     }
 
+    // Global Escape Key Listener for Landing Lightbox
+    const escKeyLandingListener = (e) => {
+      if (e.key === 'Escape') {
+        closePhotoModal();
+      }
+    };
+
     function openPhotoModal(imgSrc, title, category) {
       const modal = document.getElementById('photo-modal');
       const modalImg = document.getElementById('modal-image');
       const modalTitle = document.getElementById('modal-title');
       const modalCategory = document.getElementById('modal-category');
+      const spinner = document.getElementById('modal-image-spinner');
       
       if (modal && modalImg) {
+        // Prevent layout shift: calculate scrollbar width and pad body
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.paddingRight = scrollbarWidth + 'px';
+        document.body.style.overflow = 'hidden'; // Lock background scroll
+
+        // Prepare initial image layout transition states (hidden & scaled down)
+        modalImg.classList.remove('opacity-100', 'scale-100');
+        modalImg.classList.add('opacity-0', 'scale-95');
+
+        if (spinner) {
+          spinner.style.opacity = '1';
+          spinner.classList.remove('hidden');
+        }
+
+        // Assign sources
         modalImg.src = imgSrc;
         if (modalTitle) modalTitle.textContent = title;
         if (modalCategory) modalCategory.textContent = category;
+
+        // Animate in once fully loaded
+        modalImg.onload = () => {
+          if (spinner) {
+            spinner.style.opacity = '0';
+            setTimeout(() => spinner.classList.add('hidden'), 300);
+          }
+          // Smooth fade in & scale back to normal
+          modalImg.classList.remove('opacity-0', 'scale-95');
+          modalImg.classList.add('opacity-100', 'scale-100');
+        };
+
+        // If cached or immediately loaded
+        if (modalImg.complete) {
+          modalImg.onload();
+        }
+
+        // Set display to flex and trigger layout reflow to make sure opacity transitions smoothly
+        modal.style.display = 'flex';
+        modal.offsetHeight; // force reflow
         modal.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Lock background scroll
+
+        // Bind global Escape key listener
+        window.addEventListener('keydown', escKeyLandingListener);
       }
     }
     
     function closePhotoModal() {
       const modal = document.getElementById('photo-modal');
+      const modalImg = document.getElementById('modal-image');
       if (modal) {
         modal.classList.remove('active');
-        document.body.style.overflow = ''; // Restore scroll
+        
+        // Unbind keydown
+        window.removeEventListener('keydown', escKeyLandingListener);
+
+        // Delay restoring layout states slightly to let CSS closing transition complete smoothly
+        setTimeout(() => {
+          modal.style.display = 'none'; // Physically hide modal from viewport click tree
+          document.body.style.overflow = ''; // Restore scroll
+          document.body.style.paddingRight = '';
+          if (modalImg) {
+            modalImg.src = ''; // Clear source to prevent loading-flicker on next click
+            modalImg.classList.remove('opacity-100', 'scale-100');
+            modalImg.classList.add('opacity-0', 'scale-95');
+          }
+        }, 500);
       }
     }
 

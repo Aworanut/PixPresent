@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CameraIcon, FolderIcon, LinkSlashIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { buttonVariants } from "@/components/ui/button";
@@ -33,7 +34,7 @@ export default async function EventDetailPage({
         .order("created_at", { ascending: true }),
       supabase
         .from("photos")
-        .select("id, r2_web_url, is_hidden, face_details, storage_file_id")
+        .select("id, r2_web_url, visibility, face_details, storage_file_id")
         .eq("event_id", id)
         .order("created_at", { ascending: true }),
       supabase.auth.getUser(),
@@ -56,7 +57,7 @@ export default async function EventDetailPage({
   const photoList: GalleryPhoto[] = (photos ?? []).map((p) => ({
     id: p.id,
     r2_web_url: p.r2_web_url,
-    is_hidden: p.is_hidden ?? false,
+    visibility: (p.visibility ?? "match_only") as GalleryPhoto["visibility"],
     face_details: (p.face_details as GalleryPhoto["face_details"]) ?? [],
     storage_file_id: p.storage_file_id ?? "",
   }));
@@ -153,62 +154,66 @@ function EmptyGallery({
 }) {
   if (!driveConnected) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 py-20 gap-4 text-center px-6">
-        <div className="text-5xl">🔗</div>
-        <div className="space-y-1.5">
-          <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-            ยังไม่ได้เชื่อมต่อ Google Drive
-          </p>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            เชื่อมต่อ Drive เพื่อเริ่ม sync รูปภาพ
-          </p>
-        </div>
+      <EmptyShell>
+        <LinkSlashIcon className="h-12 w-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+        <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+          ยังไม่ได้เชื่อมต่อ Google Drive
+        </p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          เชื่อมต่อ Drive เพื่อเริ่ม sync รูปภาพ
+        </p>
         <a
           href={`/api/auth/google?redirect=/dashboard/events/${eventId}`}
-          className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
+          className="mt-2 inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
         >
           เชื่อมต่อ Google Drive
         </a>
-      </div>
+      </EmptyShell>
     );
   }
 
   if (!hasFolders) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 py-20 gap-4 text-center px-6">
-        <div className="text-5xl">📁</div>
-        <div className="space-y-1.5">
-          <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-            ยังไม่มี Drive folder
-          </p>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            เพิ่ม folder ของช่างภาพก่อน แล้วค่อย sync
-          </p>
-        </div>
+      <EmptyShell>
+        <FolderIcon className="h-12 w-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+        <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+          ยังไม่มี Drive folder
+        </p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          เพิ่ม folder ของช่างภาพก่อน แล้วค่อย sync
+        </p>
         <Link
           href={`/dashboard/events/${eventId}/edit`}
-          className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
+          className="mt-2 inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
         >
           เพิ่ม folder
         </Link>
-      </div>
+      </EmptyShell>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 py-20 gap-4 text-center px-6">
-      <div className="text-5xl">📷</div>
-      <div className="space-y-1.5">
-        <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-          ยังไม่มีรูปภาพ
-        </p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          กด Sync เพื่อดึงรูปจาก Google Drive มา index
-        </p>
-      </div>
-      <p className="text-xs text-zinc-400 dark:text-zinc-500">
-        คลิกไอคอน 🔄 ด้านบนขวาเพื่อเริ่ม Sync
+    <EmptyShell>
+      <CameraIcon className="h-12 w-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+      <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+        ยังไม่มีรูปภาพ
       </p>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        กด Sync เพื่อดึงรูปจาก Google Drive มา index
+      </p>
+      <p className="text-xs text-zinc-400 dark:text-zinc-500 flex items-center justify-center gap-1 mt-1">
+        <ArrowPathIcon className="h-3.5 w-3.5" /> คลิกไอคอน Sync ด้านบนขวาเพื่อเริ่ม
+      </p>
+    </EmptyShell>
+  );
+}
+
+// ─── Empty shell ─────────────────────────────────────────────────────────────
+
+function EmptyShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 py-20 gap-2 text-center px-6">
+      {children}
     </div>
   );
 }

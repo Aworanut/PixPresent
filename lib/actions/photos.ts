@@ -4,29 +4,50 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
-/** แบนเฉพาะรูปนี้ — ยังอยู่ใน organizer gallery แต่ guest ไม่เห็น */
-export async function hidePhoto(photoId: string, eventId: string) {
+export type PhotoVisibility = "public" | "match_only" | "hidden";
+
+/** เปลี่ยน visibility รูปเดี่ยว */
+export async function setPhotoVisibility(
+  photoId: string,
+  eventId: string,
+  visibility: PhotoVisibility,
+) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("photos")
-    .update({ is_hidden: true })
+    .update({ visibility })
     .eq("id", photoId)
     .eq("event_id", eventId);
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/events/${eventId}`);
 }
 
-/** ปลดแบนรูป */
-export async function unhidePhoto(photoId: string, eventId: string) {
+/** เปลี่ยน visibility หลายรูปพร้อมกัน */
+export async function setPhotosVisibility(
+  photoIds: string[],
+  eventId: string,
+  visibility: PhotoVisibility,
+) {
+  if (photoIds.length === 0) return;
   const supabase = await createClient();
   const { error } = await supabase
     .from("photos")
-    .update({ is_hidden: false })
-    .eq("id", photoId)
+    .update({ visibility })
+    .in("id", photoIds)
     .eq("event_id", eventId);
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/events/${eventId}`);
 }
+
+// ── Legacy aliases (compat) ────────────────────────────────────────────────────
+export const hidePhoto = async (id: string, eid: string) =>
+  setPhotoVisibility(id, eid, "hidden");
+export const unhidePhoto = async (id: string, eid: string) =>
+  setPhotoVisibility(id, eid, "match_only");
+export const hidePhotos = async (ids: string[], eid: string) =>
+  setPhotosVisibility(ids, eid, "hidden");
+export const unhidePhotos = async (ids: string[], eid: string) =>
+  setPhotosVisibility(ids, eid, "match_only");
 
 /** ลบรูปถาวร — ลบจาก DB + R2 */
 export async function deletePhoto(photoId: string, eventId: string) {
@@ -49,7 +70,7 @@ export async function deletePhoto(photoId: string, eventId: string) {
     .eq("event_id", eventId);
   if (error) throw new Error(error.message);
 
-  // ลบจาก R2 (best-effort — ไม่ throw ถ้าล้มเหลว)
+  // ลบจาก R2 (best-effort)
   if (photo?.r2_web_url || photo?.r2_full_url) {
     try {
       const { DeleteObjectCommand, S3Client } = await import("@aws-sdk/client-s3");
@@ -73,12 +94,11 @@ export async function deletePhoto(photoId: string, eventId: string) {
         );
       }
     } catch {
-      // R2 delete failed — DB already deleted, log and move on
       console.warn(`[deletePhoto] R2 cleanup failed for photo ${photoId}`);
     }
   }
 
-  // ลบ face_blacklist entries สำหรับใบหน้าในรูปนี้ (best-effort)
+  // ลบ face_blacklist entries (best-effort)
   const faceIds: string[] = photo?.rekognition_face_ids ?? [];
   if (faceIds.length > 0) {
     await admin
@@ -89,4 +109,12 @@ export async function deletePhoto(photoId: string, eventId: string) {
   }
 
   revalidatePath(`/dashboard/events/${eventId}`);
+}
+
+/** ลบหลายรูปถาวร */
+export async function deletePhotos(photoIds: string[], eventId: string) {
+  if (photoIds.length === 0) return;
+  for (const id of photoIds) {
+    await deletePhoto(id, eventId);
+  }
 }

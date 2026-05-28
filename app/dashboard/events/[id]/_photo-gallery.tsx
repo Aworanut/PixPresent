@@ -2,8 +2,17 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import Image from "next/image";
-import { hidePhoto, unhidePhoto, deletePhoto } from "@/lib/actions/photos";
+import {
+  setPhotoVisibility,
+  setPhotosVisibility,
+  deletePhoto,
+  deletePhotos,
+  type PhotoVisibility,
+} from "@/lib/actions/photos";
 import { addToBlacklist } from "@/lib/actions/blacklist";
+import { PhotoBadge } from "@/components/ui/photo-badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PhotoIcon } from "@heroicons/react/24/outline";
 
 type FaceDetail = {
   face_id: string;
@@ -13,70 +22,190 @@ type FaceDetail = {
 export type GalleryPhoto = {
   id: string;
   r2_web_url: string | null;
-  is_hidden: boolean;
+  visibility: PhotoVisibility;
   face_details: FaceDetail[];
   storage_file_id: string;
 };
 
-type Tab = "all" | "hidden";
+type Tab = "active" | "hidden";
 type View = "grid" | "list";
+type FaceFilter = "all" | "0" | "1" | "2" | "3+";
 
 type Props = {
   eventId: string;
   photos: GalleryPhoto[];
 };
 
+// ─── Design system tokens ─────────────────────────────────────────────────────
+// Champagne gold: #D4AF37 | Cream: #F5EEDC | Obsidian: #111111
+
 export function PhotoGallery({ eventId, photos }: Props) {
-  const [tab, setTab] = useState<Tab>("all");
+  const [tab, setTab] = useState<Tab>("active");
   const [view, setView] = useState<View>("grid");
+  const [faceFilter, setFaceFilter] = useState<FaceFilter>("all");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPending, startBulkTransition] = useTransition();
 
-  const visible = photos.filter((p) =>
-    tab === "all" ? !p.is_hidden : p.is_hidden,
-  );
+  // Tab split
+  const activePhotos = photos.filter((p) => p.visibility !== "hidden");
+  const hiddenPhotos = photos.filter((p) => p.visibility === "hidden");
+  const tabPhotos = tab === "active" ? activePhotos : hiddenPhotos;
 
-  const hiddenCount = photos.filter((p) => p.is_hidden).length;
+  // Face count filter
+  const visible = tabPhotos.filter((p) => {
+    if (faceFilter === "all") return true;
+    const n = p.face_details.length;
+    if (faceFilter === "0") return n === 0;
+    if (faceFilter === "1") return n === 1;
+    if (faceFilter === "2") return n === 2;
+    if (faceFilter === "3+") return n >= 3;
+    return true;
+  });
+
+  // Clear selection on tab/filter change
+  useEffect(() => { setSelectedIds(new Set()); }, [tab, faceFilter]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedIds(new Set(visible.map((p) => p.id)));
+  const clearSelection = () => setSelectedIds(new Set());
+  const exitSelectMode = () => { setSelectMode(false); clearSelection(); };
+
+  const selectedList = [...selectedIds];
+  const allSelected = visible.length > 0 && selectedIds.size === visible.length;
+
+  const bulkSet = (v: PhotoVisibility) => () => {
+    const label = v === "public" ? "เผยแพร่ทั้งหมด" : v === "match_only" ? "เฉพาะใบหน้าตรง" : "ไม่เผยแพร่";
+    if (!window.confirm(`เปลี่ยน ${selectedIds.size} รูปเป็น "${label}"?`)) return;
+    startBulkTransition(async () => {
+      await setPhotosVisibility(selectedList, eventId, v);
+      clearSelection();
+    });
+  };
+
+  const bulkDelete = () => {
+    if (!window.confirm(`ลบ ${selectedIds.size} รูปถาวร? ไม่สามารถกู้คืนได้`)) return;
+    startBulkTransition(async () => {
+      await deletePhotos(selectedList, eventId);
+      clearSelection();
+    });
+  };
 
   return (
     <div className="space-y-3">
-      {/* Tab + view toggle bar */}
-      <div className="flex items-center justify-between gap-3">
+      {/* ── Top bar ────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* Tabs */}
         <div className="flex items-center gap-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1">
-          <TabButton active={tab === "all"} onClick={() => setTab("all")}>
-            ทั้งหมด ({photos.length})
+          <TabButton active={tab === "active"} onClick={() => setTab("active")}>
+            ทั้งหมด ({activePhotos.length})
           </TabButton>
           <TabButton active={tab === "hidden"} onClick={() => setTab("hidden")}>
-            ถูกแบน {hiddenCount > 0 && `(${hiddenCount})`}
+            ไม่เผยแพร่ {hiddenPhotos.length > 0 && `(${hiddenPhotos.length})`}
           </TabButton>
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1">
-          <ViewToggle
-            active={view === "grid"}
-            onClick={() => setView("grid")}
-            label="Grid view"
+        <div className="flex items-center gap-2">
+          {/* Select toggle */}
+          <button
+            type="button"
+            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+            className={[
+              "px-3 py-1 rounded-md text-sm font-medium transition-all duration-300",
+              selectMode
+                ? "bg-[#111111] dark:bg-[#FBF9F6] text-[#FBF9F6] dark:text-[#111111]"
+                : "border border-[rgba(17,17,17,0.2)] dark:border-[rgba(251,249,246,0.2)] text-zinc-600 dark:text-zinc-400 hover:border-[#D4AF37] hover:text-[#111111] dark:hover:text-[#FBF9F6] bg-transparent",
+            ].join(" ")}
           >
-            <GridIcon />
-          </ViewToggle>
-          <ViewToggle
-            active={view === "list"}
-            onClick={() => setView("list")}
-            label="List view"
-          >
-            <ListIcon />
-          </ViewToggle>
+            {selectMode ? "ยกเลิก" : "เลือก"}
+          </button>
+
+          {/* View toggle */}
+          <div className="flex items-center gap-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1">
+            <ViewToggle active={view === "grid"} onClick={() => setView("grid")} label="Grid view">
+              <GridIcon />
+            </ViewToggle>
+            <ViewToggle active={view === "list"} onClick={() => setView("list")} label="List view">
+              <ListIcon />
+            </ViewToggle>
+          </div>
         </div>
       </div>
 
-      {/* Empty tab state */}
-      {visible.length === 0 && (
-        <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 py-10 text-center">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            {tab === "hidden" ? "ยังไม่มีรูปที่ถูกแบน" : "ยังไม่มีรูป"}
-          </p>
+      {/* ── Face count filter ───────────────────────────────────────────────── */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-xs text-zinc-400 dark:text-zinc-500 mr-1">ใบหน้า</span>
+        {(["all", "0", "1", "2", "3+"] as FaceFilter[]).map((f) => {
+          const label = f === "all" ? "ทั้งหมด" : f === "0" ? "ไม่มีคน" : f === "3+" ? "3+ คน" : `${f} คน`;
+          const count = f === "all" ? tabPhotos.length
+            : f === "0" ? tabPhotos.filter(p => p.face_details.length === 0).length
+            : f === "1" ? tabPhotos.filter(p => p.face_details.length === 1).length
+            : f === "2" ? tabPhotos.filter(p => p.face_details.length === 2).length
+            : tabPhotos.filter(p => p.face_details.length >= 3).length;
+          return (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFaceFilter(f)}
+              className={[
+                "px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-300",
+                faceFilter === f
+                  ? "bg-[#111111] dark:bg-[#FBF9F6] text-[#FBF9F6] dark:text-[#111111]"
+                  : "border border-[rgba(17,17,17,0.15)] dark:border-[rgba(251,249,246,0.15)] text-zinc-500 dark:text-zinc-400 hover:border-[#D4AF37] hover:text-zinc-900 dark:hover:text-zinc-100 bg-transparent",
+              ].join(" ")}
+            >
+              {label} <span className="opacity-50">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Bulk action bar ─────────────────────────────────────────────────── */}
+      {selectMode && (
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[rgba(212,175,55,0.3)] bg-[#F5EEDC]/40 dark:bg-[#27272A]/60 flex-wrap">
+          {/* Select all */}
+          <button
+            type="button"
+            onClick={allSelected ? clearSelection : selectAll}
+            className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 font-medium shrink-0"
+          >
+            <Checkbox checked={allSelected} indeterminate={selectedIds.size > 0 && !allSelected} />
+            {selectedIds.size > 0 ? `เลือกอยู่ ${selectedIds.size} รูป` : "เลือกทั้งหมด"}
+          </button>
+
+          {selectedIds.size > 0 && (
+            <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+              <HairlineButton onClick={bulkSet("public")} disabled={bulkPending}>
+                🌐 เผยแพร่ทั้งหมด
+              </HairlineButton>
+              <HairlineButton onClick={bulkSet("match_only")} disabled={bulkPending}>
+                👤 เฉพาะใบหน้าตรง
+              </HairlineButton>
+              <HairlineButton onClick={bulkSet("hidden")} disabled={bulkPending}>
+                🚫 ไม่เผยแพร่
+              </HairlineButton>
+              <HairlineButton onClick={bulkDelete} disabled={bulkPending} danger>
+                🗑 ลบ
+              </HairlineButton>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Grid */}
+      {/* ── Empty state ─────────────────────────────────────────────────────── */}
+      {visible.length === 0 && (
+        <EmptyState icon={PhotoIcon} message={tab === "hidden" ? "ยังไม่มีรูปที่ไม่เผยแพร่" : "ยังไม่มีรูป"} />
+      )}
+
+      {/* ── Grid ────────────────────────────────────────────────────────────── */}
       {view === "grid" && visible.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
           {visible.map((photo) => (
@@ -84,21 +213,25 @@ export function PhotoGallery({ eventId, photos }: Props) {
               key={photo.id}
               photo={photo}
               eventId={eventId}
-              tab={tab}
+              selectMode={selectMode}
+              selected={selectedIds.has(photo.id)}
+              onToggleSelect={toggleSelect}
             />
           ))}
         </div>
       )}
 
-      {/* List */}
+      {/* ── List ────────────────────────────────────────────────────────────── */}
       {view === "list" && visible.length > 0 && (
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-100 dark:divide-zinc-800">
+        <div className="rounded-lg border border-[rgba(17,17,17,0.1)] dark:border-[rgba(251,249,246,0.1)] bg-white dark:bg-zinc-900 divide-y divide-[rgba(17,17,17,0.06)] dark:divide-[rgba(251,249,246,0.06)]">
           {visible.map((photo) => (
             <ListRow
               key={photo.id}
               photo={photo}
               eventId={eventId}
-              tab={tab}
+              selectMode={selectMode}
+              selected={selectedIds.has(photo.id)}
+              onToggleSelect={toggleSelect}
             />
           ))}
         </div>
@@ -112,20 +245,30 @@ export function PhotoGallery({ eventId, photos }: Props) {
 function GridCard({
   photo,
   eventId,
-  tab,
+  selectMode,
+  selected,
+  onToggleSelect,
 }: {
   photo: GalleryPhoto;
   eventId: string;
-  tab: Tab;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
 }) {
   const faceCount = photo.face_details.length;
   const url = photo.r2_web_url;
+  const isHidden = photo.visibility === "hidden";
 
   return (
     <div
+      onClick={selectMode ? () => onToggleSelect(photo.id) : undefined}
       className={[
-        "group relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800",
-        photo.is_hidden ? "opacity-60" : "",
+        "group relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 transition-all duration-300",
+        isHidden ? "opacity-50" : "",
+        selectMode ? "cursor-pointer" : "",
+        selected
+          ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-white dark:ring-offset-zinc-950"
+          : "",
       ].join(" ")}
     >
       {url ? (
@@ -138,33 +281,48 @@ function GridCard({
           loading="lazy"
         />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-2xl text-zinc-400">
-          🖼️
+        <div className="absolute inset-0 flex items-center justify-center">
+          <PhotoIcon className="h-6 w-6 text-zinc-300 dark:text-zinc-600" />
+        </div>
+      )}
+
+      {/* Selected overlay */}
+      {selectMode && selected && (
+        <div className="absolute inset-0 bg-[#D4AF37]/10" />
+      )}
+
+      {/* Checkbox */}
+      {selectMode && (
+        <div className="absolute top-1.5 left-1.5">
+          <Checkbox checked={selected} />
+        </div>
+      )}
+
+      {/* Visibility badge */}
+      {!selectMode && photo.visibility === "public" && (
+        <div className="absolute top-1 left-1">
+          <VisibilityBadge v="public" />
+        </div>
+      )}
+      {!selectMode && isHidden && (
+        <div className="absolute top-1 left-1">
+          <VisibilityBadge v="hidden" />
         </div>
       )}
 
       {/* Face count badge */}
-      {faceCount > 0 && (
+      {!selectMode && faceCount > 0 && (
         <div className="absolute bottom-1 left-1">
-          <span className="rounded px-1 py-0.5 text-[10px] font-medium bg-black/60 text-white">
-            {faceCount} ใบหน้า
-          </span>
+          <PhotoBadge variant="face">{faceCount} ใบหน้า</PhotoBadge>
         </div>
       )}
 
-      {/* Hidden badge */}
-      {photo.is_hidden && (
-        <div className="absolute top-1 left-1">
-          <span className="rounded px-1 py-0.5 text-[10px] font-medium bg-rose-600/90 text-white">
-            แบน
-          </span>
+      {/* ⋮ menu */}
+      {!selectMode && (
+        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <PhotoMenu photo={photo} eventId={eventId} />
         </div>
       )}
-
-      {/* ⋮ menu button */}
-      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <PhotoMenu photo={photo} eventId={eventId} tab={tab} />
-      </div>
     </div>
   );
 }
@@ -174,38 +332,39 @@ function GridCard({
 function ListRow({
   photo,
   eventId,
-  tab,
+  selectMode,
+  selected,
+  onToggleSelect,
 }: {
   photo: GalleryPhoto;
   eventId: string;
-  tab: Tab;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
 }) {
   const faceCount = photo.face_details.length;
   const url = photo.r2_web_url;
   const filename = photo.storage_file_id.split("/").pop() ?? photo.storage_file_id;
+  const isHidden = photo.visibility === "hidden";
 
   return (
     <div
+      onClick={selectMode ? () => onToggleSelect(photo.id) : undefined}
       className={[
-        "flex items-center gap-3 px-4 py-2.5 group",
-        photo.is_hidden ? "opacity-60" : "",
+        "flex items-center gap-3 px-4 py-2.5 group transition-colors",
+        isHidden ? "opacity-50" : "",
+        selectMode ? "cursor-pointer hover:bg-[#F5EEDC]/30 dark:hover:bg-zinc-800/50" : "",
+        selected ? "bg-[#F5EEDC]/50 dark:bg-[#27272A]/60" : "",
       ].join(" ")}
     >
+      {selectMode && <Checkbox checked={selected} />}
+
       {/* Thumbnail */}
       <div className="relative w-10 h-10 flex-shrink-0 rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800">
         {url ? (
-          <Image
-            src={url}
-            alt="photo"
-            fill
-            className="object-cover"
-            sizes="40px"
-            loading="lazy"
-          />
+          <Image src={url} alt="photo" fill className="object-cover" sizes="40px" loading="lazy" />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-base text-zinc-400">
-            🖼️
-          </div>
+          <div className="absolute inset-0 flex items-center justify-center text-base text-zinc-400">🖼️</div>
         )}
       </div>
 
@@ -216,40 +375,107 @@ function ListRow({
         </p>
         <p className="text-xs text-zinc-400 dark:text-zinc-500">
           {faceCount > 0 ? `${faceCount} ใบหน้า` : "ไม่พบใบหน้า"}
-          {photo.is_hidden && " · แบนอยู่"}
+          {" · "}
+          <span className={photo.visibility === "public" ? "text-[#D4AF37]" : isHidden ? "text-zinc-400" : ""}>
+            {VISIBILITY_LABEL[photo.visibility]}
+          </span>
         </p>
       </div>
 
       {/* ⋮ menu */}
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-        <PhotoMenu photo={photo} eventId={eventId} tab={tab} />
-      </div>
+      {!selectMode && (
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+          <PhotoMenu photo={photo} eventId={eventId} />
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── ⋮ Dropdown menu ──────────────────────────────────────────────────────────
+// ─── Visibility helpers ───────────────────────────────────────────────────────
 
-function PhotoMenu({
-  photo,
-  eventId,
-  tab,
+const VISIBILITY_LABEL: Record<PhotoVisibility, string> = {
+  public: "เผยแพร่ทั้งหมด",
+  match_only: "เฉพาะใบหน้าตรง",
+  hidden: "ไม่เผยแพร่",
+};
+
+function VisibilityBadge({ v }: { v: PhotoVisibility }) {
+  if (v === "public") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium bg-[#D4AF37]/20 text-[#111111] dark:text-[#FBF9F6] backdrop-blur-sm">
+        🌐
+      </span>
+    );
+  }
+  if (v === "hidden") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium bg-black/40 text-white backdrop-blur-sm">
+        ไม่เผยแพร่
+      </span>
+    );
+  }
+  return null;
+}
+
+// ─── Checkbox ─────────────────────────────────────────────────────────────────
+
+function Checkbox({ checked, indeterminate }: { checked: boolean; indeterminate?: boolean }) {
+  return (
+    <span
+      className={[
+        "flex h-5 w-5 items-center justify-center rounded border transition-all duration-200 text-xs font-bold shrink-0",
+        checked || indeterminate
+          ? "bg-[#D4AF37] border-[#D4AF37] text-[#111111]"
+          : "bg-white dark:bg-zinc-800 border-[rgba(17,17,17,0.25)] dark:border-[rgba(251,249,246,0.25)]",
+      ].join(" ")}
+    >
+      {indeterminate ? "−" : checked ? "✓" : null}
+    </span>
+  );
+}
+
+// ─── Hairline action button (design system §3.1) ──────────────────────────────
+
+function HairlineButton({
+  onClick,
+  disabled,
+  danger,
+  children,
 }: {
-  photo: GalleryPhoto;
-  eventId: string;
-  tab: Tab;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  children: React.ReactNode;
 }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        "px-2.5 py-1 rounded text-xs font-medium border transition-all duration-300 disabled:opacity-40",
+        danger
+          ? "border-[rgba(17,17,17,0.2)] dark:border-[rgba(251,249,246,0.2)] text-zinc-600 dark:text-zinc-400 hover:border-rose-400 hover:text-rose-600 dark:hover:text-rose-400 bg-transparent"
+          : "border-[rgba(17,17,17,0.2)] dark:border-[rgba(251,249,246,0.2)] text-zinc-600 dark:text-zinc-400 hover:border-[#D4AF37] hover:text-zinc-900 dark:hover:text-zinc-100 bg-transparent",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── ⋮ Photo menu ─────────────────────────────────────────────────────────────
+
+function PhotoMenu({ photo, eventId }: { photo: GalleryPhoto; eventId: string }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -260,19 +486,14 @@ function PhotoMenu({
     startTransition(fn);
   };
 
-  const handleHide = () =>
-    act(() => hidePhoto(photo.id, eventId));
-
-  const handleUnhide = () =>
-    act(() => unhidePhoto(photo.id, eventId));
+  const setVis = (v: PhotoVisibility) =>
+    act(() => setPhotoVisibility(photo.id, eventId, v));
 
   const handleBanFaces = () => {
     if (photo.face_details.length === 0) return;
-    if (!window.confirm(`แบนใบหน้าทั้ง ${photo.face_details.length} คนในรูปนี้? guest จะไม่เห็นรูปของคนเหล่านี้ทั้งหมด`)) return;
+    if (!window.confirm(`ซ่อนใบหน้าทั้ง ${photo.face_details.length} คนในรูปนี้จากการค้นหา?`)) return;
     act(async () => {
-      for (const f of photo.face_details) {
-        await addToBlacklist(eventId, f.face_id);
-      }
+      for (const f of photo.face_details) await addToBlacklist(eventId, f.face_id);
     });
   };
 
@@ -294,20 +515,39 @@ function PhotoMenu({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-8 z-20 w-48 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg py-1 text-sm">
-          {photo.is_hidden ? (
-            <MenuItem onClick={handleUnhide}>ปลดแบนรูปนี้</MenuItem>
-          ) : (
-            <MenuItem onClick={handleHide}>🚫 แบนรูปนี้</MenuItem>
-          )}
+        <div className="absolute right-0 top-8 z-20 w-52 rounded-lg border border-[rgba(17,17,17,0.1)] dark:border-[rgba(251,249,246,0.1)] bg-white dark:bg-zinc-900 shadow-xl py-1 text-sm">
+          {/* Visibility section */}
+          <div className="px-3 pt-1.5 pb-1">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-medium">การเผยแพร่</p>
+          </div>
+          <MenuItem
+            onClick={() => setVis("public")}
+            active={photo.visibility === "public"}
+          >
+            🌐 เผยแพร่ทั้งหมด
+          </MenuItem>
+          <MenuItem
+            onClick={() => setVis("match_only")}
+            active={photo.visibility === "match_only"}
+          >
+            👤 เฉพาะใบหน้าตรง
+          </MenuItem>
+          <MenuItem
+            onClick={() => setVis("hidden")}
+            active={photo.visibility === "hidden"}
+          >
+            🚫 ไม่เผยแพร่
+          </MenuItem>
+
+          <div className="my-1 border-t border-[rgba(17,17,17,0.06)] dark:border-[rgba(251,249,246,0.06)]" />
 
           {photo.face_details.length > 0 && (
             <MenuItem onClick={handleBanFaces}>
-              👤 แบนคน{photo.face_details.length > 1 ? `ทั้ง ${photo.face_details.length} คน` : "นี้"}ทั้งหมด
+              👤 ซ่อนใบหน้า{photo.face_details.length > 1 ? `ทั้ง ${photo.face_details.length} คน` : "นี้"}จากค้นหา
             </MenuItem>
           )}
 
-          <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+          <div className="my-1 border-t border-[rgba(17,17,17,0.06)] dark:border-[rgba(251,249,246,0.06)]" />
 
           <MenuItem onClick={handleDelete} danger>
             🗑 ลบรูปถาวร
@@ -321,10 +561,12 @@ function PhotoMenu({
 function MenuItem({
   onClick,
   danger,
+  active,
   children,
 }: {
   onClick: () => void;
   danger?: boolean;
+  active?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -332,18 +574,19 @@ function MenuItem({
       type="button"
       onClick={onClick}
       className={[
-        "w-full text-left px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors",
+        "w-full text-left px-3 py-2 hover:bg-[#F5EEDC]/60 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between gap-2",
         danger
           ? "text-rose-600 dark:text-rose-400"
           : "text-zinc-700 dark:text-zinc-300",
       ].join(" ")}
     >
-      {children}
+      <span>{children}</span>
+      {active && <span className="text-[#D4AF37] text-xs">✓</span>}
     </button>
   );
 }
 
-// ─── Tab + View helpers ───────────────────────────────────────────────────────
+// ─── Tab / View helpers ───────────────────────────────────────────────────────
 
 function TabButton({
   active,

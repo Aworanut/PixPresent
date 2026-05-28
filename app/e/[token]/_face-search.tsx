@@ -385,7 +385,7 @@ function PhotoCard({ photo, onOpen }: PhotoCardProps) {
       />
       {/* Hover hint */}
       <div className="absolute inset-0 flex items-end p-2 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-        <span className="text-[10px] text-white font-medium px-1.5 py-0.5 bg-black/40 rounded">
+        <span className="text-xs text-white font-medium px-1.5 py-0.5 bg-black/40 rounded">
           ดูรูป
         </span>
       </div>

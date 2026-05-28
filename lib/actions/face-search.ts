@@ -84,22 +84,35 @@ export async function searchFaces(formData: FormData): Promise<SearchResult> {
     };
   }
 
-  // 4. Fetch matched photo URLs
+  // 4. Fetch matched photos + all public photos for this event
   const photos: MatchedPhoto[] = [];
-  if (matchResult.length > 0) {
-    const { data: photoRows } = await supabase
+
+  const [matchedRows, publicRows] = await Promise.all([
+    matchResult.length > 0
+      ? supabase
+          .from("photos")
+          .select("id, r2_web_url, r2_full_url")
+          .eq("event_id", eventId)
+          .eq("visibility", "match_only")
+          .in("id", matchResult)
+      : Promise.resolve({ data: [] }),
+    supabase
       .from("photos")
       .select("id, r2_web_url, r2_full_url")
       .eq("event_id", eventId)
-      .in("id", matchResult);
+      .eq("visibility", "public"),
+  ]);
 
-    for (const row of photoRows ?? []) {
-      photos.push({
-        id: row.id,
-        webUrl: row.r2_web_url ?? "",
-        fullUrl: row.r2_full_url ?? "",
-      });
-    }
+  // Merge: matched first, then public (dedup by id)
+  const seen = new Set<string>();
+  for (const row of [...(matchedRows.data ?? []), ...(publicRows.data ?? [])]) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    photos.push({
+      id: row.id,
+      webUrl: row.r2_web_url ?? "",
+      fullUrl: row.r2_full_url ?? "",
+    });
   }
 
   // 5. Insert guest_session

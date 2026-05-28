@@ -36,6 +36,26 @@
   </script>
 
   <style>
+    /* Load Local Sao Chingcha font */
+    @font-face {
+      font-family: 'SaoChingcha';
+      src: url('public/fonts/SaoChingcha-Regular.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'SaoChingcha';
+      src: url('public/fonts/SaoChingcha-Bold.otf') format('opentype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'SaoChingcha';
+      src: url('public/fonts/SaoChingcha-Light.otf') format('opentype');
+      font-weight: 300;
+      font-style: normal;
+    }
+
     /* Custom Luxury Styling */
     body {
       background-color: #FBF9F6;
@@ -59,51 +79,84 @@
 
     /* 1. Shimmer Animation for Skeleton cards */
     @keyframes shimmer {
-      0% {
-        background-position: -200% 0;
-      }
-      100% {
-        background-position: 200% 0;
-      }
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
     }
-    .skeleton-card {
+    .skeleton-shimmer {
       background: linear-gradient(90deg, #F5F3ED 25%, #EFEBE0 50%, #F5F3ED 75%);
       background-size: 200% 100%;
       animation: shimmer 1.6s infinite linear;
     }
-    html.dark .skeleton-card {
+    html.dark .skeleton-shimmer {
       background: linear-gradient(90deg, #1A1A1A 25%, #27272A 50%, #1A1A1A 75%);
       background-size: 200% 100%;
       animation: shimmer 1.6s infinite linear;
     }
 
+    /* Soft Pulsing Skeleton */
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+    .skeleton-pulsing {
+      background-color: #EFEBE0;
+      animation: pulseSoft 2s infinite ease-in-out;
+    }
+    html.dark .skeleton-pulsing {
+      background-color: #27272A;
+    }
+
+    /* Wireframe Skeleton */
+    .skeleton-wireframe {
+      border: 1px dashed rgba(212, 175, 55, 0.4);
+      background-color: transparent;
+      position: relative;
+    }
+    .skeleton-wireframe::after {
+      content: '+';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #D4AF37;
+      font-size: 14px;
+      font-family: monospace;
+    }
+
     /* 2. Premium Toast Animations */
     @keyframes slideInRight {
-      from {
-        transform: translateX(120%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideDownCenter {
+      from { transform: translate(-50%, -120%); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
     }
     @keyframes fadeOut {
-      from {
-        opacity: 1;
-      }
-      to {
-        opacity: 0;
-      }
+      from { opacity: 1; }
+      to { opacity: 0; }
     }
-    .toast-container {
+    .toast-container-floating {
       position: fixed;
       bottom: 2rem;
       right: 2rem;
-      z-index: 50;
+      z-index: 100;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
+      pointer-events: none;
+    }
+    .toast-container-banner {
+      position: fixed;
+      top: 5.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 90%;
+      max-width: 600px;
       pointer-events: none;
     }
     .luxury-toast {
@@ -114,38 +167,41 @@
     .luxury-toast.leaving {
       animation: fadeOut 0.4s ease forwards;
     }
+    .toast-banner {
+      animation: slideDownCenter 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
 
-    /* 3. Photo Detail Lightbox Modal */
+    /* Lightbox Styles */
     .photo-modal-overlay {
       position: fixed;
       inset: 0;
-      z-index: 50;
-      background-color: rgba(17, 17, 17, 0.88);
-      backdrop-filter: blur(12px);
-      display: flex;
+      z-index: 150;
+      display: none;
       align-items: center;
       justify-content: center;
       opacity: 0;
-      pointer-events: none;
       transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .photo-modal-overlay.active {
+      display: flex;
       opacity: 1;
-      pointer-events: auto;
     }
 
-    /* Custom Input bottom borders */
-    .luxury-input {
-      background: transparent;
-      border-bottom: 1px solid rgba(17, 17, 17, 0.2);
-      transition: all 0.4s ease;
+    /* Lightbox Styles Variants */
+    .photo-modal-overlay.theme-blur {
+      background-color: rgba(17, 17, 17, 0.88);
+      backdrop-filter: blur(12px);
     }
-    html.dark .luxury-input {
-      border-bottom: 1px solid rgba(251, 249, 246, 0.2);
+    .photo-modal-overlay.theme-vignette {
+      background: radial-gradient(circle, rgba(27,27,27,0.75) 0%, rgba(11,11,11,0.98) 100%);
     }
-    .luxury-input:focus {
-      outline: none;
-      border-bottom: 1px solid #D4AF37;
+    .photo-modal-overlay.theme-vignette .frame-wrapper {
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      box-shadow: 0 0 30px rgba(212, 175, 55, 0.1);
+    }
+    .photo-modal-overlay.theme-solid {
+      background-color: #111111;
+      backdrop-filter: none;
     }
 
     /* Smooth sidebar links highlight */
@@ -154,6 +210,13 @@
       border-left-color: #D4AF37;
       padding-left: 1rem;
     }
+
+    /* Code Snippet styling */
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body class="selection:bg-goldLight min-h-screen flex flex-col selection:text-charcoal dark:selection:bg-zinc-800 dark:selection:text-cream">
@@ -161,7 +224,7 @@
   <!-- Header Navigation -->
   <header class="w-full border-b border-charcoal/5 dark:border-cream/5 px-6 md:px-12 py-6 flex items-center justify-between sticky top-0 bg-cream/90 dark:bg-zinc-950/90 backdrop-blur-md z-40 transition-colors duration-500">
     <a href="#" class="font-serif text-2xl tracking-widest uppercase font-light text-charcoal dark:text-cream">
-      Face<span class="text-champagne font-medium">find</span> <span class="text-[10px] tracking-widest font-mono text-champagne/80 font-bold border border-champagne/30 px-2 py-0.5 ml-2">DESIGN SYSTEM LAB</span>
+      Face<span class="text-champagne font-medium">find</span> <span class="text-[10px] tracking-widest font-mono text-champagne/80 font-bold border border-champagne/30 px-2 py-0.5 ml-2">SPECIMEN LAB</span>
     </a>
     
     <div class="flex items-center gap-6">
@@ -205,11 +268,12 @@
       </div>
       
       <nav class="flex flex-col space-y-4 text-xs font-mono tracking-wider uppercase text-charcoal/50 dark:text-cream/50 pl-6">
-        <a href="#section-buttons" id="link-buttons" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">01 // CTA Buttons</a>
-        <a href="#section-toasts" id="link-toasts" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">02 // Toast Alerts</a>
-        <a href="#section-skeletons" id="link-skeletons" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">03 // Skeleton Cards</a>
+        <a href="#section-typography" id="link-typography" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">01 // Typography</a>
+        <a href="#section-buttons" id="link-buttons" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">02 // CTA Buttons</a>
+        <a href="#section-skeletons" id="link-skeletons" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">03 // Skeleton Loaders</a>
         <a href="#section-inputs" id="link-inputs" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">04 // Form Controls</a>
-        <a href="#section-lightbox" id="link-lightbox" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">05 // Photo Lightbox</a>
+        <a href="#section-toasts" id="link-toasts" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">05 // Toast Alerts</a>
+        <a href="#section-lightbox" id="link-lightbox" class="nav-link border-l-2 border-transparent pl-4 hover:text-charcoal dark:hover:text-cream transition-all">06 // Photo Lightbox</a>
       </nav>
     </aside>
 
@@ -218,285 +282,459 @@
       
       <!-- Welcome intro -->
       <section class="space-y-6 border-b border-charcoal/10 dark:border-cream/10 pb-12">
-        <span data-i18n="labBadge" class="text-xs uppercase tracking-mega text-champagne font-semibold block">Besoke UI Playground</span>
+        <span data-i18n="labBadge" class="text-xs uppercase tracking-mega text-champagne font-semibold block">Component Specimen Studio</span>
         <h1 class="font-serif text-5xl md:text-6xl font-light leading-tight text-charcoal dark:text-cream">
           Interactive Specimen<br>
           <span class="italic font-normal">Design Lab.</span>
         </h1>
         <p data-i18n="labDesc" class="font-luxury-body text-charcoal/60 dark:text-cream/60 text-sm md:text-base font-light tracking-wide leading-relaxed max-w-2xl">
-          ยินดีต้อนรับสู่หน้าแล็บระบบดีไซน์จำลองแบบโต้ตอบได้จริง (Interactive Design Lab) หน้านี้ถูกออกแบบมาเพื่อให้คุณเลือก ตรวจสอบ และทดลองสัมผัส Micro-Animations ต่าง ๆ ของ 5 องค์ประกอบพรีเมียมที่ยังขาดอยู่ ก่อนที่เราจะนำไปบันทึกสเปกในเอกสารหลักและพัฒนาต่อยอดครับ
+          ทดลองปรับและทดสอบส่วนประกอบดีไซน์ระบบได้ทีละหัวข้อ ด้านล่างนี้แยกเป็นระบบอย่างชัดเจนเพื่อให้คุณเห็นความเปลี่ยนแปลงแบบเรียลไทม์ และเห็นโค้ดโทเค็นสำหรับนักพัฒนาทันทีครับ
         </p>
       </section>
 
-      <!-- Section 1: Buttons -->
+      <!-- Section 1: Typography -->
+      <section id="section-typography" class="space-y-8 scroll-mt-28">
+        <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">TOPIC 01</span>
+          <h2 data-i18n="typoTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Heading Typography Stack (สไตล์พาดหัวพรีเมียมสองภาษา)</h2>
+        </div>
+        
+        <p data-i18n="typoDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
+          พาดหัวภาษาอังกฤษล็อกตัวที่ Cormorant Garamond ทรงคุณค่า ส่วนพาดหัวภาษาไทยมีตัวเลือก 3 สไตล์เพื่อรองรับอารมณ์อีเวนต์ที่แตกต่างกัน ทดลองเปลี่ยนฟอนต์เพื่อทดสอบการแสดงผลและปัญหาสระลอยทันที:
+        </p>
+
+        <!-- Selector controls and Canvas Container -->
+        <div class="border border-charcoal/10 dark:border-cream/10 bg-white/50 dark:bg-zinc-950/20 p-6 md:p-8 space-y-8">
+          
+          <!-- Controls -->
+          <div class="flex flex-wrap items-center gap-6 text-xs font-mono border-b border-charcoal/5 dark:border-cream/5 pb-6">
+            <div class="space-y-2">
+              <span class="text-[9px] text-champagne uppercase font-bold block">1. เลือกฟอนต์พาดหัวภาษาไทย (Thai Heading Font)</span>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="font-choice" value="kanit" checked onclick="changeFontSpecimen('kanit')" class="accent-champagne">
+                  <span>Option A: Kanit (คณิท)</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="font-choice" value="sao" onclick="changeFontSpecimen('sao')" class="accent-champagne">
+                  <span>Option B: Sao Chingcha (เสาชิงช้า)</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="font-choice" value="charm" onclick="changeFontSpecimen('charm')" class="accent-champagne">
+                  <span>Option C: Charmonman (ชามอนมาน)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <span class="text-[9px] text-champagne uppercase font-bold block">2. น้ำหนักอักษร (Weight)</span>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="weight-choice" value="light" onclick="changeWeightSpecimen('300')" class="accent-champagne">
+                  <span>Light (300)</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="weight-choice" value="regular" checked onclick="changeWeightSpecimen('400')" class="accent-champagne">
+                  <span>Regular (400)</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="weight-choice" value="bold" onclick="changeWeightSpecimen('700')" class="accent-champagne">
+                  <span>Bold (700)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Canvas -->
+          <div class="py-12 border-b border-charcoal/5 dark:border-cream/5 flex flex-col justify-center min-h-[220px]">
+            <span class="text-[9px] font-mono text-champagne/80 tracking-widest uppercase block mb-4">// LIVE PREVIEW CANVAS</span>
+            <div id="typo-specimen-box" class="space-y-4">
+              <!-- English title (locks to Cormorant) and fallback Thai title -->
+              <h2 id="typo-specimen-heading" class="text-4xl md:text-5xl lg:text-6xl text-charcoal dark:text-cream leading-tight font-light font-serif">
+                The Eternal Memories.<br>
+                <span id="typo-specimen-thai" class="block font-sans mt-2">ความทรงจำอันงดงามและเป็นนิรันดร์ ๑๒๓๔๕</span>
+              </h2>
+              <p class="text-xs text-charcoal/40 dark:text-cream/40 max-w-lg leading-relaxed">
+                * สังเกตการซ้อนกันของสระบนและวรรณยุกต์ เช่น คำว่า "ความทรงจำอันงดงามและเป็นนิรันดร์" จะต้องสแนปตำแหน่งได้อย่างสมบูรณ์แบบ ไม่มีการลอยแยกตัวของไม้เอก ไม้โท หรือสระอิ สระอุ
+              </p>
+            </div>
+          </div>
+
+          <!-- Code Snippet -->
+          <div class="space-y-2">
+            <span class="text-[9px] font-mono text-champagne uppercase font-bold block">Developer Tokens & CSS Rules</span>
+            <div class="bg-charcoal/5 dark:bg-zinc-950 p-4 border border-charcoal/10 dark:border-cream/10 rounded-sm">
+              <pre id="typo-code-box" class="text-charcoal/80 dark:text-cream/80 overflow-x-auto"></pre>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Section 2: Buttons -->
       <section id="section-buttons" class="space-y-8 scroll-mt-28">
         <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
-          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 01</span>
-          <h2 data-i18n="btnTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Actionable Button Systems (ระบบปุ่มกดที่พรีเมียม)</h2>
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">TOPIC 02</span>
+          <h2 data-i18n="btnTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Actionable Button Systems (ระบบปุ่มกดที่หรูหราคมเฉียบ)</h2>
         </div>
         
         <p data-i18n="btnDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
-          การออกแบบปุ่มระดับลักชัวรีจะต้องใช้เอฟเฟกต์การวางเมาส์ที่นุ่มนวลและควบคุมน้ำหนักคู่ขนานกัน ด้านล่างนี้คือ 3 รูปแบบปุ่มหลักที่คุณสามารถเลือกนำไปใช้บนหน้าจอแอปพลิเคชันจริง:
+          ควบคุมและเปลี่ยนสไตล์ปุ่มแบบส่วนตัว เพื่อดูสุนทรียศาสตร์ของการเปลี่ยนผ่านเมาส์ (Hover Micro-Animations) แบบที่คุณชอบที่สุด:
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+        <div class="border border-charcoal/10 dark:border-cream/10 bg-white/50 dark:bg-zinc-950/20 p-6 md:p-8 space-y-8">
           
-          <!-- Primary CTA Button (Obsidian Solid) -->
-          <div class="border border-charcoal/10 dark:border-cream/10 bg-white dark:bg-zinc-900/10 p-6 flex flex-col justify-between h-56 relative overflow-hidden">
-            <span class="text-[9px] font-mono text-champagne uppercase block">PRIMARY CTA</span>
-            <div class="space-y-4 my-auto">
-              <!-- Obsidian solid button with champagne hover sliding overlay -->
-              <button class="relative w-full overflow-hidden bg-charcoal dark:bg-zinc-800 text-white py-3 text-xs tracking-widest uppercase font-mono group transition-colors duration-500">
-                <span class="absolute inset-0 w-full h-full bg-champagne transform translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out z-0"></span>
-                <span class="relative z-10 transition-colors duration-500 group-hover:text-charcoal uppercase" data-i18n="btnPrimText">Bespoke Primary</span>
+          <!-- Controls -->
+          <div class="flex flex-wrap items-center gap-6 text-xs font-mono border-b border-charcoal/5 dark:border-cream/5 pb-6">
+            <div class="space-y-2">
+              <span class="text-[9px] text-champagne uppercase font-bold block">เลือกสไตล์ปุ่มกด (Select Button Style)</span>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="btn-style" value="solid" checked onclick="changeButtonStyle('solid')" class="accent-champagne">
+                  <span>Style 1: Solid & Gold Slide-up</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="btn-style" value="outline" onclick="changeButtonStyle('outline')" class="accent-champagne">
+                  <span>Style 2: Minimalist Hairline</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="btn-style" value="text" onclick="changeButtonStyle('text')" class="accent-champagne">
+                  <span>Style 3: Expanding Text Underline</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Canvas -->
+          <div class="py-12 border-b border-charcoal/5 dark:border-cream/5 flex flex-col items-center justify-center min-h-[160px]">
+            <span class="text-[9px] font-mono text-champagne/80 tracking-widest uppercase block mb-6 w-full text-center">// LIVE SPECIMEN PREVIEW (ทดลองวางเมาส์ / คลิกจริง)</span>
+            
+            <div class="max-w-xs w-full">
+              <!-- Clickable Specimen Button -->
+              <button id="btn-specimen" class="w-full relative overflow-hidden text-center py-3.5 text-xs tracking-widest uppercase font-mono transition-all duration-500 ease-out z-10 border" onclick="triggerToast('success')">
+                <span class="btn-text relative z-10">Inquire Bespoke Portal</span>
               </button>
             </div>
-            <div class="text-[10px] text-charcoal/40 dark:text-cream/40 font-mono">
-              Obsidian Solid with Gold Slide-up
+          </div>
+
+          <!-- Code Snippet -->
+          <div class="space-y-2">
+            <span class="text-[9px] font-mono text-champagne uppercase font-bold block">Component Tokens & Code</span>
+            <div class="bg-charcoal/5 dark:bg-zinc-950 p-4 border border-charcoal/10 dark:border-cream/10 rounded-sm">
+              <pre id="btn-code-box" class="text-charcoal/80 dark:text-cream/80 overflow-x-auto"></pre>
             </div>
           </div>
 
-          <!-- Secondary CTA Button (Hairline Outline) -->
-          <div class="border border-charcoal/10 dark:border-cream/10 bg-white dark:bg-zinc-900/10 p-6 flex flex-col justify-between h-56 relative overflow-hidden">
-            <span class="text-[9px] font-mono text-champagne uppercase block">SECONDARY CTA</span>
-            <div class="space-y-4 my-auto">
-              <!-- Hairline outline with gold overlay on hover -->
-              <button class="w-full border border-charcoal/30 dark:border-cream/30 text-charcoal dark:text-cream py-3 text-xs tracking-widest uppercase font-mono hover:border-champagne hover:bg-goldLight/20 transition-all duration-500 ease-out" data-i18n="btnSecText">
-                Bespoke Outline
-              </button>
-            </div>
-            <div class="text-[10px] text-charcoal/40 dark:text-cream/40 font-mono">
-              Ultra-thin 1px with soft golden glow
-            </div>
-          </div>
-
-          <!-- Tertiary CTA Button (Minimal Link) -->
-          <div class="border border-charcoal/10 dark:border-cream/10 bg-white dark:bg-zinc-900/10 p-6 flex flex-col justify-between h-56 relative overflow-hidden">
-            <span class="text-[9px] font-mono text-champagne uppercase block">TERTIARY CTA</span>
-            <div class="space-y-4 my-auto text-center">
-              <!-- Letter-spacing expansion underline link -->
-              <a href="#" class="inline-block text-xs font-mono tracking-widest uppercase text-charcoal dark:text-cream border-b border-champagne pb-1 hover:tracking-[0.2em] hover:text-champagne transition-all duration-500 ease-out" data-i18n="btnTerText">
-                Besoke Text Link
-              </a>
-            </div>
-            <div class="text-[10px] text-charcoal/40 dark:text-cream/40 font-mono text-center">
-              Text expansion with gold border-b
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- Section 2: Toasts -->
-      <section id="section-toasts" class="space-y-8 scroll-mt-28">
-        <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
-          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 02</span>
-          <h2 data-i18n="toastTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Luxury Toast & Alert Notifications (ระบบกล่องแจ้งเตือนระดับพรีเมียม)</h2>
-        </div>
-        
-        <p data-i18n="toastDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
-          กล่องข้อความแจ้งเตือนที่เหมาะสมกับการใช้งานจริง (SaaS Feedback) จะต้องแสดงผลด้วยความเงียบสงบ ไม่ทำลายองค์ประกอบของแอปพลิเคชัน ทดลองคลิกปุ่มควบคุมด้านล่างเพื่อยิงการแจ้งเตือนจริง ๆ ในมุมขวาล่างของหน้าจอ:
-        </p>
-
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4">
-          <!-- Trigger Success -->
-          <button onclick="triggerToast('success')" class="border border-champagne bg-goldLight/20 text-charcoal dark:text-cream p-4 text-left font-mono transition-colors hover:bg-goldLight/40">
-            <span class="text-[9px] block text-champagne font-bold">01 // SUCCESS</span>
-            <span class="text-xs uppercase font-bold" data-i18n="tstSuccess">Trigger Success</span>
-          </button>
-          
-          <!-- Trigger Warning -->
-          <button onclick="triggerToast('warning')" class="border border-charcoal/10 hover:border-amber-500 text-charcoal dark:text-cream p-4 text-left font-mono transition-colors hover:bg-amber-500/5">
-            <span class="text-[9px] block text-amber-500 font-bold">02 // WARNING</span>
-            <span class="text-xs uppercase font-bold" data-i18n="tstWarning">Trigger Warning</span>
-          </button>
-
-          <!-- Trigger Error -->
-          <button onclick="triggerToast('error')" class="border border-charcoal/10 hover:border-red-500 text-charcoal dark:text-cream p-4 text-left font-mono transition-colors hover:bg-red-500/5">
-            <span class="text-[9px] block text-red-500 font-bold">03 // ERROR</span>
-            <span class="text-xs uppercase font-bold" data-i18n="tstError">Trigger Error</span>
-          </button>
-
-          <!-- Trigger Processing -->
-          <button onclick="triggerToast('processing')" class="border border-charcoal/10 hover:border-champagne text-charcoal dark:text-cream p-4 text-left font-mono transition-colors hover:bg-goldLight/10">
-            <span class="text-[9px] block text-champagne/80 font-bold">04 // PROCESSING</span>
-            <span class="text-xs uppercase font-bold" data-i18n="tstProgress">Trigger Loading</span>
-          </button>
         </div>
       </section>
 
       <!-- Section 3: Skeletons -->
       <section id="section-skeletons" class="space-y-8 scroll-mt-28">
         <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
-          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 03</span>
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">TOPIC 03</span>
           <h2 data-i18n="sklTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Breathy UI Skeleton Loaders (โครงร่างภาพเรืองแสงขณะรอดึงรูปถ่าย)</h2>
         </div>
         
         <p data-i18n="sklDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
-          หลีกเลี่ยงการใช้หน้าจอหมุนโหลด (Spinner) ที่น่ารำคาญใจ ระบบดีไซน์ของเราใช้การเรืองแสงสีทองอ่อนเคลื่อนที่จากซ้ายไปขวา (Shimmer Effect) เลียนแบบสเปกของช่องแสดงผลจริง ทดลองสลับสถานะด้านล่างเพื่อดูการสแนปเปลี่ยนผ่านของภาพพรีเมียม:
+          การขจัดปัญหารูปโหลดช้าแบบสะดุด ด้วยการกำหนดสเปกของตัวรอรูปที่มีความเงียบสงบและพริ้วไหวในโครงข่ายแกลเลอรีจำลอง:
         </p>
 
-        <div class="space-y-4">
-          <!-- Toggle Controller Button -->
-          <button onclick="toggleSkeletonState()" class="border border-charcoal dark:border-cream text-charcoal dark:text-cream hover:bg-charcoal hover:text-white px-5 py-2.5 text-xs font-mono uppercase tracking-widest transition-colors duration-500">
-            Toggle Loader State (กดเพื่อสลับภาพ/ตัวโหลด)
-          </button>
-
-          <!-- Mini Gallery Demo -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-6 pt-4" id="skeleton-grid">
-            
-            <!-- Item 1 -->
-            <div class="border border-charcoal/5 relative h-64 overflow-hidden group">
-              <!-- Skeleton State -->
-              <div class="skeleton-card absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
-                <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
-                <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
-              </div>
-              <!-- Real Image State (Fades in) -->
-              <img src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop" class="real-image w-full h-full object-cover opacity-0 transition-opacity duration-700">
-              <div class="image-detail absolute bottom-4 left-4 z-20 text-white opacity-0 transition-opacity duration-700">
-                <span class="font-serif italic text-sm block">The Tuscany Ceremony</span>
-                <span class="font-mono text-[9px] uppercase tracking-widest block text-champagne">Ceremony</span>
+        <div class="border border-charcoal/10 dark:border-cream/10 bg-white/50 dark:bg-zinc-950/20 p-6 md:p-8 space-y-8">
+          
+          <!-- Controls -->
+          <div class="flex flex-wrap items-center justify-between gap-6 text-xs font-mono border-b border-charcoal/5 dark:border-cream/5 pb-6">
+            <div class="space-y-2">
+              <span class="text-[9px] text-champagne uppercase font-bold block">1. เลือกเอฟเฟกต์การโหลด (Select Skeleton Style)</span>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="skl-style" value="shimmer" checked onclick="changeSkeletonStyle('shimmer')" class="accent-champagne">
+                  <span>Style 1: Golden Shimmer</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="skl-style" value="pulsing" onclick="changeSkeletonStyle('pulsing')" class="accent-champagne">
+                  <span>Style 2: Soft Pulsing</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="skl-style" value="wireframe" onclick="changeSkeletonStyle('wireframe')" class="accent-champagne">
+                  <span>Style 3: Minimal Wireframe</span>
+                </label>
               </div>
             </div>
 
-            <!-- Item 2 -->
-            <div class="border border-charcoal/5 relative h-64 overflow-hidden group">
-              <div class="skeleton-card absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
-                <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
-                <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
-              </div>
-              <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=600&auto=format&fit=crop" class="real-image w-full h-full object-cover opacity-0 transition-opacity duration-700">
-              <div class="image-detail absolute bottom-4 left-4 z-20 text-white opacity-0 transition-opacity duration-700">
-                <span class="font-serif italic text-sm block">Portrait of Grace</span>
-                <span class="font-mono text-[9px] uppercase tracking-widest block text-champagne">Bridal</span>
-              </div>
+            <div class="flex items-end">
+              <button onclick="toggleSkeletonGalleryState()" class="border border-charcoal dark:border-cream px-4 py-2 font-mono hover:bg-charcoal hover:text-white dark:hover:bg-cream dark:hover:text-charcoal transition-colors">
+                Toggle Skeletons / Images (กดสลับรูป)
+              </button>
             </div>
-
-            <!-- Item 3 -->
-            <div class="border border-charcoal/5 relative h-64 overflow-hidden group">
-              <div class="skeleton-card absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
-                <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
-                <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
-              </div>
-              <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=600&auto=format&fit=crop" class="real-image w-full h-full object-cover opacity-0 transition-opacity duration-700">
-              <div class="image-detail absolute bottom-4 left-4 z-20 text-white opacity-0 transition-opacity duration-700">
-                <span class="font-serif italic text-sm block">Golden Hour Banquet</span>
-                <span class="font-mono text-[9px] uppercase tracking-widest block text-champagne">Reception</span>
-              </div>
-            </div>
-
-            <!-- Item 4 -->
-            <div class="border border-charcoal/5 relative h-64 overflow-hidden group">
-              <div class="skeleton-card absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
-                <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
-                <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
-              </div>
-              <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=600&auto=format&fit=crop" class="real-image w-full h-full object-cover opacity-0 transition-opacity duration-700">
-              <div class="image-detail absolute bottom-4 left-4 z-20 text-white opacity-0 transition-opacity duration-700">
-                <span class="font-serif italic text-sm block">Riviera Summer Gala</span>
-                <span class="font-mono text-[9px] uppercase tracking-widest block text-champagne">Cocktail</span>
-              </div>
-            </div>
-
           </div>
+
+          <!-- Live Canvas -->
+          <div class="py-6 border-b border-charcoal/5 dark:border-cream/5 min-h-[300px]">
+            <span class="text-[9px] font-mono text-champagne/80 tracking-widest uppercase block mb-6">// LIVE PREVIEW GRID</span>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6" id="skeleton-specimen-grid">
+              
+              <!-- Item 1 -->
+              <div class="border border-charcoal/10 dark:border-cream/10 relative h-64 overflow-hidden group">
+                <div class="skeleton-el absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
+                  <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
+                  <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
+                </div>
+                <img src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop" class="real-image-specimen w-full h-full object-cover opacity-0 transition-opacity duration-700">
+              </div>
+
+              <!-- Item 2 -->
+              <div class="border border-charcoal/10 dark:border-cream/10 relative h-64 overflow-hidden group">
+                <div class="skeleton-el absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
+                  <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
+                  <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
+                </div>
+                <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=600&auto=format&fit=crop" class="real-image-specimen w-full h-full object-cover opacity-0 transition-opacity duration-700">
+              </div>
+
+              <!-- Item 3 -->
+              <div class="border border-charcoal/10 dark:border-cream/10 relative h-64 overflow-hidden group">
+                <div class="skeleton-el absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4">
+                  <div class="h-4 bg-charcoal/5 dark:bg-white/5 w-2/3"></div>
+                  <div class="h-3 bg-charcoal/5 dark:bg-white/5 w-1/3 mt-2"></div>
+                </div>
+                <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=600&auto=format&fit=crop" class="real-image-specimen w-full h-full object-cover opacity-0 transition-opacity duration-700">
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Code Snippet -->
+          <div class="space-y-2">
+            <span class="text-[9px] font-mono text-champagne uppercase font-bold block">CSS Keyframes & Shimmer Tokens</span>
+            <div class="bg-charcoal/5 dark:bg-zinc-950 p-4 border border-charcoal/10 dark:border-cream/10 rounded-sm">
+              <pre id="skl-code-box" class="text-charcoal/80 dark:text-cream/80 overflow-x-auto"></pre>
+            </div>
+          </div>
+
         </div>
       </section>
 
       <!-- Section 4: Inputs -->
       <section id="section-inputs" class="space-y-8 scroll-mt-28">
         <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
-          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 04</span>
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">TOPIC 04</span>
           <h2 data-i18n="inpTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Form Controls & Validation States (อินพุตฟอร์มและสถานะเส้นขอบบาง 1px)</h2>
         </div>
         
         <p data-i18n="inpDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
-          ระบบอินพุตระดับสูงจะไม่ใช้บล็อกกล่องทึบหนา แต่จะอาศัยความพริ้วไหวของเส้นใต้ (Bottom hairline line) ขอบทองแชมเปญ และสัญญาณไฟสถานะสีเขียวมรกตหรือแดงชาดที่ละเอียดอ่อน:
+          สลับรูปทรงขอบของแบบฟอร์มกรอกข้อมูล และทดสอบสัญญาณไฟสถานะ (Success / Error Indicators) ที่เปล่งประกายอย่างประณีต:
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
+        <div class="border border-charcoal/10 dark:border-cream/10 bg-white/50 dark:bg-zinc-950/20 p-6 md:p-8 space-y-8">
           
-          <!-- Focus State Mock -->
-          <div class="border border-charcoal/10 dark:border-cream/10 p-6 bg-white dark:bg-zinc-900/10 space-y-4">
-            <span class="text-[9px] font-mono text-champagne uppercase block">01 // FOCUS / ACTIVE STATE</span>
-            <div class="flex flex-col space-y-2">
-              <label class="text-[9px] uppercase tracking-widest text-champagne font-bold">Contact Email (สเตตัสกำลังพิมพ์)</label>
-              <!-- Focused inputs have bright gold hairline borders -->
-              <input type="text" value="photographer@vogue.com" class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream !border-champagne" readonly>
+          <!-- Controls -->
+          <div class="flex flex-wrap items-center justify-between gap-6 text-xs font-mono border-b border-charcoal/5 dark:border-cream/5 pb-6">
+            <div class="space-y-2">
+              <span class="text-[9px] text-champagne uppercase font-bold block">1. เลือกสไตล์กรอบอินพุต (Select Input Style)</span>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="input-style" value="hairline" checked onclick="changeInputStyle('hairline')" class="accent-champagne">
+                  <span>Style 1: Bottom Hairline</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="input-style" value="rounded" onclick="changeInputStyle('rounded')" class="accent-champagne">
+                  <span>Style 2: Rounded Box</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="input-style" value="double" onclick="changeInputStyle('double')" class="accent-champagne">
+                  <span>Style 3: Double Bottom Focus</span>
+                </label>
+              </div>
             </div>
-            <p class="text-[10px] text-charcoal/40 dark:text-cream/40 leading-relaxed">
-              เส้นล่างจะเรืองแสงสีทองแชมเปญ (`#D4AF37`) เพื่อดึงโฟกัส
-            </p>
+
+            <div class="flex items-center gap-2">
+              <button onclick="triggerInputValidation('success')" class="border border-emerald-500/30 hover:border-emerald-500 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 text-[10px]">
+                Trigger Success State
+              </button>
+              <button onclick="triggerInputValidation('error')" class="border border-red-500/30 hover:border-red-500 bg-red-500/5 text-red-600 dark:text-red-400 px-3 py-1.5 text-[10px]">
+                Trigger Error State
+              </button>
+              <button onclick="triggerInputValidation('reset')" class="border border-charcoal/10 hover:border-charcoal dark:hover:border-cream px-3 py-1.5 text-[10px]">
+                Reset Input
+              </button>
+            </div>
           </div>
 
-          <!-- Success State Mock -->
-          <div class="border border-charcoal/10 dark:border-cream/10 p-6 bg-white dark:bg-zinc-900/10 space-y-4">
-            <span class="text-[9px] font-mono text-emerald-500 uppercase block">02 // VALIDATION SUCCESS STATE</span>
-            <div class="flex flex-col space-y-2 relative">
-              <label class="text-[9px] uppercase tracking-widest text-emerald-500 font-bold">Contact Email (สเตตัสกรอกถูกต้อง)</label>
-              <input type="text" value="concierge@facefind.app" class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream !border-emerald-500" readonly>
-              <!-- Small emerald dot -->
-              <span class="absolute right-0 bottom-3 w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <!-- Live Canvas -->
+          <div class="py-12 border-b border-charcoal/5 dark:border-cream/5 flex flex-col justify-center min-h-[160px]">
+            <span class="text-[9px] font-mono text-champagne/80 tracking-widest uppercase block mb-6">// LIVE PREVIEW CANVAS</span>
+            
+            <div class="max-w-md w-full mx-auto space-y-4">
+              <div class="flex flex-col space-y-2 relative" id="input-container">
+                <label for="inp-specimen" class="text-[10px] uppercase tracking-widest text-charcoal/40 dark:text-cream/40 font-bold" id="input-label-element">Email Address *</label>
+                <input type="text" id="inp-specimen" placeholder="concierge@facefind.app" class="py-2 text-sm font-light text-charcoal dark:text-cream transition-all duration-300">
+                <!-- Small status dot -->
+                <span id="input-status-dot" class="absolute right-2 bottom-3.5 w-1.5 h-1.5 rounded-full transition-all duration-300 scale-0"></span>
+              </div>
+              <p id="input-helper-msg" class="text-[10px] text-charcoal/40 dark:text-cream/40 leading-relaxed font-sans">
+                * สังเกตแสงขอบใต้ล่างหรือจุดเตือนมุมขวาสุดเมื่อสลับสถานะ
+              </p>
             </div>
-            <p class="text-[10px] text-emerald-500/80 leading-relaxed">
-              สเตตัสผ่านจะแสดงเส้นสีเขียวมรกตบาง พร้อมจุดสัญญาณไฟในแนวระดับ
-            </p>
           </div>
 
-          <!-- Error State Mock -->
-          <div class="border border-charcoal/10 dark:border-cream/10 p-6 bg-white dark:bg-zinc-900/10 space-y-4">
-            <span class="text-[9px] font-mono text-red-500 uppercase block">03 // ERROR STATE</span>
-            <div class="flex flex-col space-y-2 relative">
-              <label class="text-[9px] uppercase tracking-widest text-red-500 font-bold">Contact Email (สเตตัสเกิดข้อผิดพลาด)</label>
-              <input type="text" value="invalid-email-format" class="luxury-input py-2 text-sm font-light text-charcoal dark:text-cream !border-red-500" readonly>
-              <span class="absolute right-0 bottom-3 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+          <!-- Code Snippet -->
+          <div class="space-y-2">
+            <span class="text-[9px] font-mono text-champagne uppercase font-bold block">Validation Component Tokens</span>
+            <div class="bg-charcoal/5 dark:bg-zinc-950 p-4 border border-charcoal/10 dark:border-cream/10 rounded-sm">
+              <pre id="inp-code-box" class="text-charcoal/80 dark:text-cream/80 overflow-x-auto"></pre>
             </div>
-            <p class="text-[10px] text-red-500 leading-relaxed">
-              เส้นใต้เปลี่ยนเป็นสีแดง Crimson อ่อนพริ้วไหว เพื่อการตอบรับที่ชัดเจนและสง่างาม
-            </p>
           </div>
 
         </div>
       </section>
 
-      <!-- Section 5: Lightbox -->
+      <!-- Section 5: Toasts -->
+      <section id="section-toasts" class="space-y-8 scroll-mt-28">
+        <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">TOPIC 05</span>
+          <h2 data-i18n="toastTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Luxury Toast & Alert Notifications (ระบบแจ้งเตือนแชนแนลสถานะ)</h2>
+        </div>
+        
+        <p data-i18n="toastDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
+          ปรับแต่งลักษณะตำแหน่งของกล่องแจ้งเตือนความคืบหน้าการประมวลผล (เช่น สแกนใบหน้าสำเร็จ หรือส่งอีเมลล้มเหลว) และกดปุ่มเพื่อสั่งการยิงกล่องทดสอบบนจอภาพจริงทันที:
+        </p>
+
+        <div class="border border-charcoal/10 dark:border-cream/10 bg-white/50 dark:bg-zinc-950/20 p-6 md:p-8 space-y-8">
+          
+          <!-- Controls -->
+          <div class="flex flex-wrap items-center gap-6 text-xs font-mono border-b border-charcoal/5 dark:border-cream/5 pb-6">
+            <div class="space-y-2">
+              <span class="text-[9px] text-champagne uppercase font-bold block">เลือกจุดแสดงและสไตล์ของแบนเนอร์ (Select Notification Style)</span>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="toast-style" value="floating" checked onclick="changeToastStyle('floating')" class="accent-champagne">
+                  <span>Style 1: Floating Card (ขวาขอบทอง)</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="toast-style" value="minimal" onclick="changeToastStyle('minimal')" class="accent-champagne">
+                  <span>Style 2: Minimalist Hairline (ขวาขีดทอง)</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="toast-style" value="banner" onclick="changeToastStyle('banner')" class="accent-champagne">
+                  <span>Style 3: Top Center wide Banner (แบนเนอร์กาล่าด้านบน)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Canvas -->
+          <div class="py-12 border-b border-charcoal/5 dark:border-cream/5 flex flex-col justify-center min-h-[160px] text-center">
+            <span class="text-[9px] font-mono text-champagne/80 tracking-widest uppercase block mb-6">// TRIGGER INTERACTIVE SYSTEM FEEDBACKS</span>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
+              <!-- Success -->
+              <button onclick="triggerToastSpecimen('success')" class="border border-champagne bg-goldLight/20 text-charcoal dark:text-cream px-4 py-3 text-xs font-mono hover:bg-goldLight/40 transition-colors uppercase">
+                Success
+              </button>
+              
+              <!-- Warning -->
+              <button onclick="triggerToastSpecimen('warning')" class="border border-charcoal/10 hover:border-amber-500 text-charcoal dark:text-cream px-4 py-3 text-xs font-mono hover:bg-amber-500/5 transition-colors uppercase">
+                Warning
+              </button>
+
+              <!-- Error -->
+              <button onclick="triggerToastSpecimen('error')" class="border border-charcoal/10 hover:border-red-500 text-charcoal dark:text-cream px-4 py-3 text-xs font-mono hover:bg-red-500/5 transition-colors uppercase">
+                Error
+              </button>
+
+              <!-- Loading -->
+              <button onclick="triggerToastSpecimen('processing')" class="border border-charcoal/10 hover:border-champagne text-charcoal dark:text-cream px-4 py-3 text-xs font-mono hover:bg-goldLight/10 transition-colors uppercase">
+                Loading
+              </button>
+            </div>
+          </div>
+
+          <!-- Code Snippet -->
+          <div class="space-y-2">
+            <span class="text-[9px] font-mono text-champagne uppercase font-bold block">Developer Toast HTML & CSS Mapping</span>
+            <div class="bg-charcoal/5 dark:bg-zinc-950 p-4 border border-charcoal/10 dark:border-cream/10 rounded-sm">
+              <pre id="tst-code-box" class="text-charcoal/80 dark:text-cream/80 overflow-x-auto"></pre>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Section 6: Lightbox -->
       <section id="section-lightbox" class="space-y-8 scroll-mt-28">
         <div class="border-b border-charcoal/5 dark:border-cream/5 pb-4">
-          <span class="text-[9px] font-mono tracking-widest text-champagne block">COMPONENT 05</span>
+          <span class="text-[9px] font-mono tracking-widest text-champagne block">TOPIC 06</span>
           <h2 data-i18n="lgbTitle" class="font-serif text-2xl font-light text-charcoal dark:text-cream">Photo Lightbox Modals (หน้าต่างขยายภาพพร้อมเอฟเฟกต์เบลอหลัง)</h2>
         </div>
         
         <p data-i18n="lgbDesc" class="font-luxury-body text-xs md:text-sm text-charcoal/60 dark:text-cream/60 leading-relaxed font-light">
-          เมื่อแขกในงานกดที่รูปถ่าย แผงควบคุม Photo Viewer จะปรากฏขึ้นมาด้วยความนุ่มนวล พร้อมแสดงสถิติและดีเทลอย่างครบครัน ทดลองกดพรีวิวที่การ์ดจำลองรูปถ่ายด้านล่างเพื่อสัมผัสเอฟเฟกต์ Lightbox จริง ๆ:
+          กำหนดธีมและระดับของฉากหลังหน้าจอป็อปอัปขยายผลงาน ให้แมตช์เข้าคู่สไตล์ดีไซน์ที่คุณพึงพอใจ:
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+        <div class="border border-charcoal/10 dark:border-cream/10 bg-white/50 dark:bg-zinc-950/20 p-6 md:p-8 space-y-8">
           
-          <!-- Clickable Card 1 -->
-          <div onclick="openLabLightbox('https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop', 'I. The Tuscany Villa Estate Wedding', 'Ceremony - Stated October 14, 2026')" class="border border-charcoal/10 dark:border-cream/10 p-4 bg-white dark:bg-zinc-900/10 cursor-pointer group hover:border-champagne transition-all duration-500 flex flex-col justify-between h-96">
-            <div class="h-64 overflow-hidden relative">
-              <img src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
-              <div class="absolute inset-0 bg-charcoal/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                <span class="bg-white/90 px-3 py-1.5 text-[9px] font-mono tracking-widest text-charcoal uppercase">CLICK TO OPEN LIGHTBOX</span>
+          <!-- Controls -->
+          <div class="flex flex-wrap items-center gap-6 text-xs font-mono border-b border-charcoal/5 dark:border-cream/5 pb-6">
+            <div class="space-y-2">
+              <span class="text-[9px] text-champagne uppercase font-bold block">เลือกธีมหน้าต่างขยายรูปภาพ (Select Lightbox Theme)</span>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="lightbox-style" value="blur" checked onclick="changeLightboxTheme('blur')" class="accent-champagne">
+                  <span>Theme 1: Luxury Blur (เบลอหลังลักชัวรี)</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="lightbox-style" value="vignette" onclick="changeLightboxTheme('vignette')" class="accent-champagne">
+                  <span>Theme 2: Champagne Vignette (ขอบฟุ้งแชมเปญอุ่น)</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="lightbox-style" value="solid" onclick="changeLightboxTheme('solid')" class="accent-champagne">
+                  <span>Theme 3: Obsidian Classic (ดำมืดสนิทเน้นภาพ)</span>
+                </label>
               </div>
-            </div>
-            <div class="pt-4 flex items-center justify-between">
-              <span class="font-serif italic text-base text-charcoal dark:text-cream">I. The Tuscany Wedding</span>
-              <span class="font-mono text-[9px] uppercase tracking-widest text-champagne">STATION 01</span>
             </div>
           </div>
 
-          <!-- Clickable Card 2 -->
-          <div onclick="openLabLightbox('https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=1200&auto=format&fit=crop', 'II. Portrait of Grace at Sunset', 'Bridal - Stated July 09, 2026')" class="border border-charcoal/10 dark:border-cream/10 p-4 bg-white dark:bg-zinc-900/10 cursor-pointer group hover:border-champagne transition-all duration-500 flex flex-col justify-between h-96">
-            <div class="h-64 overflow-hidden relative">
-              <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=600&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
-              <div class="absolute inset-0 bg-charcoal/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                <span class="bg-white/90 px-3 py-1.5 text-[9px] font-mono tracking-widest text-charcoal uppercase">CLICK TO OPEN LIGHTBOX</span>
+          <!-- Live Canvas -->
+          <div class="py-12 border-b border-charcoal/5 dark:border-cream/5 flex flex-col justify-center min-h-[220px]">
+            <span class="text-[9px] font-mono text-champagne/80 tracking-widest uppercase block mb-6 text-center">// CLICK IMAGE TO PREVIEW ACTIVE LIGHTBOX THEME</span>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-xl mx-auto w-full">
+              
+              <!-- Card 1 -->
+              <div onclick="openLabLightbox('https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop', 'I. The Tuscany Villa Estate Wedding', 'Ceremony - Firenze, Italy')" class="border border-charcoal/10 dark:border-cream/10 p-4 bg-white dark:bg-zinc-900/10 cursor-pointer group hover:border-champagne transition-all duration-500">
+                <div class="h-48 overflow-hidden relative">
+                  <img src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
+                  <div class="absolute inset-0 bg-charcoal/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <span class="bg-white/90 px-3 py-1.5 text-[9px] font-mono tracking-widest text-charcoal uppercase">Open Lightbox</span>
+                  </div>
+                </div>
+                <div class="pt-3 text-center">
+                  <span class="font-serif italic text-sm text-charcoal dark:text-cream">I. The Tuscany Wedding</span>
+                </div>
               </div>
+
+              <!-- Card 2 -->
+              <div onclick="openLabLightbox('https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=1200&auto=format&fit=crop', 'II. Portrait of Grace at Sunset', 'Bridal - Vogue Shoot')" class="border border-charcoal/10 dark:border-cream/10 p-4 bg-white dark:bg-zinc-900/10 cursor-pointer group hover:border-champagne transition-all duration-500">
+                <div class="h-48 overflow-hidden relative">
+                  <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=600&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
+                  <div class="absolute inset-0 bg-charcoal/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <span class="bg-white/90 px-3 py-1.5 text-[9px] font-mono tracking-widest text-charcoal uppercase">Open Lightbox</span>
+                  </div>
+                </div>
+                <div class="pt-3 text-center">
+                  <span class="font-serif italic text-sm text-charcoal dark:text-cream">II. Portrait of Grace</span>
+                </div>
+              </div>
+
             </div>
-            <div class="pt-4 flex items-center justify-between">
-              <span class="font-serif italic text-base text-charcoal dark:text-cream">II. Portrait of Grace</span>
-              <span class="font-mono text-[9px] uppercase tracking-widest text-champagne">STATION 02</span>
+          </div>
+
+          <!-- Code Snippet -->
+          <div class="space-y-2">
+            <span class="text-[9px] font-mono text-champagne uppercase font-bold block">CSS Overlay Backdrop Filters</span>
+            <div class="bg-charcoal/5 dark:bg-zinc-950 p-4 border border-charcoal/10 dark:border-cream/10 rounded-sm">
+              <pre id="lgb-code-box" class="text-charcoal/80 dark:text-cream/80 overflow-x-auto"></pre>
             </div>
           </div>
 
@@ -507,19 +745,26 @@
 
   </div>
 
-  <!-- Luxury Toast Notification Container (Dynamic) -->
-  <div id="toast-container" class="toast-container"></div>
+  <!-- Dynamic Luxury Toast Notification Containers -->
+  <div id="toast-container-floating" class="toast-container-floating"></div>
+  <div id="toast-container-banner" class="toast-container-banner"></div>
 
   <!-- Photo Detail Lightbox Modal (Dynamic) -->
-  <div id="photo-modal" class="photo-modal-overlay" onclick="closeLabLightbox()">
-    <div class="max-w-4xl max-h-[85vh] w-full p-4 relative flex flex-col items-center justify-center pointer-events-auto" onclick="event.stopPropagation()">
+  <div id="photo-modal" class="photo-modal-overlay theme-blur" onclick="closeLabLightbox()">
+    <div class="frame-wrapper max-w-4xl max-h-[85vh] w-full p-4 relative flex flex-col items-center justify-center pointer-events-auto transition-all duration-500" onclick="event.stopPropagation()">
       <!-- Close Button -->
       <button class="absolute -top-10 right-4 text-white hover:text-champagne transition-colors font-mono text-xs tracking-widest uppercase flex items-center gap-2" onclick="closeLabLightbox()">
         <span>CLOSE</span> <span class="text-lg leading-none">&times;</span>
       </button>
-      <!-- Image Frame -->
-      <div class="border border-champagne/30 bg-zinc-950 p-2 md:p-3 max-h-[75vh] flex items-center justify-center overflow-hidden">
-        <img id="modal-image" src="" alt="Full Screen Preview" class="max-w-full max-h-[70vh] object-contain">
+      <!-- Image Frame Wrapper with Loading State -->
+      <div class="border border-champagne/30 bg-zinc-950 p-2 md:p-3 max-h-[75vh] min-h-[300px] w-full max-w-3xl flex items-center justify-center overflow-hidden relative">
+        <!-- Sleek Loading Spinner -->
+        <div id="modal-image-spinner" class="absolute inset-0 flex items-center justify-center bg-zinc-950 z-20 transition-opacity duration-300">
+          <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10" stroke-dasharray="24" stroke-dashoffset="6"/>
+          </svg>
+        </div>
+        <img id="modal-image" src="" alt="Full Screen Preview" class="max-w-full max-h-[70vh] object-contain opacity-0 scale-95 transition-all duration-500 ease-out z-10">
       </div>
       <!-- Details -->
       <div class="mt-4 text-center space-y-1">
@@ -537,75 +782,62 @@
     </div>
   </footer>
 
-  <!-- JavaScript controller script -->
+  <!-- JavaScript Specimen Controller -->
   <script>
-    // Bilingual Dictionaries for Design Lab
+    // Bilingual Dictionaries
     const TRANSLATIONS = {
       EN: {
-        labBadge: "Besoke UI Playground",
-        labDesc: "Welcome to the interactive design system specimen lab. This portal is built to let you preview, choose, and experience the remaining high-end micro-interactions (CTAs, Toasts, Skeletons, Inputs, Lightboxes) before locking them into the official design.md specification.",
+        labBadge: "Component Specimen Studio",
+        labDesc: "Test, configure, and inspect individual design system components side-by-side with developer tokens and clean HTML previews. Not coupled to any single layout context.",
+        typoTitle: "Heading Typography Stack",
+        typoDesc: "English titles render in Cormorant Garamond. Thai headings are selectable in three distinct, highly-differentiated brands to convey distinct event styles.",
         btnTitle: "Actionable Button Systems",
-        btnDesc: "Luxury button designs rely on balanced weights and elegant hover states. Below are the three primary configurations tailored for your real-world platform:",
-        btnPrimText: "Bespoke Primary",
-        btnSecText: "Bespoke Outline",
-        btnTerText: "Bespoke Text Link",
-        toastTitle: "Luxury Toast & Alert Notifications",
-        toastDesc: "Status alerts must display feedback quietly and smoothly without breaking interface aesthetics. Click the buttons below to trigger real floating notifications in the bottom-right corner:",
-        tstSuccess: "Trigger Success",
-        tstWarning: "Trigger Warning",
-        tstError: "Trigger Error",
-        tstProgress: "Trigger Loading",
+        btnDesc: "Change themes to experience micro-transition dynamics. Solid blocks slide up gold, outline borders glow champagne, and link anchors expand their letter tracking.",
         sklTitle: "Breathy UI Skeleton Loaders",
-        sklDesc: "Avoid annoying spinners. Our system utilizes a soft champagne-cream shimmering skeleton grid, gracefully preparing guests to view their final matched high-fidelity editorial memories:",
+        sklDesc: "Toggle loading state to see how the skeleton overlays hold placeholder frames with soft golden shimmers or pulsing wireframes, avoiding disruptive spinner boxes.",
         inpTitle: "Form Controls & Validation States",
-        inpDesc: "High-end inputs avoid bulky dark boundaries. They employ clean bottom hairline borders, subtle color transitions, and elegant success emerald or crimson indicator alerts:",
+        inpDesc: "Choose boundary configurations. Focus moves champagne indicators. Fire success validation for green signaling nodes or error validation for crimson pulsing warning pins.",
+        toastTitle: "Luxury Toast & Alert Notifications",
+        toastDesc: "Status notifications must appear gracefully without breaking visual grid aesthetics. Try Floating Cards, Minimal Accent Bars, or sliding Gala Banners.",
         lgbTitle: "Photo Lightbox Modals",
-        lgbDesc: "When guests tap event images, the lightbox overlay opens gracefully. It manages downloads, prints, and credits cleanly. Click the cards below to test the full-screen interactive modal:",
-        toastSuccessMsg: "Biometric analysis completed successfully! Found 2 matched photos.",
-        toastWarningMsg: "Biometric clarity is slightly low. Recommended to re-upload for better matches.",
-        toastErrorMsg: "Secure database mapping timed out. Please check system status drawers.",
-        toastProcessingMsg: "Uploading secure biometrics to platform cloud. Please wait..."
+        lgbDesc: "Choose structural backdrop frames. Tap any archive item to inspect the pop-up viewport with blur filters, vignette gold gradients, or solid obsidian blackouts.",
+        tstSuccessMsg: "Biometric analysis completed successfully! Found 2 matched photos.",
+        tstWarningMsg: "Biometric clarity is slightly low. Recommended to re-upload for better matches.",
+        tstErrorMsg: "Secure database mapping timed out. Please check system status drawers.",
+        tstProcessingMsg: "Uploading secure biometrics to platform cloud. Please wait..."
       },
       TH: {
-        labBadge: "แผงควบคุมทดสอบ UI ระดับลักชัวรี",
-        labDesc: "ยินดีต้อนรับสู่หน้าแล็บระบบดีไซน์จำลองแบบโต้ตอบได้จริง (Interactive Design Lab) หน้านี้ถูกออกแบบมาเพื่อให้คุณเลือก ตรวจสอบ และทดลองสัมผัส Micro-Animations ต่าง ๆ ของ 5 องค์ประกอบพรีเมียมที่ยังขาดอยู่ ก่อนที่เราจะนำไปบันทึกสเปกในเอกสารหลักและพัฒนาต่อยอดครับ",
+        labBadge: "ระบบสตูดิโอทดสอบชิ้นงานดีไซน์อินเทอร์แอกทีฟ",
+        labDesc: "ทดลองปรับและทดสอบส่วนประกอบดีไซน์ระบบได้ทีละหัวข้อ ด้านล่างนี้แยกเป็นระบบอย่างชัดเจนเพื่อให้คุณเห็นความเปลี่ยนแปลงแบบเรียลไทม์ และเห็นโค้ดโทเค็นสำหรับนักพัฒนาทันทีครับ",
+        typoTitle: "สไตล์พาดหัวพรีเมียมสองภาษา",
+        typoDesc: "พาดหัวภาษาอังกฤษล็อกตัวที่ Cormorant Garamond ทรงคุณค่า ส่วนพาดหัวภาษาไทยมีตัวเลือก 3 สไตล์เพื่อรองรับอารมณ์อีเวนต์ที่แตกต่างกัน ทดลองเปลี่ยนฟอนต์เพื่อทดสอบการแสดงผลและปัญหาสระลอยทันที:",
         btnTitle: "ระบบปุ่มกดที่หรูหราคมเฉียบ",
-        btnDesc: "การออกแบบปุ่มระดับลักชัวรีจะต้องใช้เอฟเฟกต์การวางเมาส์ที่นุ่มนวลและควบคุมน้ำหนักคู่ขนานกัน ด้านล่างนี้คือ 3 รูปแบบปุ่มหลักที่คุณสามารถเลือกนำไปใช้บนหน้าจอแอปพลิเคชันจริง:",
-        btnPrimText: "ปุ่มหลัก Obsidian",
-        btnSecText: "ปุ่มขอบบาง Outline",
-        btnTerText: "ปุ่มลิงก์ขยายสเปซ",
-        toastTitle: "ระบบกล่องแจ้งเตือนพรีเมียม",
-        toastDesc: "กล่องข้อความแจ้งเตือนที่เหมาะสมกับการใช้งานจริง (SaaS Feedback) จะต้องแสดงผลด้วยความเงียบสงบ ไม่ทำลายองค์ประกอบของแอปพลิเคชัน ทดลองคลิกปุ่มควบคุมด้านล่างเพื่อยิงการแจ้งเตือนจริง ๆ ในมุมขวาล่างของหน้าจอ:",
-        tstSuccess: "ยิงสถานะสำเร็จ",
-        tstWarning: "ยิงสถานะแจ้งเตือน",
-        tstError: "ยิงสถานะผิดพลาด",
-        tstProgress: "ยิงสถานะกำลังโหลด",
+        btnDesc: "ควบคุมและเปลี่ยนสไตล์ปุ่มแบบส่วนตัว เพื่อดูสุนทรียศาสตร์ของการเปลี่ยนผ่านเมาส์ (Hover Micro-Animations) แบบที่คุณชอบที่สุด:",
         sklTitle: "โครงร่างภาพเรืองแสงขณะรอดึงรูปถ่าย",
-        sklDesc: "หลีกเลี่ยงการใช้หน้าจอหมุนโหลด (Spinner) ที่น่ารำคาญใจ ระบบดีไซน์ของเราใช้การเรืองแสงสีทองอ่อนเคลื่อนที่จากซ้ายไปขวา (Shimmer Effect) เลียนแบบสเปกของช่องแสดงผลจริง ทดลองสลับสถานะด้านล่างเพื่อดูการสแนปเปลี่ยนผ่านของภาพพรีเมียม:",
+        sklDesc: "การขจัดปัญหารูปโหลดช้าแบบสะดุด ด้วยการกำหนดสเปกของตัวรอรูปที่มีความเงียบสงบและพริ้วไหวในโครงข่ายแกลเลอรีจำลอง:",
         inpTitle: "อินพุตฟอร์มและสถานะเส้นขอบบาง 1px",
-        inpDesc: "ระบบอินพุตระดับสูงจะไม่ใช้บล็อกกล่องทึบหนา แต่จะอาศัยความพริ้วไหวของเส้นใต้ (Bottom hairline line) ขอบทองแชมเปญ และสัญญาณไฟสถานะสีเขียวมรกตหรือแดงชาดที่ละเอียดอ่อน:",
+        inpDesc: "สลับรูปทรงขอบของแบบฟอร์มกรอกข้อมูล และทดสอบสัญญาณไฟสถานะ (Success / Error Indicators) ที่เปล่งประกายอย่างประณีต:",
+        toastTitle: "ระบบแจ้งเตือนแชนแนลสถานะ",
+        toastDesc: "ปรับแต่งลักษณะตำแหน่งของกล่องแจ้งเตือนความคืบหน้าการประมวลผล (เช่น สแกนใบหน้าสำเร็จ หรือส่งอีเมลล้มเหลว) และกดปุ่มเพื่อสั่งการยิงกล่องทดสอบบนจอภาพจริงทันที:",
         lgbTitle: "หน้าต่างขยายภาพพร้อมเอฟเฟกต์เบลอหลัง",
-        lgbDesc: "เมื่อแขกในงานกดที่รูปถ่าย แผงควบคุม Photo Viewer จะปรากฏขึ้นมาด้วยความนุ่มนวล พร้อมแสดงสถิติและดีเทลอย่างครบครัน ทดลองกดพรีวิวที่การ์ดจำลองรูปถ่ายด้านล่างเพื่อสัมผัสเอฟเฟกต์ Lightbox จริง ๆ:",
-        toastSuccessMsg: "จับคู่โครงสร้างชีวมิติเสร็จสิ้น! พบภาพถ่ายของคุณ 2 ภาพในอัลบั้มทัสคานี",
-        toastWarningMsg: "ความละเอียดของรูปพอร์ตเทรตค่อนข้างต่ำ แนะนำให้อัปโหลดภาพใหม่เพื่อให้ได้สแกนแม่นยำขึ้น",
-        toastErrorMsg: "การส่งข้อมูลไปยังฐานข้อมูลขัดข้อง (Timeout) กรุณาตรวจสอบสถานะจาก Metrics Panel",
-        toastProcessingMsg: "กำลังอัปโหลดโครงร่างใบหน้าเข้าสู่คลาวด์อัจฉริยะอย่างปลอดภัย กรุณารอสักครู่..."
+        lgbDesc: "กำหนดธีมและระดับของฉากหลังหน้าจอป็อปอัปขยายผลงาน ให้แมตช์เข้าคู่สไตล์ดีไซน์ที่คุณพึงพอใจ:",
+        tstSuccessMsg: "จับคู่โครงสร้างชีวมิติเสร็จสิ้น! พบภาพถ่ายของคุณ 2 ภาพในอัลบั้มทัสคานี",
+        tstWarningMsg: "ความละเอียดของรูปพอร์ตเทรตค่อนข้างต่ำ แนะนำให้อัปโหลดภาพใหม่เพื่อให้ได้สแกนแม่นยำขึ้น",
+        tstErrorMsg: "การส่งข้อมูลไปยังฐานข้อมูลขัดข้อง (Timeout) กรุณาตรวจสอบสถานะจาก Metrics Panel",
+        tstProcessingMsg: "กำลังอัปโหลดโครงร่างใบหน้าเข้าสู่คลาวด์อัจฉริยะอย่างปลอดภัย กรุณารอสักครู่..."
       }
     };
 
     let currentLang = 'EN';
+    let currentToastStyle = 'floating';
+    let currentLightboxTheme = 'blur';
 
     function setLanguage(lang) {
       currentLang = lang;
       localStorage.setItem('ff-lang-lab', lang);
-      
-      // Toggle HTML Attribute for Thai spacing fix
       document.documentElement.setAttribute('lang', lang.toLowerCase());
-
-      // Update button text
       document.getElementById('lang-toggle').textContent = lang === 'EN' ? 'TH' : 'EN';
 
-      // Translate all marked elements
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) {
@@ -614,12 +846,20 @@
       });
     }
 
-    // Initialize Language settings
+    // On Load Initializer
     document.addEventListener('DOMContentLoaded', () => {
       const savedLang = localStorage.getItem('ff-lang-lab') || 'EN';
       setLanguage(savedLang);
       
-      // Auto highlight active sidebar section on scroll
+      // Load initial code viewer values
+      changeFontSpecimen('kanit');
+      changeButtonStyle('solid');
+      changeSkeletonStyle('shimmer');
+      changeInputStyle('hairline');
+      changeToastStyle('floating');
+      changeLightboxTheme('blur');
+
+      // Scrollspy
       setupScrollspy();
     });
 
@@ -629,11 +869,6 @@
 
     // Dark Mode Toggle
     const themeToggle = document.getElementById('theme-toggle');
-    const savedTheme = localStorage.getItem('ff-theme') || 'light';
-    if (savedTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    }
-
     themeToggle.addEventListener('click', () => {
       const isDark = document.documentElement.classList.contains('dark');
       if (isDark) {
@@ -644,27 +879,498 @@
         localStorage.setItem('ff-theme', 'dark');
       }
     });
+    if (localStorage.getItem('ff-theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
 
-    // 1. Premium Toast Notification Logic
-    function triggerToast(type) {
-      const container = document.getElementById('toast-container');
+    // ==========================================
+    // 01 // TYPOGRAPHY SYSTEM
+    // ==========================================
+    function changeFontSpecimen(option) {
+      const thaiEl = document.getElementById('typo-specimen-thai');
+      const codeBox = document.getElementById('typo-code-box');
+      
+      let fontName = '';
+      let fontVar = '';
+      
+      if (option === 'kanit') {
+        thaiEl.style.fontFamily = "'Kanit', sans-serif";
+        fontName = 'Kanit (Modern Loopless)';
+        fontVar = '--font-serif-thai: "Kanit", sans-serif;';
+      } else if (option === 'sao') {
+        thaiEl.style.fontFamily = "'SaoChingcha', serif";
+        fontName = 'Sao Chingcha (Heritage Calligraphy Naris-style)';
+        fontVar = '--font-serif-thai: "SaoChingcha", serif; /* Loaded locally */';
+      } else if (option === 'charm') {
+        thaiEl.style.fontFamily = "'Charmonman', cursive";
+        fontName = 'Charmonman (Romantic Cursive Script)';
+        fontVar = '--font-serif-thai: "Charmonman", cursive;';
+      }
+
+      const activeWeight = document.querySelector('input[name="weight-choice"]:checked').value;
+      let wValue = activeWeight === 'light' ? '300' : activeWeight === 'regular' ? '400' : '700';
+
+      codeBox.textContent = `/* Typography Component Tokens [${fontName}] */
+:root {
+  --heading-english: "Cormorant Garamond", serif;
+  ${fontVar}
+  --heading-weight: ${wValue};
+}
+
+.editorial-heading {
+  font-family: var(--heading-english), var(--font-serif-thai), serif !important;
+  font-weight: var(--heading-weight) !important;
+  letter-spacing: -0.015em;
+}`;
+    }
+
+    function changeWeightSpecimen(weight) {
+      const thaiEl = document.getElementById('typo-specimen-thai');
+      const headingEl = document.getElementById('typo-specimen-heading');
+      
+      thaiEl.style.fontWeight = weight;
+      headingEl.style.fontWeight = weight;
+      
+      // Update code view
+      const activeFont = document.querySelector('input[name="font-choice"]:checked').value;
+      changeFontSpecimen(activeFont);
+    }
+
+    // ==========================================
+    // 02 // BUTTON SYSTEMS
+    // ==========================================
+    function changeButtonStyle(style) {
+      const btn = document.getElementById('btn-specimen');
+      const codeBox = document.getElementById('btn-code-box');
+
+      // Clear inline style overrides
+      btn.className = "w-full relative overflow-hidden text-center py-3.5 text-xs tracking-widest uppercase font-mono transition-all duration-500 ease-out z-10 border";
+      btn.innerHTML = `<span class="btn-text relative z-10">Inquire Bespoke Portal</span>`;
+      
+      if (style === 'solid') {
+        btn.classList.add('bg-charcoal', 'dark:bg-zinc-800', 'text-cream', 'border-charcoal', 'dark:border-zinc-800');
+        
+        // Append absolute background overlay for custom sliding animation
+        btn.innerHTML = `
+          <span class="absolute inset-0 w-full h-full bg-champagne transform translate-y-full transition-transform duration-500 ease-out z-0"></span>
+          <span class="btn-text relative z-10 transition-colors duration-500">Inquire Bespoke Portal</span>
+        `;
+        
+        // CSS simulation via styles
+        btn.onmouseover = () => {
+          btn.querySelector('span.absolute').style.transform = 'translateY(0)';
+          btn.querySelector('span.btn-text').style.color = '#111111';
+          btn.style.borderColor = '#D4AF37';
+        };
+        btn.onmouseout = () => {
+          btn.querySelector('span.absolute').style.transform = 'translateY(100%)';
+          btn.querySelector('span.btn-text').style.color = '#FBF9F6';
+          btn.style.borderColor = '#111111';
+          if (document.documentElement.classList.contains('dark')) {
+            btn.style.borderColor = '#27272A';
+          }
+        };
+
+        codeBox.textContent = `/* CSS Component Tokens: Style 1 - Solid with Champagne slide-up */
+:root {
+  --cta-bg: #111111;
+  --cta-text: #FBF9F6;
+  --cta-border: #111111;
+  --cta-hover-bg: #D4AF37;
+  --cta-hover-text: #111111;
+}
+
+.cta-button {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--cta-bg);
+  border: 1px solid var(--cta-border);
+}
+.cta-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--cta-hover-bg);
+  transform: translateY(100%);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 0;
+}
+.cta-button:hover::before {
+  transform: translateY(0);
+}
+.cta-button:hover {
+  color: var(--cta-hover-text);
+  border-color: var(--cta-hover-bg);
+}`;
+
+      } else if (style === 'outline') {
+        btn.classList.add('bg-transparent', 'text-charcoal', 'dark:text-cream', 'border-charcoal/30', 'dark:border-cream/30');
+        
+        btn.onmouseover = () => {
+          btn.style.borderColor = '#D4AF37';
+          btn.style.backgroundColor = 'rgba(212, 175, 55, 0.08)';
+          btn.style.boxShadow = '0 0 12px rgba(212, 175, 55, 0.15)';
+        };
+        btn.onmouseout = () => {
+          btn.style.borderColor = 'rgba(17, 17, 17, 0.3)';
+          if (document.documentElement.classList.contains('dark')) {
+            btn.style.borderColor = 'rgba(251, 249, 246, 0.3)';
+          }
+          btn.style.backgroundColor = 'transparent';
+          btn.style.boxShadow = 'none';
+        };
+
+        codeBox.textContent = `/* CSS Component Tokens: Style 2 - Hairline 1px Outline */
+:root {
+  --cta-bg: transparent;
+  --cta-text: #111111; /* #FBF9F6 in dark mode */
+  --cta-border: rgba(17, 17, 17, 0.3);
+  --cta-hover-border: #D4AF37;
+  --cta-hover-bg: rgba(212, 175, 55, 0.08);
+}
+
+.cta-button {
+  background-color: var(--cta-bg);
+  border: 1px solid var(--cta-border);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cta-button:hover {
+  border-color: var(--cta-hover-border);
+  background-color: var(--cta-hover-bg);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}`;
+
+      } else if (style === 'text') {
+        btn.classList.add('bg-transparent', 'text-charcoal', 'dark:text-cream', 'border-transparent', 'border-b-champagne', 'rounded-none');
+        btn.style.paddingLeft = '0.5rem';
+        btn.style.paddingRight = '0.5rem';
+
+        btn.onmouseover = () => {
+          btn.style.letterSpacing = '0.25em';
+          btn.style.color = '#D4AF37';
+        };
+        btn.onmouseout = () => {
+          btn.style.letterSpacing = '0.125em';
+          btn.style.color = '';
+        };
+
+        codeBox.textContent = `/* CSS Component Tokens: Style 3 - Classic Text Expansion Link */
+:root {
+  --cta-text-color: #111111;
+  --cta-border-bottom: #D4AF37;
+}
+
+.cta-button {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--cta-border-bottom);
+  letter-spacing: 0.12em;
+  transition: all 0.5s ease;
+}
+.cta-button:hover {
+  letter-spacing: 0.22em;
+  color: var(--cta-border-bottom);
+}`;
+      }
+    }
+
+    // ==========================================
+    // 03 // SKELETON SYSTEMS
+    // ==========================================
+    let activeSklStyle = 'shimmer';
+    let skeletonsVisible = true;
+
+    function changeSkeletonStyle(style) {
+      activeSklStyle = style;
+      const skeletons = document.querySelectorAll('.skeleton-el');
+      const codeBox = document.getElementById('skl-code-box');
+
+      skeletons.forEach(s => {
+        // Clear old animations
+        s.className = "skeleton-el absolute inset-0 z-10 transition-opacity duration-700 flex flex-col justify-end p-4";
+        
+        if (style === 'shimmer') {
+          s.classList.add('skeleton-shimmer');
+        } else if (style === 'pulsing') {
+          s.classList.add('skeleton-pulsing');
+        } else if (style === 'wireframe') {
+          s.classList.add('skeleton-wireframe');
+        }
+      });
+
+      if (style === 'shimmer') {
+        codeBox.textContent = `/* CSS Core Shimmer keyframe specifications */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-card-shimmer {
+  background: linear-gradient(90deg, #F5F3ED 25%, #EFEBE0 50%, #F5F3ED 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+html.dark .skeleton-card-shimmer {
+  background: linear-gradient(90deg, #1A1A1A 25%, #27272A 50%, #1A1A1A 75%);
+}`;
+      } else if (style === 'pulsing') {
+        codeBox.textContent = `/* Soft Pulsing Animation Tokens */
+@keyframes pulseSoft {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.skeleton-card-pulse {
+  background-color: #EFEBE0; /* #27272A in dark mode */
+  animation: pulseSoft 2.0s infinite ease-in-out;
+}`;
+      } else if (style === 'wireframe') {
+        codeBox.textContent = `/* Architectural Wireframe Grid Specimen */
+.skeleton-card-wireframe {
+  border: 1px dashed rgba(212, 175, 55, 0.4);
+  background-color: transparent;
+  position: relative;
+}
+.skeleton-card-wireframe::after {
+  content: '+';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #D4AF37;
+  font-family: monospace;
+}`;
+      }
+    }
+
+    function toggleSkeletonGalleryState() {
+      skeletonsVisible = !skeletonsVisible;
+      const skeletons = document.querySelectorAll('.skeleton-el');
+      const images = document.querySelectorAll('.real-image-specimen');
+
+      skeletons.forEach(s => {
+        s.style.opacity = skeletonsVisible ? '1' : '0';
+        s.style.pointerEvents = skeletonsVisible ? 'auto' : 'none';
+      });
+
+      images.forEach(img => {
+        img.style.opacity = skeletonsVisible ? '0' : '1';
+      });
+    }
+
+    // ==========================================
+    // 04 // FORM CONTROL SYSTEMS
+    // ==========================================
+    let currentInputStyle = 'hairline';
+
+    function changeInputStyle(style) {
+      currentInputStyle = style;
+      const input = document.getElementById('inp-specimen');
+      const codeBox = document.getElementById('inp-code-box');
+
+      // Clear styles
+      input.className = "py-2 text-sm font-light text-charcoal dark:text-cream transition-all duration-300 w-full";
+      input.style = "";
+
+      if (style === 'hairline') {
+        input.classList.add('bg-transparent', 'border-b', 'border-charcoal/20', 'dark:border-cream/20', 'rounded-none');
+        
+        input.onfocus = () => { input.style.borderBottomColor = '#D4AF37'; };
+        input.onblur = () => { input.style.borderBottomColor = ''; };
+
+        codeBox.textContent = `/* Input style 1 - Bottom Hairline */
+.luxury-input-hairline {
+  background: transparent;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.2);
+  border-radius: 0;
+  transition: border-bottom-color 0.4s ease;
+}
+.luxury-input-hairline:focus {
+  outline: none;
+  border-bottom-color: #D4AF37;
+}`;
+
+      } else if (style === 'rounded') {
+        input.classList.add('bg-white', 'dark:bg-zinc-900/50', 'border', 'border-charcoal/10', 'dark:border-cream/10', 'rounded-md', 'px-3');
+        
+        input.onfocus = () => { 
+          input.style.borderColor = '#D4AF37'; 
+          input.style.boxShadow = '0 0 8px rgba(212, 175, 55, 0.2)';
+        };
+        input.onblur = () => { 
+          input.style.borderColor = ''; 
+          input.style.boxShadow = 'none';
+        };
+
+        codeBox.textContent = `/* Input style 2 - Modern Rounded Box */
+.luxury-input-rounded {
+  background: #ffffff;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  transition: all 0.4s ease;
+}
+.luxury-input-rounded:focus {
+  outline: none;
+  border-color: #D4AF37;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
+}`;
+
+      } else if (style === 'double') {
+        input.classList.add('bg-transparent', 'border-b', 'border-charcoal/20', 'dark:border-cream/20', 'rounded-none');
+        
+        input.onfocus = () => { 
+          input.style.borderBottom = '4px double #D4AF37';
+          input.style.paddingBottom = '4px';
+        };
+        input.onblur = () => { 
+          input.style.borderBottom = '';
+          input.style.paddingBottom = '';
+        };
+
+        codeBox.textContent = `/* Input style 3 - Prestige Double bottom line on focus */
+.luxury-input-double {
+  background: transparent;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.2);
+  transition: all 0.3s ease;
+}
+.luxury-input-double:focus {
+  outline: none;
+  border-bottom: 4px double #D4AF37 !important; /* 4px double allows two distinct 1px gold lines */
+  padding-bottom: 4px;
+}`;
+      }
+
+      // Re-trigger active state formatting if user had selected validation simulators
+      const activeVal = document.getElementById('inp-specimen').getAttribute('data-active-validation');
+      if (activeVal) triggerInputValidation(activeVal);
+    }
+
+    function triggerInputValidation(state) {
+      const input = document.getElementById('inp-specimen');
+      const dot = document.getElementById('input-status-dot');
+      const container = document.getElementById('input-container');
+      const label = document.getElementById('input-label-element');
+      const msg = document.getElementById('input-helper-msg');
+
+      input.setAttribute('data-active-validation', state);
+
+      // Reset styles
+      input.style.borderColor = "";
+      input.style.borderBottom = "";
+      dot.className = "absolute right-2 bottom-3.5 w-1.5 h-1.5 rounded-full transition-all duration-300 scale-0";
+      label.className = "text-[10px] uppercase tracking-widest text-charcoal/40 dark:text-cream/40 font-bold";
+      msg.className = "text-[10px] text-charcoal/40 dark:text-cream/40 leading-relaxed font-sans";
+      msg.textContent = "* สังเกตแสงขอบใต้ล่างหรือจุดเตือนมุมขวาสุดเมื่อสลับสถานะ";
+
+      if (state === 'success') {
+        input.value = "concierge@facefind.app";
+        
+        if (currentInputStyle === 'rounded') {
+          input.style.borderColor = "#10B981"; // Emerald-500
+          input.style.boxShadow = "0 0 8px rgba(16, 185, 129, 0.2)";
+        } else {
+          input.style.borderBottom = "1px solid #10B981";
+        }
+        
+        dot.classList.add('bg-emerald-500', 'scale-100');
+        label.classList.add('!text-emerald-500');
+        msg.classList.add('!text-emerald-500');
+        msg.textContent = currentLang === 'EN' ? "✔ Verified secure guest email." : "✔ ผ่านเกณฑ์: รูปแบบข้อมูลที่อยู่อีเมลชีวมิติถูกต้อง";
+
+      } else if (state === 'error') {
+        input.value = "invalid-email-format";
+        
+        if (currentInputStyle === 'rounded') {
+          input.style.borderColor = "#EF4444"; // Red-500
+          input.style.boxShadow = "0 0 8px rgba(239, 68, 68, 0.2)";
+        } else {
+          input.style.borderBottom = "1px solid #EF4444";
+        }
+        
+        dot.classList.add('bg-red-500', 'scale-100', 'animate-pulse');
+        label.classList.add('!text-red-500');
+        msg.classList.add('!text-red-500');
+        msg.textContent = currentLang === 'EN' ? "✘ Incorrect address format. Missing @ operator." : "✘ ข้อผิดพลาด: รูปแบบที่อยู่อีเมลไม่ถูกต้อง ขาดสัญลักษณ์ @";
+
+      } else if (state === 'reset') {
+        input.value = "";
+        changeInputStyle(currentInputStyle);
+      }
+    }
+
+    // ==========================================
+    // 05 // TOAST SYSTEMS
+    // ==========================================
+    function changeToastStyle(style) {
+      currentToastStyle = style;
+      const codeBox = document.getElementById('tst-code-box');
+
+      if (style === 'floating') {
+        codeBox.textContent = `/* Toast Style 1 - Floating Card in bottom-right */
+.toast-floating {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 1.25rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  animation: slideInRight 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}`;
+      } else if (style === 'minimal') {
+        codeBox.textContent = `/* Toast Style 2 - High-contrast minimal hairline bar */
+.toast-minimal {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background-color: #111111; /* obsidian */
+  border-left: 3px solid #D4AF37; /* gold */
+  color: #FBF9F6;
+  padding: 0.88rem 1.5rem;
+  animation: slideInRight 0.35s ease forwards;
+}`;
+      } else if (style === 'banner') {
+        codeBox.textContent = `/* Toast Style 3 - Center-Top gold-bordered white toast */
+@keyframes slideDownCenter {
+  from { transform: translate(-50%, -100%); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+.toast-top-banner {
+  position: fixed;
+  top: 6.5rem; /* just below header */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.95); /* white background */
+  border: 1px solid rgba(212, 175, 55, 0.3); /* gold border */
+  color: #111111; /* dark text */
+  padding: 1rem 1.5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  width: 90%;
+  max-width: 500px;
+  animation: slideDownCenter 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}`;
+      }
+    }
+
+    function triggerToastSpecimen(type) {
+      const isBanner = currentToastStyle === 'banner';
+      const container = document.getElementById(isBanner ? 'toast-container-banner' : 'toast-container-floating');
+      
       if (!container) return;
 
       const toast = document.createElement('div');
-      toast.className = `luxury-toast border bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-5 py-4 flex items-center gap-4 shadow-xl border-champagne/30 dark:border-champagne/10 max-w-sm pointer-events-auto`;
       
       let iconColor = '#D4AF37';
-      let msg = TRANSLATIONS[currentLang].toastSuccessMsg;
+      let msg = TRANSLATIONS[currentLang].tstSuccessMsg;
 
       if (type === 'warning') {
-        iconColor = '#F59E0B'; // Amber 500
-        msg = TRANSLATIONS[currentLang].toastWarningMsg;
+        iconColor = '#F59E0B'; // Amber
+        msg = TRANSLATIONS[currentLang].tstWarningMsg;
       } else if (type === 'error') {
-        iconColor = '#EF4444'; // Red 500
-        msg = TRANSLATIONS[currentLang].toastErrorMsg;
+        iconColor = '#EF4444'; // Red
+        msg = TRANSLATIONS[currentLang].tstErrorMsg;
       } else if (type === 'processing') {
-        iconColor = '#D4AF37'; // Gold
-        msg = TRANSLATIONS[currentLang].toastProcessingMsg;
+        iconColor = '#D4AF37';
+        msg = TRANSLATIONS[currentLang].tstProcessingMsg;
       }
 
       let iconSvg = type === 'processing'
@@ -677,14 +1383,30 @@
         iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="1.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
       }
 
-      toast.innerHTML = `
-        <div class="flex-shrink-0">${iconSvg}</div>
-        <div class="font-luxury-body text-xs text-charcoal dark:text-cream font-light tracking-wide leading-relaxed">${msg}</div>
-      `;
+      // Configure layout based on active customizer settings
+      if (currentToastStyle === 'floating') {
+        toast.className = `luxury-toast border bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-5 py-4 flex items-center gap-4 shadow-xl border-champagne/30 dark:border-champagne/10 max-w-sm pointer-events-auto`;
+        toast.innerHTML = `
+          <div class="flex-shrink-0">${iconSvg}</div>
+          <div class="font-luxury-body text-xs text-charcoal dark:text-cream font-light tracking-wide leading-relaxed">${msg}</div>
+        `;
+      } else if (currentToastStyle === 'minimal') {
+        toast.className = `luxury-toast border-l-[3px] bg-charcoal dark:bg-zinc-900 px-5 py-3.5 flex items-center gap-4 shadow-xl border-t-0 border-r-0 border-b-0 border-champagne max-w-sm pointer-events-auto`;
+        toast.innerHTML = `
+          <div class="flex-shrink-0">${iconSvg}</div>
+          <div class="font-luxury-body text-xs text-cream font-light tracking-wide leading-relaxed">${msg}</div>
+        `;
+      } else if (currentToastStyle === 'banner') {
+        toast.className = `toast-banner border-b border-champagne bg-charcoal/95 dark:bg-zinc-950/95 backdrop-blur-md px-6 py-4 flex items-center justify-center gap-4 shadow-2xl w-full text-center pointer-events-auto`;
+        toast.innerHTML = `
+          <div class="flex-shrink-0">${iconSvg}</div>
+          <div class="font-luxury-body text-xs text-cream font-light tracking-wide leading-relaxed">${msg}</div>
+        `;
+      }
 
       container.appendChild(toast);
 
-      // Remove Toast automatically
+      // Auto purge
       setTimeout(() => {
         toast.classList.add('leaving');
         toast.addEventListener('animationend', () => {
@@ -693,54 +1415,137 @@
       }, 4000);
     }
 
-    // 2. Image Skeleton / Loader Shimmer Toggler
-    let isSkeletonLoading = true;
+    // ==========================================
+    // 06 // LIGHTBOX SYSTEMS
+    // ==========================================
+    function changeLightboxTheme(theme) {
+      currentLightboxTheme = theme;
+      const modal = document.getElementById('photo-modal');
+      const codeBox = document.getElementById('lgb-code-box');
 
-    function toggleSkeletonState() {
-      isSkeletonLoading = !isSkeletonLoading;
-      const skeletons = document.querySelectorAll('.skeleton-card');
-      const images = document.querySelectorAll('.real-image');
-      const details = document.querySelectorAll('.image-detail');
-
-      skeletons.forEach(s => {
-        s.style.opacity = isSkeletonLoading ? '1' : '0';
-        s.style.pointerEvents = isSkeletonLoading ? 'auto' : 'none';
-      });
-
-      images.forEach(img => {
-        img.style.opacity = isSkeletonLoading ? '0' : '1';
-      });
-
-      details.forEach(d => {
-        d.style.opacity = isSkeletonLoading ? '0' : '1';
-      });
+      // Clear layout theme formats
+      modal.className = "photo-modal-overlay";
+      
+      if (theme === 'blur') {
+        modal.classList.add('theme-blur');
+        codeBox.textContent = `/* Lightbox Theme 1 - Luxury Backdrop Blur */
+.lightbox-modal {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(17, 17, 17, 0.88);
+  backdrop-filter: blur(12px);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}`;
+      } else if (theme === 'vignette') {
+        modal.classList.add('theme-vignette');
+        codeBox.textContent = `/* Lightbox Theme 2 - Champagne gold vignette borders */
+.lightbox-modal {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle, rgba(27,27,27,0.75) 0%, rgba(11,11,11,0.98) 100%);
+}
+.lightbox-frame-wrap {
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.1);
+}`;
+      } else if (theme === 'solid') {
+        modal.classList.add('theme-solid');
+        codeBox.textContent = `/* Lightbox Theme 3 - Solid Obsidian classic */
+.lightbox-modal {
+  position: fixed;
+  inset: 0;
+  background-color: #111111;
+  backdrop-filter: none; /* pure art focus */
+}`;
+      }
     }
 
-    // 3. Photo Detail Lightbox Modal controller
+    // Global Escape Key Listener for Lightbox
+    const escKeyListener = (e) => {
+      if (e.key === 'Escape') {
+        closeLabLightbox();
+      }
+    };
+
     function openLabLightbox(src, title, desc) {
       const modal = document.getElementById('photo-modal');
       const modalImg = document.getElementById('modal-image');
       const modalTitle = document.getElementById('modal-title');
       const modalDesc = document.getElementById('modal-category');
+      const spinner = document.getElementById('modal-image-spinner');
 
       if (modal && modalImg) {
+        // Prevent layout shift: calculate scrollbar width and pad body
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.paddingRight = scrollbarWidth + 'px';
+        document.body.style.overflow = 'hidden';
+
+        // Prepare initial image layout transition states (hidden & scaled down)
+        modalImg.classList.remove('opacity-100', 'scale-100');
+        modalImg.classList.add('opacity-0', 'scale-95');
+        
+        if (spinner) {
+          spinner.style.opacity = '1';
+          spinner.classList.remove('hidden');
+        }
+
+        // Set information
         modalImg.src = src;
         modalTitle.textContent = title;
         modalDesc.textContent = desc;
+
+        // Animate in once fully loaded
+        modalImg.onload = () => {
+          if (spinner) {
+            spinner.style.opacity = '0';
+            setTimeout(() => spinner.classList.add('hidden'), 300);
+          }
+          // Smooth fade in & scale back to normal
+          modalImg.classList.remove('opacity-0', 'scale-95');
+          modalImg.classList.add('opacity-100', 'scale-100');
+        };
+
+        // If cached or immediately loaded
+        if (modalImg.complete) {
+          modalImg.onload();
+        }
+
+        // Set display to flex and trigger layout reflow to make sure opacity transitions smoothly
+        modal.style.display = 'flex';
+        modal.offsetHeight; // force reflow
         modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
+
+        // Bind global Escape key listener
+        window.addEventListener('keydown', escKeyListener);
       }
     }
 
     function closeLabLightbox() {
       const modal = document.getElementById('photo-modal');
+      const modalImg = document.getElementById('modal-image');
       if (modal) {
         modal.classList.remove('active');
-        document.body.style.overflow = '';
+        
+        // Unbind keydown
+        window.removeEventListener('keydown', escKeyListener);
+
+        // Delay restoring layout states slightly to let CSS closing transition complete smoothly
+        setTimeout(() => {
+          modal.style.display = 'none'; // Physically hide modal from viewport click tree
+          document.body.style.overflow = '';
+          document.body.style.paddingRight = '';
+          if (modalImg) {
+            modalImg.src = ''; // Clear source to prevent loading-flicker on next click
+            modalImg.classList.remove('opacity-100', 'scale-100');
+            modalImg.classList.add('opacity-0', 'scale-95');
+          }
+        }, 500);
       }
     }
 
-    // 4. Scrollspy layout highlighters
+    // ==========================================
+    // scrollspy
+    // ==========================================
     function setupScrollspy() {
       const links = document.querySelectorAll('.nav-link');
       const sections = document.querySelectorAll('main > section');
@@ -748,7 +1553,7 @@
       function changeActiveLink() {
         let index = sections.length;
 
-        while(--index && window.scrollY + 150 < sections[index].offsetTop) {}
+        while(--index && window.scrollY + 180 < sections[index].offsetTop) {}
 
         links.forEach((link) => link.classList.remove('active'));
         if (links[index]) {
