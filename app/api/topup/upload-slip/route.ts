@@ -1,0 +1,145 @@
+/**
+ * POST /api/topup/upload-slip
+ *
+ * Accepts a bank-transfer slip image + package details, verifies via SlipOK,
+ * and either auto-approves credits or queues the slip for manual review.
+ *
+ * Form fields:
+ *   slip_image    File    — the slip image (image/*)
+ *   package_id    string  — 'pack_199' | 'pack_499' | 'pack_999' | 'custom'
+ *   amount_thb    number  — transfer amount in THB
+ *   credits_claimed number — credits the user claims to receive
+ *
+ * Response (approved):  { status: 'approved', credits: number, newBalance: number }
+ * Response (pending):   { status: 'pending', message: string }
+ */
+
+import { randomUUID } from 'crypto'
+import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { uploadToR2, r2Paths } from '@/lib/r2'
+import { sendAdminSlipPending, sendOrganizerTopupApproved } from '@/lib/email/notifications'
+import { validateTopupRequest, verifySlipWithSlipOK } from '@/lib/topup'
+
+export async function POST(request: Request): Promise<Response> {
+  try {
+    // 1. Auth check
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // 2. Get tenant (service role to bypass RLS on tenants)
+    const admin = createServiceRoleClient()
+
+    const { data: tenant, error: tenantError } = await admin
+      .from('tenants')
+      .select('id, name, credit_balance')
+      .eq('owner_user_id', user.id)
+      .single()
+
+    if (tenantError || !tenant) {
+      return Response.json({ error: 'Tenant not found' }, { status: 404 })
+    }
+
+    // 3. Parse multipart form
+    const formData = await request.formData()
+    const slipFile = formData.get('slip_image') as File | null
+    const packageId = formData.get('package_id') as string
+    const amountThb = Number(formData.get('amount_thb'))
+    const creditsClaimed = Number(formData.get('credits_claimed'))
+
+    // Validate slip file
+    if (!slipFile || typeof slipFile === 'string') {
+      return Response.json({ error: 'slip_image is required' }, { status: 400 })
+    }
+    if (!slipFile.type.startsWith('image/')) {
+      return Response.json({ error: 'slip_image must be an image file' }, { status: 400 })
+    }
+
+    // 4. Validate package/amount/credits
+    const validation = validateTopupRequest(packageId, amountThb, creditsClaimed)
+    if (!validation.valid) {
+      return Response.json({ error: validation.error }, { status: 400 })
+    }
+
+    // 5. Generate slip ID
+    const slipId = randomUUID()
+
+    // 6. Upload slip to R2 (non-blocking — fallback to placeholder if R2 not configured)
+    const slipBuffer = Buffer.from(await slipFile.arrayBuffer())
+    const r2Result = await uploadToR2(r2Paths.slip(tenant.id, slipId), slipBuffer, slipFile.type)
+    const slipImageUrl = r2Result.ok ? r2Result.url : `slip-pending://${slipId}`
+
+    // 7. Insert slip_uploads row
+    const { error: insertError } = await admin.from('slip_uploads').insert({
+      id: slipId,
+      tenant_id: tenant.id,
+      package_id: packageId,
+      amount_thb: amountThb,
+      credits_claimed: creditsClaimed,
+      slip_image_url: slipImageUrl,
+      status: 'pending',
+    })
+
+    if (insertError) {
+      console.error('[upload-slip] Failed to insert slip_uploads row:', insertError)
+      return Response.json({ error: 'Failed to record slip' }, { status: 500 })
+    }
+
+    // 8. Verify with SlipOK
+    const verification = await verifySlipWithSlipOK(slipBuffer, amountThb)
+
+    // 9a. Auto-approved path
+    if (verification.verified) {
+      // Call approve_topup_credit RPC with service role (bypasses RLS)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: rpcError } = await (admin as any).rpc('approve_topup_credit', {
+        p_slip_id: slipId,
+      })
+
+      if (rpcError) {
+        console.error('[upload-slip] approve_topup_credit RPC failed:', rpcError)
+        return Response.json({ error: 'Failed to approve credits' }, { status: 500 })
+      }
+
+      // Fetch updated balance
+      const { data: updatedTenant } = await admin
+        .from('tenants')
+        .select('credit_balance')
+        .eq('id', tenant.id)
+        .single()
+
+      const newBalance = updatedTenant?.credit_balance ?? tenant.credit_balance + creditsClaimed
+
+      // Send approval email (non-blocking — don't fail if email fails)
+      await sendOrganizerTopupApproved({
+        toEmail: user.email!,
+        credits: creditsClaimed,
+        newBalance,
+      }).catch((err) => console.error('[upload-slip] sendOrganizerTopupApproved failed:', err))
+
+      return Response.json({ status: 'approved', credits: creditsClaimed, newBalance })
+    }
+
+    // 9b. Pending path — slip stays 'pending' in DB (already inserted)
+    await sendAdminSlipPending({
+      slipId,
+      tenantName: tenant.name,
+      amountThb,
+      credits: creditsClaimed,
+    }).catch((err) => console.error('[upload-slip] sendAdminSlipPending failed:', err))
+
+    return Response.json({
+      status: 'pending',
+      message: 'Slip อยู่ระหว่างการตรวจสอบ กรุณารอภายใน 24 ชั่วโมง',
+    })
+  } catch (err) {
+    console.error('[upload-slip] Unexpected error:', err)
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
