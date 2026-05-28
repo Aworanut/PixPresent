@@ -107,6 +107,7 @@ export function EventForm({
                 <button
                   key={tier}
                   type="button"
+                  aria-pressed={isSelected}
                   onClick={() => setSelectedTier(tier)}
                   className={[
                     "flex flex-col gap-1 rounded-lg border px-3 py-2.5 text-left transition-colors",
