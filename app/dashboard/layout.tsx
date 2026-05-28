@@ -25,6 +25,12 @@ export default async function DashboardLayout({
           </Link>
 
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1">
+              <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                {ctx.tenant.credit_balance.toLocaleString()}
+              </span>
+              <span className="text-xs text-zinc-400 dark:text-zinc-500">cr</span>
+            </div>
             <Link
               href="/dashboard/account"
               className="hidden sm:flex flex-col items-end leading-tight hover:opacity-70 transition-opacity"
