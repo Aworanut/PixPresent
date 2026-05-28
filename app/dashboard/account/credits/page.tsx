@@ -24,7 +24,8 @@ const PKG_LABEL: Record<string, string> = {
   custom: "Custom",
 };
 
-function formatDate(iso: string): string {
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
   return new Date(iso).toLocaleDateString("th-TH", {
     day: "numeric",
     month: "short",
@@ -93,19 +94,19 @@ function SlipsTable({ slips }: { slips: SlipRow[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 วันที่
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 แพ็กเกจ
               </th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 จำนวนเงิน (฿)
               </th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 Credits
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 สถานะ
               </th>
             </tr>
@@ -152,16 +153,16 @@ function LedgerTable({ ledger }: { ledger: LedgerRow[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 วันที่
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 รายการ
               </th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 Credits
               </th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 คงเหลือ
               </th>
             </tr>

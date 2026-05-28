@@ -137,22 +137,30 @@ html[lang="th"] .tracking-mega {
 
 /* Reusable Component Specimens (Locked CSS) */
 
-/* 3.1 Primary & Secondary Buttons (Style 2: Minimalist Hairline) */
+/* 3.1 Primary & Secondary Buttons (Borderless, Float-Up Hover) */
 .cta-button {
-  background-color: var(--cta-bg);
-  border: 1px solid var(--cta-border);
+  background-color: transparent;
+  border: 1px solid transparent !important; /* Enforce borderless state by default */
   color: var(--cta-text);
   font-family: var(--font-mono), monospace;
   letter-spacing: 0.125em;
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.4s ease,
+              border-color 0.4s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transform: translateY(0);
 }
 .cta-button:hover {
-  border-color: var(--cta-hover-border);
-  background-color: var(--cta-hover-bg);
-  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+  transform: translateY(-2px) !important;
+  border-color: rgba(212, 175, 55, 0.5) !important; /* Show premium gold hairline on hover */
+  background-color: var(--cta-hover-bg) !important;
+  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+.dark .cta-button:hover {
+  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.22), 0 1px 3px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* 3.2 Skeleton Card Loader (Style 1: Golden Shimmer) */

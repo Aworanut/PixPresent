@@ -10,11 +10,11 @@ export default function AuthLayout({
       <div className="w-full max-w-sm">
         <Link
           href="/"
-          className="block mb-8 text-center text-sm font-medium tracking-wider uppercase text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
+          className="block mb-8 text-center text-xs font-semibold tracking-widest uppercase text-zinc-400 dark:text-zinc-500 hover:text-[#D4AF37] dark:hover:text-[#D4AF37] transition-all duration-300 font-mono"
         >
           PixPresent · FaceFind
         </Link>
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm p-6 sm:p-8">
+        <div className="rounded-none border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm p-8 sm:p-10">
           {children}
         </div>
       </div>

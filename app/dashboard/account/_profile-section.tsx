@@ -16,8 +16,23 @@ export function ProfileSection({ tenant, email }: Props) {
 
   return (
     <div className="space-y-8">
-      <form action={action} className="space-y-5">
-        <div className="space-y-4">
+      <form action={action} className="space-y-6">
+        <div className="space-y-6">
+          {/* Company Logo / Branding Monogram Preview */}
+          <div className="flex items-center gap-4 pb-2 border-b border-zinc-100 dark:border-zinc-800/60">
+            <div className="h-16 w-16 rounded-none bg-white dark:bg-zinc-900 border border-[#D4AF37]/50 flex items-center justify-center text-2xl font-bold font-mono text-[#D4AF37] select-none shadow-sm">
+              {tenant.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="space-y-0.5">
+              <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-50 font-mono tracking-widest uppercase">
+                Company Logo / Monogram
+              </h3>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 max-w-sm leading-relaxed">
+                ตราสัญลักษณ์องค์กรประณีตของคุณ แสดงผลบนแถบนำทางของระบบแดชบอร์ดหลัก
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="name">ชื่อองค์กร</Label>
             <Input

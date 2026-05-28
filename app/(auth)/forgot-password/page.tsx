@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <header className="mb-6 space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-2xl font-medium tracking-tight text-zinc-900 dark:text-zinc-50 font-heading">
           ลืมรหัสผ่าน
         </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">

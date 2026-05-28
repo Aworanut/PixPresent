@@ -4,7 +4,6 @@ import { CameraIcon, FolderIcon, LinkSlashIcon, ArrowPathIcon, PencilSquareIcon 
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { buttonVariants } from "@/components/ui/button";
-import { DeleteEventButton } from "./_delete-button";
 import { EventToolbar } from "./_event-toolbar";
 import { EventTitleEditor } from "./_event-title-editor";
 import { PhotoGallery, type GalleryPhoto } from "./_photo-gallery";
@@ -77,7 +76,7 @@ export default async function EventDetailPage({
   return (
     <div className="space-y-5">
       {/* ── Header ── */}
-      <header className="flex items-start gap-4">
+      <header className="flex items-end gap-4 justify-between">
         <div className="flex-1 min-w-0">
           <nav className="text-sm mb-2">
             <Link
@@ -123,12 +122,6 @@ export default async function EventDetailPage({
             <PencilSquareIcon className="h-4 w-4 stroke-[1.5] flex-shrink-0 relative top-[-0.5px]" />
             <span className="hidden sm:inline relative top-[0.5px]">Edit</span>
           </Link>
-          <DeleteEventButton
-            id={event.id}
-            name={event.name}
-            hasStartedSync={!!event.sync_started_at}
-            creditsUsed={event.credits_used ?? 0}
-          />
         </div>
       </header>
 
@@ -188,8 +181,8 @@ function EmptyGallery({
           เพิ่ม folder ของช่างภาพก่อน แล้วค่อย sync
         </p>
         <Link
-          href={`/dashboard/events/${eventId}/edit`}
-          className="mt-2 inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
+          href={`/dashboard/events/${eventId}?open=folders`}
+          className="mt-2 inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors cursor-pointer"
         >
           เพิ่ม folder
         </Link>
@@ -228,15 +221,13 @@ function EmptyShell({ children }: { children: React.ReactNode }) {
 function StatusBadge({ isIndexed }: { isIndexed: boolean }) {
   if (isIndexed) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      <span className="inline-flex items-center rounded-none bg-emerald-50/40 dark:bg-emerald-950/20 px-2 py-0.5 text-[10px] font-semibold font-mono tracking-wider uppercase text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 relative top-[0.5px]">
         Synced
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-      <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
+    <span className="inline-flex items-center rounded-none bg-zinc-100/40 dark:bg-zinc-800/40 px-2 py-0.5 text-[10px] font-semibold font-mono tracking-wider uppercase text-zinc-500 dark:text-zinc-400 border border-zinc-500/20 relative top-[0.5px]">
       Not synced
     </span>
   );

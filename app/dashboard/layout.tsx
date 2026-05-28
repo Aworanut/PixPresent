@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentTenant } from "@/lib/auth/current-tenant";
+import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +13,13 @@ export default async function DashboardLayout({
   const ctx = await getCurrentTenant();
   // Proxy should have redirected, but guard anyway in case of race
   if (!ctx) redirect("/login");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const avatarUrl =
+    user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-zinc-950">
@@ -33,17 +41,24 @@ export default async function DashboardLayout({
             </div>
             <Link
               href="/dashboard/account"
-              className="hidden sm:flex flex-col items-end leading-tight hover:opacity-70 transition-opacity"
+              className="hidden sm:flex items-center gap-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:opacity-70 transition-opacity"
             >
-              <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                {ctx.tenant.name}
-              </span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                {ctx.user.email}
-              </span>
+              <span>{ctx.tenant.name}</span>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={ctx.tenant.name}
+                  className="h-6 w-6 rounded-none object-cover border border-[#D4AF37]/50 shadow-sm"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="h-6 w-6 rounded-none bg-white dark:bg-zinc-950 text-[#D4AF37] border border-[#D4AF37]/65 flex items-center justify-center text-[10px] font-bold font-mono select-none shadow-sm">
+                  {ctx.tenant.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </Link>
             <form action={signOut}>
-              <Button type="submit" variant="ghost" size="sm">
+              <Button type="submit" variant="default" size="sm">
                 Sign out
               </Button>
             </form>

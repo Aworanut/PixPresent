@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Cormorant_Garamond, Kanit, Charmonman, IBM_Plex_Sans_Thai } from "next/font/google";
+import { Geist, Geist_Mono, Cormorant_Garamond, Kanit, Chonburi, Charmonman, IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,6 +22,12 @@ const kanit = Kanit({
   variable: "--font-kanit",
   subsets: ["thai", "latin"],
   weight: ["400", "700"],
+});
+
+const chonburi = Chonburi({
+  variable: "--font-chonburi",
+  subsets: ["thai", "latin"],
+  weight: ["400"],
 });
 
 const charmonman = Charmonman({
@@ -49,7 +55,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} ${kanit.variable} ${charmonman.variable} ${ibmPlexThai.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} ${kanit.variable} ${chonburi.variable} ${charmonman.variable} ${ibmPlexThai.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

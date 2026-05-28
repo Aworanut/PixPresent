@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { FolderIcon, ArrowPathIcon, ArrowUpOnSquareIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,23 @@ type Modal = "drive" | "sync" | "share" | null;
 // ─── Toolbar ──────────────────────────────────────────────────────────────────
 
 export function EventToolbar(props: ToolbarProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [open, setOpen] = useState<Modal>(null);
-  const close = () => setOpen(null);
+
+  // Listen to URL search parameter to auto-open Google Drive Folders modal
+  useEffect(() => {
+    if (searchParams?.get("open") === "folders") {
+      setOpen("drive");
+    }
+  }, [searchParams]);
+
+  const close = () => {
+    setOpen(null);
+    if (searchParams?.get("open") === "folders") {
+      router.replace(`/dashboard/events/${props.eventId}`);
+    }
+  };
 
   return (
     <>
@@ -132,10 +147,12 @@ function Modal({
   title,
   onClose,
   children,
+  className = "max-w-md",
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <div
@@ -143,7 +160,7 @@ function Modal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-xl bg-white dark:bg-zinc-900 shadow-2xl"
+        className={`w-full rounded-xl bg-white dark:bg-zinc-900 shadow-2xl transition-all duration-300 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
@@ -253,7 +270,7 @@ function DriveModal({
   };
 
   return (
-    <Modal title="Google Drive Folders" onClose={onClose}>
+    <Modal title="Google Drive Folders" onClose={onClose} className="sm:max-w-xl md:max-w-2xl">
       <div className="space-y-4">
         {!driveConnected && (
           <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-400 flex items-center justify-between gap-3">
@@ -283,7 +300,7 @@ function DriveModal({
                     value={row.label}
                     onChange={(e) => update(idx, "label", e.target.value)}
                     placeholder="Label"
-                    className="w-24 flex-shrink-0 h-8 text-sm"
+                    className="w-36 flex-shrink-0 h-8 text-sm"
                     maxLength={60}
                   />
                   <div className="relative flex-1 min-w-0">

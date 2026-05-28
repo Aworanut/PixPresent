@@ -12,7 +12,14 @@ import {
 import { addToBlacklist } from "@/lib/actions/blacklist";
 import { PhotoBadge } from "@/components/ui/photo-badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PhotoIcon } from "@heroicons/react/24/outline";
+import {
+  PhotoIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  XMarkIcon,
+  ArrowDownTrayIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 
 type FaceDetail = {
   face_id: string;
@@ -47,6 +54,9 @@ export function PhotoGallery({ eventId, photos }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkPending, startBulkTransition] = useTransition();
 
+  // Lightbox State
+  const [activePhotoIdx, setActivePhotoIdx] = useState<number | null>(null);
+
   // Tab split
   const activePhotos = photos.filter((p) => p.visibility !== "hidden");
   const hiddenPhotos = photos.filter((p) => p.visibility === "hidden");
@@ -63,8 +73,53 @@ export function PhotoGallery({ eventId, photos }: Props) {
     return true;
   });
 
-  // Clear selection on tab/filter change
-  useEffect(() => { setSelectedIds(new Set()); }, [tab, faceFilter]);
+  // Clear selection and close lightbox on tab/filter change
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setActivePhotoIdx(null);
+  }, [tab, faceFilter]);
+
+  const handleClose = () => setActivePhotoIdx(null);
+
+  const handlePrev = () => {
+    setActivePhotoIdx((prev) => {
+      if (prev === null || visible.length === 0) return null;
+      return (prev - 1 + visible.length) % visible.length;
+    });
+  };
+
+  const handleNext = () => {
+    setActivePhotoIdx((prev) => {
+      if (prev === null || visible.length === 0) return null;
+      return (prev + 1) % visible.length;
+    });
+  };
+
+  const handleSetVisibility = async (photoId: string, v: PhotoVisibility) => {
+    if (tab === "active" && v === "hidden") {
+      if (visible.length <= 1) {
+        handleClose();
+      } else {
+        setActivePhotoIdx((prev) => {
+          if (prev === null) return null;
+          return prev >= visible.length - 1 ? visible.length - 2 : prev;
+        });
+      }
+    }
+    await setPhotoVisibility(photoId, eventId, v);
+  };
+
+  const handleDeletePhoto = async (photoId: string) => {
+    if (visible.length <= 1) {
+      handleClose();
+    } else {
+      setActivePhotoIdx((prev) => {
+        if (prev === null) return null;
+        return prev >= visible.length - 1 ? visible.length - 2 : prev;
+      });
+    }
+    await deletePhoto(photoId, eventId);
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -208,7 +263,7 @@ export function PhotoGallery({ eventId, photos }: Props) {
       {/* ── Grid ────────────────────────────────────────────────────────────── */}
       {view === "grid" && visible.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-          {visible.map((photo) => (
+          {visible.map((photo, idx) => (
             <GridCard
               key={photo.id}
               photo={photo}
@@ -216,6 +271,7 @@ export function PhotoGallery({ eventId, photos }: Props) {
               selectMode={selectMode}
               selected={selectedIds.has(photo.id)}
               onToggleSelect={toggleSelect}
+              onViewPhoto={() => setActivePhotoIdx(idx)}
             />
           ))}
         </div>
@@ -224,7 +280,7 @@ export function PhotoGallery({ eventId, photos }: Props) {
       {/* ── List ────────────────────────────────────────────────────────────── */}
       {view === "list" && visible.length > 0 && (
         <div className="rounded-lg border border-[rgba(17,17,17,0.1)] dark:border-[rgba(251,249,246,0.1)] bg-white dark:bg-zinc-900 divide-y divide-[rgba(17,17,17,0.06)] dark:divide-[rgba(251,249,246,0.06)]">
-          {visible.map((photo) => (
+          {visible.map((photo, idx) => (
             <ListRow
               key={photo.id}
               photo={photo}
@@ -232,9 +288,24 @@ export function PhotoGallery({ eventId, photos }: Props) {
               selectMode={selectMode}
               selected={selectedIds.has(photo.id)}
               onToggleSelect={toggleSelect}
+              onViewPhoto={() => setActivePhotoIdx(idx)}
             />
           ))}
         </div>
+      )}
+
+      {/* ── Lightbox Modal ── */}
+      {activePhotoIdx !== null && visible[activePhotoIdx] && (
+        <Lightbox
+          photo={visible[activePhotoIdx]}
+          index={activePhotoIdx}
+          total={visible.length}
+          onClose={handleClose}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onSetVisibility={handleSetVisibility}
+          onDelete={handleDeletePhoto}
+        />
       )}
     </div>
   );
@@ -248,12 +319,14 @@ function GridCard({
   selectMode,
   selected,
   onToggleSelect,
+  onViewPhoto,
 }: {
   photo: GalleryPhoto;
   eventId: string;
   selectMode: boolean;
   selected: boolean;
   onToggleSelect: (id: string) => void;
+  onViewPhoto: () => void;
 }) {
   const faceCount = photo.face_details.length;
   const url = photo.r2_web_url;
@@ -261,11 +334,10 @@ function GridCard({
 
   return (
     <div
-      onClick={selectMode ? () => onToggleSelect(photo.id) : undefined}
+      onClick={selectMode ? () => onToggleSelect(photo.id) : onViewPhoto}
       className={[
-        "group relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 transition-all duration-300",
+        "group relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 transition-all duration-300 cursor-pointer",
         isHidden ? "opacity-50" : "",
-        selectMode ? "cursor-pointer" : "",
         selected
           ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-white dark:ring-offset-zinc-950"
           : "",
@@ -319,7 +391,10 @@ function GridCard({
 
       {/* ⋮ menu */}
       {!selectMode && (
-        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div 
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
           <PhotoMenu photo={photo} eventId={eventId} />
         </div>
       )}
@@ -335,12 +410,14 @@ function ListRow({
   selectMode,
   selected,
   onToggleSelect,
+  onViewPhoto,
 }: {
   photo: GalleryPhoto;
   eventId: string;
   selectMode: boolean;
   selected: boolean;
   onToggleSelect: (id: string) => void;
+  onViewPhoto: () => void;
 }) {
   const faceCount = photo.face_details.length;
   const url = photo.r2_web_url;
@@ -349,11 +426,10 @@ function ListRow({
 
   return (
     <div
-      onClick={selectMode ? () => onToggleSelect(photo.id) : undefined}
+      onClick={selectMode ? () => onToggleSelect(photo.id) : onViewPhoto}
       className={[
-        "flex items-center gap-3 px-4 py-2.5 group transition-colors",
+        "flex items-center gap-3 px-4 py-2.5 group transition-colors cursor-pointer hover:bg-[#F5EEDC]/30 dark:hover:bg-zinc-800/50",
         isHidden ? "opacity-50" : "",
-        selectMode ? "cursor-pointer hover:bg-[#F5EEDC]/30 dark:hover:bg-zinc-800/50" : "",
         selected ? "bg-[#F5EEDC]/50 dark:bg-[#27272A]/60" : "",
       ].join(" ")}
     >
@@ -384,7 +460,10 @@ function ListRow({
 
       {/* ⋮ menu */}
       {!selectMode && (
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+        <div 
+          className="opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
           <PhotoMenu photo={photo} eventId={eventId} />
         </div>
       )}
@@ -657,5 +736,211 @@ function ListIcon() {
     <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
       <path d="M2 4h12M2 8h12M2 12h12" />
     </svg>
+  );
+}
+
+// ─── Lightbox Component ───────────────────────────────────────────────────────
+
+type LightboxProps = {
+  photo: GalleryPhoto;
+  index: number;
+  total: number;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onSetVisibility: (id: string, v: PhotoVisibility) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+};
+
+function Lightbox({
+  photo,
+  index,
+  total,
+  onClose,
+  onPrev,
+  onNext,
+  onSetVisibility,
+  onDelete,
+}: LightboxProps) {
+  const [isPending, startTransition] = useTransition();
+  const [isImgLoading, setIsImgLoading] = useState(true);
+  const [direction, setDirection] = useState<"left" | "right" | null>(null);
+
+  // Reset image loading state when photo changes
+  useEffect(() => {
+    setIsImgLoading(true);
+  }, [photo.id]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        setDirection("left");
+        onPrev();
+      } else if (e.key === "ArrowRight") {
+        setDirection("right");
+        onNext();
+      } else if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onPrev, onNext, onClose]);
+
+  const url = photo.r2_web_url;
+
+  const handleDelete = () => {
+    if (!window.confirm("ลบรูปนี้ถาวร? ไม่สามารถกู้คืนได้")) return;
+    startTransition(async () => {
+      await onDelete(photo.id);
+    });
+  };
+
+  const handleSetVis = (v: PhotoVisibility) => {
+    startTransition(async () => {
+      await onSetVisibility(photo.id, v);
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-between bg-black/95 backdrop-blur-md transition-all duration-300">
+      {/* Top Header Row */}
+      <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 bg-gradient-to-b from-black/50 to-transparent z-10">
+        {/* Photo index counter */}
+        <div className="font-mono text-xs text-zinc-400 tracking-widest uppercase">
+          IMAGE {index + 1} OF {total}
+        </div>
+
+        {/* Close Button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1 rounded-full text-zinc-400 hover:text-white transition-colors duration-200"
+          aria-label="Close"
+        >
+          <XMarkIcon className="h-6 w-6 stroke-[1.5]" />
+        </button>
+      </div>
+
+      {/* Main Image View + Navigation Controls */}
+      <div className="relative flex-1 flex items-center justify-center px-4 sm:px-12 md:px-20">
+        {/* Left Arrow Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setDirection("left");
+            onPrev();
+          }}
+          className="absolute left-2 sm:left-4 md:left-6 z-10 p-2 rounded-full bg-black/40 hover:bg-black/60 text-zinc-300 hover:text-white transition-all duration-200 border border-zinc-800/50 hover:border-zinc-700/50 shadow-lg"
+          aria-label="Previous image"
+        >
+          <ArrowLeftIcon className="h-6 w-6 stroke-[1.5]" />
+        </button>
+
+        {/* The Image Wrapper */}
+        <div className="relative w-full h-full max-h-[70vh] flex items-center justify-center select-none overflow-hidden">
+          {url ? (
+            <>
+              {isImgLoading && (
+                <div className="absolute inset-0 flex items-center justify-center z-10 transition-opacity duration-300">
+                  {/* Premium, delicate champagne gold circular spinner */}
+                  <div className="h-10 w-10 rounded-full border-2 border-zinc-800/80 border-t-[#D4AF37] animate-spin" />
+                </div>
+              )}
+              <Image
+                src={url}
+                alt={`Event photo ${index + 1}`}
+                fill
+                className={`object-contain transition-all duration-500 ease-out ${
+                  isImgLoading
+                    ? `opacity-0 scale-95 blur-sm ${
+                        direction === "right"
+                          ? "translate-x-8"
+                          : direction === "left"
+                          ? "-translate-x-8"
+                          : "translate-x-0"
+                      }`
+                    : "opacity-100 scale-100 blur-0 translate-x-0"
+                }`}
+                sizes="100vw"
+                priority
+                onLoad={() => setIsImgLoading(false)}
+              />
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-zinc-500">
+              <PhotoIcon className="h-12 w-12 stroke-[1]" />
+              <span className="text-sm font-mono tracking-wider">NO IMAGE DATA</span>
+            </div>
+          )}
+        </div>
+
+        {/* Right Arrow Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setDirection("right");
+            onNext();
+          }}
+          className="absolute right-2 sm:right-4 md:right-6 z-10 p-2 rounded-full bg-black/40 hover:bg-black/60 text-zinc-300 hover:text-white transition-all duration-200 border border-zinc-800/50 hover:border-zinc-700/50 shadow-lg"
+          aria-label="Next image"
+        >
+          <ArrowRightIcon className="h-6 w-6 stroke-[1.5]" />
+        </button>
+      </div>
+
+      {/* Bottom Controls / Action Bar */}
+      <div className="w-full bg-gradient-to-t from-black/80 via-black/50 to-transparent pt-4 pb-6 px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 z-10">
+        {/* Visibility Toggles */}
+        <div className="flex items-center gap-1 rounded-md bg-zinc-900 border border-zinc-800 p-1">
+          {(["public", "match_only", "hidden"] as PhotoVisibility[]).map((v) => {
+            const label = v === "public" ? "PUBLIC" : v === "match_only" ? "MATCH ONLY" : "HIDDEN";
+            const isActive = photo.visibility === v;
+            return (
+              <button
+                key={v}
+                type="button"
+                disabled={isPending}
+                onClick={() => handleSetVis(v)}
+                className={[
+                  "px-3 py-1 font-mono text-[10px] tracking-wider transition-all duration-300 rounded",
+                  isActive
+                    ? "bg-[#D4AF37] text-black font-semibold shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50",
+                ].join(" ")}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Download & Delete Quick Actions */}
+        <div className="flex items-center gap-2">
+          {url && (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-zinc-800 bg-zinc-900 hover:border-zinc-700 hover:bg-zinc-800/50 text-xs font-medium text-zinc-300 hover:text-white transition-all duration-300"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4 stroke-[1.5]" />
+              <span>DOWNLOAD</span>
+            </a>
+          )}
+          
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={handleDelete}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-zinc-800 bg-zinc-900 hover:border-rose-950/50 hover:bg-rose-950/20 hover:text-rose-400 text-xs font-medium text-zinc-400 transition-all duration-300 disabled:opacity-40"
+          >
+            <TrashIcon className="h-4 w-4 stroke-[1.5]" />
+            <span>DELETE</span>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
