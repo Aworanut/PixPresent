@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button, buttonVariants } from "@/components/ui/button";
 import type { EventActionState } from "@/lib/actions/events";
+import { TIER_CONFIG, EVENT_TIERS, type EventTier } from "@/lib/credit-packages";
 
 type FormAction = (
   prev: EventActionState,
@@ -21,10 +22,12 @@ type EventFormProps = {
   action: FormAction;
   submitLabel: string;
   pendingLabel: string;
+  showTierSelector?: boolean;
   defaults?: {
     name?: string | null;
     event_date?: string | null;
     folders?: FolderInput[];
+    tier?: EventTier;
   };
   cancelHref: string;
 };
@@ -33,6 +36,7 @@ export function EventForm({
   action,
   submitLabel,
   pendingLabel,
+  showTierSelector = false,
   defaults,
   cancelHref,
 }: EventFormProps) {
@@ -41,6 +45,9 @@ export function EventForm({
     defaults?.folders && defaults.folders.length > 0
       ? defaults.folders
       : [{ label: "", folder: "" }],
+  );
+  const [selectedTier, setSelectedTier] = useState<EventTier>(
+    defaults?.tier ?? "starter",
   );
   const formId = useId();
 
@@ -85,6 +92,49 @@ export function EventForm({
           defaultValue={defaults?.event_date ?? ""}
         />
       </div>
+
+      {showTierSelector && (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium leading-none mb-1">
+            Event Tier
+          </legend>
+          <input type="hidden" name="tier" value={selectedTier} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {EVENT_TIERS.map((tier) => {
+              const cfg = TIER_CONFIG[tier];
+              const isSelected = selectedTier === tier;
+              return (
+                <button
+                  key={tier}
+                  type="button"
+                  onClick={() => setSelectedTier(tier)}
+                  className={[
+                    "flex flex-col gap-1 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                    isSelected
+                      ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                      : "border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-zinc-500",
+                  ].join(" ")}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">{cfg.label}</span>
+                    <span className="text-sm font-bold">{cfg.creditCost} cr</span>
+                  </div>
+                  <span
+                    className={[
+                      "text-xs leading-snug",
+                      isSelected
+                        ? "text-zinc-300 dark:text-zinc-600"
+                        : "text-zinc-500 dark:text-zinc-400",
+                    ].join(" ")}
+                  >
+                    {cfg.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium leading-none mb-1">

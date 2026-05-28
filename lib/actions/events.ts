@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { deleteRekognitionCollection } from "@/lib/aws/rekognition";
 import { extractDriveFolderId } from "@/lib/google-drive";
+import { isValidTier, TIER_CONFIG, type EventTier } from "@/lib/credit-packages";
 
 export type EventActionState = { error: string } | undefined;
 
@@ -47,11 +48,14 @@ type ParsedForm = {
   name: string;
   event_date: string | null;
   folders: ParsedFolder[];
+  tier: EventTier;
 };
 
 function parseForm(formData: FormData): ParsedForm {
   const name = String(formData.get("name") ?? "").trim();
   const event_date = String(formData.get("event_date") ?? "").trim() || null;
+  const rawTier = String(formData.get("tier") ?? "starter");
+  const tier: EventTier = isValidTier(rawTier) ? rawTier : "starter";
 
   const labels = formData.getAll("folder_labels[]").map((v) => String(v).trim());
   const rawIds = formData.getAll("folder_ids[]").map((v) => String(v).trim());
@@ -65,7 +69,7 @@ function parseForm(formData: FormData): ParsedForm {
     folders.push({ label: labels[i] ?? "", folder_id });
   }
 
-  return { name, event_date, folders };
+  return { name, event_date, folders, tier };
 }
 
 function validate({ name }: ParsedForm): EventActionState {
@@ -91,12 +95,17 @@ export async function createEvent(
     return { error: "ไม่พบ tenant ของคุณ (อาจ session หมดอายุ)" };
   }
 
+  const tierCfg = TIER_CONFIG[input.tier];
   const { data: created, error } = await supabase
     .from("events")
     .insert({
       tenant_id: tenant.id,
       name: input.name,
       event_date: input.event_date,
+      tier: input.tier,
+      storage_limit_gb: tierCfg.storageLimitGb,
+      link_active_days: tierCfg.linkActiveDays,
+      data_retention_days: tierCfg.dataRetentionDays,
     })
     .select("id")
     .single();

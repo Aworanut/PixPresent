@@ -114,22 +114,26 @@ export type Database = {
           created_at: string
           credits_used: number
           currency: string | null
+          data_retention_days: number
           default_photo_price: number | null
           deleted_at: string | null
           event_date: string | null
           highlight_reel_enabled: boolean
           id: string
           is_indexed: boolean
+          link_active_days: number
           name: string
           reel_quota: number | null
           rekognition_collection_id: string | null
           share_link_expires_days: number
           share_token: string | null
           share_token_expires_at: string | null
+          storage_limit_gb: number
           sync_completed_at: string | null
           sync_photo_count: number
           sync_started_at: string | null
           tenant_id: string
+          tier: string
           updated_at: string
         }
         Insert: {
@@ -138,22 +142,26 @@ export type Database = {
           created_at?: string
           credits_used?: number
           currency?: string | null
+          data_retention_days?: number
           default_photo_price?: number | null
           deleted_at?: string | null
           event_date?: string | null
           highlight_reel_enabled?: boolean
           id?: string
           is_indexed?: boolean
+          link_active_days?: number
           name: string
           reel_quota?: number | null
           rekognition_collection_id?: string | null
           share_link_expires_days?: number
           share_token?: string | null
           share_token_expires_at?: string | null
+          storage_limit_gb?: number
           sync_completed_at?: string | null
           sync_photo_count?: number
           sync_started_at?: string | null
           tenant_id: string
+          tier?: string
           updated_at?: string
         }
         Update: {
@@ -162,22 +170,26 @@ export type Database = {
           created_at?: string
           credits_used?: number
           currency?: string | null
+          data_retention_days?: number
           default_photo_price?: number | null
           deleted_at?: string | null
           event_date?: string | null
           highlight_reel_enabled?: boolean
           id?: string
           is_indexed?: boolean
+          link_active_days?: number
           name?: string
           reel_quota?: number | null
           rekognition_collection_id?: string | null
           share_link_expires_days?: number
           share_token?: string | null
           share_token_expires_at?: string | null
+          storage_limit_gb?: number
           sync_completed_at?: string | null
           sync_photo_count?: number
           sync_started_at?: string | null
           tenant_id?: string
+          tier?: string
           updated_at?: string
         }
         Relationships: [

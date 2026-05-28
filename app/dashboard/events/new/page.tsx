@@ -27,6 +27,7 @@ export default function NewEventPage() {
         action={createEvent}
         submitLabel="สร้าง Event"
         pendingLabel="กำลังสร้าง..."
+        showTierSelector={true}
         cancelHref="/dashboard"
       />
     </div>
