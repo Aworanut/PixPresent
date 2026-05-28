@@ -148,7 +148,21 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ status: 'approved', credits: creditsClaimed, newBalance })
     }
 
-    // 9b. Pending path — slip stays 'pending' in DB (already inserted)
+    // 9b. SlipOK explicitly rejected — auto-reject slip, no admin review needed
+    if (verification.rejected) {
+      const { error: rejectErr } = await admin.rpc('reject_topup', {
+        p_slip_id: slipId,
+        p_reason: verification.error ?? 'SlipOK rejected',
+      })
+      if (rejectErr) console.error('[upload-slip] reject_topup RPC failed:', rejectErr)
+
+      return Response.json(
+        { error: `สลิปไม่ผ่านการตรวจสอบ: ${verification.error ?? 'กรุณาตรวจสอบยอดโอนและลองใหม่'}` },
+        { status: 400 },
+      )
+    }
+
+    // 9c. Network error / SlipOK unavailable — keep pending for admin review
     await sendAdminSlipPending({
       slipId,
       tenantName: tenant.name,

@@ -70,10 +70,10 @@ export async function verifySlipWithSlipOK(
   slipImageBuffer: Buffer,
   amountThb: number,
   mimeType = 'application/octet-stream',
-): Promise<{ verified: boolean; transactionId?: string; error?: string }> {
+): Promise<{ verified: boolean; rejected: boolean; transactionId?: string; error?: string }> {
   const apiUrl = process.env.SLIPOK_API_URL
   if (!apiUrl) {
-    return { verified: false, error: 'SLIPOK_API_URL not configured' }
+    return { verified: false, rejected: false, error: 'SLIPOK_API_URL not configured' }
   }
 
   try {
@@ -107,16 +107,20 @@ export async function verifySlipWithSlipOK(
     if (response.ok && data.success === true) {
       return {
         verified: true,
+        rejected: false,
         transactionId: data.data?.transRef ?? undefined,
       }
     }
 
+    // SlipOK responded but explicitly rejected the slip (not a network error)
     return {
       verified: false,
+      rejected: true,
       error: data.message ?? 'Verification failed',
     }
   } catch (err) {
+    // Network error / timeout — don't auto-reject, fall back to pending
     const message = err instanceof Error ? err.message : String(err)
-    return { verified: false, error: message }
+    return { verified: false, rejected: false, error: message }
   }
 }
