@@ -54,6 +54,7 @@ begin
   end if;
 
   -- 2. Mark slip approved
+  -- verified_by intentionally NULL: auto-approved by SlipOK (no human reviewer)
   update public.slip_uploads
      set status      = 'approved',
          verified_at = now()
@@ -112,9 +113,17 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_slip slip_uploads%rowtype;
 begin
-  -- 1. Lock slip row; verify it exists
-  perform 1
+  -- 0. Validate reason is non-empty
+  if p_reason is null or trim(p_reason) = '' then
+    raise exception 'reject_topup: reason must not be empty';
+  end if;
+
+  -- 1. Lock slip row; verify it exists and is still pending
+  select *
+    into v_slip
     from public.slip_uploads
    where id = p_slip_id
      for update;
@@ -123,17 +132,11 @@ begin
     raise exception 'slip_not_found: slip_id=% does not exist', p_slip_id;
   end if;
 
-  -- 2. Verify still pending (guard against double-processing)
-  perform 1
-    from public.slip_uploads
-   where id     = p_slip_id
-     and status = 'pending';
-
-  if not found then
-    raise exception 'slip_not_pending: slip_id=% is not in pending status', p_slip_id;
+  if v_slip.status <> 'pending' then
+    raise exception 'slip_not_pending: slip_id=% is already %', p_slip_id, v_slip.status;
   end if;
 
-  -- 3. Mark slip rejected
+  -- 2. Mark slip rejected
   update public.slip_uploads
      set status        = 'rejected',
          reject_reason = p_reason,
