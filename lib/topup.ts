@@ -92,7 +92,7 @@ export async function verifySlipWithSlipOK(
 
     const headers: Record<string, string> = {}
     if (process.env.SLIPOK_API_TOKEN) {
-      headers['x-authorization'] = `Bearer ${process.env.SLIPOK_API_TOKEN}`
+      headers['x-authorization'] = process.env.SLIPOK_API_TOKEN
     }
 
     const response = await fetch(apiUrl, {
