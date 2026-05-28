@@ -105,6 +105,7 @@ export async function createEvent(
 
   const tierCfg = TIER_CONFIG[input.tier];
 
+  // Optimistic UX pre-check; the RPC's FOR UPDATE row-lock is the authoritative double-spend guard.
   if (tenant.credit_balance < tierCfg.creditCost) {
     return {
       error: `เครดิตไม่พอ — ต้องการ ${tierCfg.creditCost} cr แต่มีเพียง ${tenant.credit_balance} cr กรุณาเติมเครดิตก่อนสร้าง event`,
@@ -141,20 +142,20 @@ export async function createEvent(
       .from("event_storage_folders")
       .insert(
         input.folders.map((f) => ({
-          event_id: eventId as string,
+          event_id: eventId,
           label: f.label,
           folder_id: f.folder_id,
         })),
       );
     if (folderErr) {
       // Roll back the event so the user can retry without orphans.
-      await admin.from("events").delete().eq("id", eventId as string);
+      await admin.from("events").delete().eq("id", eventId);
       return { error: `เพิ่ม folder ไม่สำเร็จ: ${folderErr.message}` };
     }
   }
 
   revalidatePath("/dashboard");
-  redirect(`/dashboard/events/${eventId as string}`);
+  redirect(`/dashboard/events/${eventId}`);
 }
 
 export async function updateEvent(
