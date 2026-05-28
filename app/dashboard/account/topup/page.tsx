@@ -32,7 +32,7 @@ export default async function TopupPage() {
         </div>
       </div>
 
-      <TopupFlow initialBalance={ctx.tenant.credit_balance} />
+      <TopupFlow />
     </div>
   );
 }

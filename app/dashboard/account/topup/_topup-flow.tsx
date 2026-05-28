@@ -6,11 +6,7 @@ import { PaymentPanel } from "./_payment-panel";
 
 type SelectedPackage = { id: string; priceThb: number; credits: number };
 
-type Props = {
-  initialBalance: number;
-};
-
-export function TopupFlow({ initialBalance: _ }: Props) {
+export function TopupFlow() {
   const [selected, setSelected] = useState<SelectedPackage | null>(null);
 
   return (
