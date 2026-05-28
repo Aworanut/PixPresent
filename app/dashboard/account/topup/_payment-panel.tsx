@@ -11,6 +11,12 @@ type Props = {
   selected: SelectedPackage;
 };
 
+type ApiResponse =
+  | { status: "approved"; credits: number; newBalance: number }
+  | { status: "pending"; message: string }
+  | { status: "error"; error: string }
+  | { error: string };
+
 type UploadResult =
   | { status: "approved"; credits: number; newBalance: number }
   | { status: "pending"; message: string }
@@ -74,13 +80,18 @@ export function PaymentPanel({ selected }: Props) {
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await res.json() as ApiResponse;
 
       if (!res.ok) {
-        setResult({ status: "error", message: data.error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง" });
-      } else if (data.status === "approved") {
-        setResult({ status: "approved", credits: data.credits, newBalance: data.newBalance });
-      } else if (data.status === "pending") {
+        const errMsg = "error" in data ? data.error : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+        setResult({ status: "error", message: errMsg });
+      } else if ("status" in data && data.status === "approved") {
+        setResult({
+          status: "approved",
+          credits: Number(data.credits),
+          newBalance: Number(data.newBalance),
+        });
+      } else if ("status" in data && data.status === "pending") {
         setResult({ status: "pending", message: data.message });
       } else {
         setResult({ status: "error", message: "ไม่ได้รับผลลัพธ์ที่ถูกต้อง" });

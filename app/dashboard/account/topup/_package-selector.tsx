@@ -99,9 +99,11 @@ export function PackageSelector({ onSelect }: Props) {
       ))}
 
       {/* Custom card */}
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={selectCustom}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") selectCustom(); }}
         className={[cardBase, selected === "custom" ? cardActive : cardIdle].join(" ")}
       >
         <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Custom</p>
@@ -110,6 +112,9 @@ export function PackageSelector({ onSelect }: Props) {
           <div className="mt-3" onClick={(e) => e.stopPropagation()}>
             <input
               type="number"
+              aria-label="จำนวนเงิน (THB)"
+              aria-invalid={!!customError}
+              aria-describedby={customError ? "custom-amount-error" : undefined}
               min={CUSTOM_TOPUP.minThb}
               max={CUSTOM_TOPUP.maxThb}
               step={1}
@@ -121,11 +126,13 @@ export function PackageSelector({ onSelect }: Props) {
               autoFocus
             />
             {customError && (
-              <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{customError}</p>
+              <p id="custom-amount-error" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+                {customError}
+              </p>
             )}
           </div>
         )}
-      </button>
+      </div>
     </div>
   );
 }
