@@ -27,6 +27,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "concurrently": "^9.2.1",
+    "exif-reader": "^2.0.3",
     "fflate": "^0.8.3",
     "googleapis": "^172.0.0",
     "lucide-react": "^1.16.0",

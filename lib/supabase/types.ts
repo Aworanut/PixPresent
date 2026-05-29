@@ -286,44 +286,59 @@ export type Database = {
       }
       photos: {
         Row: {
+          copyright: string | null
           created_at: string
           event_id: string
+          event_storage_folder_id: string | null
           face_details: Json
           id: string
           indexed_at: string | null
+          original_filename: string | null
+          photographer_name: string | null
           price: number | null
           r2_full_url: string | null
           r2_web_url: string | null
           rekognition_face_ids: string[]
           storage_file_id: string
+          taken_at: string | null
           visibility: string
           watermark_url: string | null
         }
         Insert: {
+          copyright?: string | null
           created_at?: string
           event_id: string
+          event_storage_folder_id?: string | null
           face_details?: Json
           id?: string
           indexed_at?: string | null
+          original_filename?: string | null
+          photographer_name?: string | null
           price?: number | null
           r2_full_url?: string | null
           r2_web_url?: string | null
           rekognition_face_ids?: string[]
           storage_file_id: string
+          taken_at?: string | null
           visibility?: string
           watermark_url?: string | null
         }
         Update: {
+          copyright?: string | null
           created_at?: string
           event_id?: string
+          event_storage_folder_id?: string | null
           face_details?: Json
           id?: string
           indexed_at?: string | null
+          original_filename?: string | null
+          photographer_name?: string | null
           price?: number | null
           r2_full_url?: string | null
           r2_web_url?: string | null
           rekognition_face_ids?: string[]
           storage_file_id?: string
+          taken_at?: string | null
           visibility?: string
           watermark_url?: string | null
         }
@@ -333,6 +348,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_event_storage_folder_id_fkey"
+            columns: ["event_storage_folder_id"]
+            isOneToOne: false
+            referencedRelation: "event_storage_folders"
             referencedColumns: ["id"]
           },
         ]

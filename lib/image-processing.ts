@@ -8,10 +8,14 @@
  */
 
 import sharp from "sharp";
+import exifReader from "exif-reader";
 
 export type ProcessedImage = {
   web: Buffer; // ~300-800 KB
   full: Buffer; // ~2-8 MB
+  artist?: string;
+  copyright?: string;
+  takenAt?: string;
 };
 
 /**
@@ -21,6 +25,30 @@ export type ProcessedImage = {
  */
 export async function processImage(input: Buffer): Promise<ProcessedImage> {
   const pipeline = sharp(input, { failOn: "error" });
+
+  const metadata = await pipeline.metadata();
+  let artist: string | undefined;
+  let copyright: string | undefined;
+  let takenAt: string | undefined;
+
+  if (metadata.exif) {
+    try {
+      const exifData = exifReader(metadata.exif);
+      if (exifData.Image) {
+        if (typeof exifData.Image.Artist === "string" && exifData.Image.Artist.trim()) {
+          artist = exifData.Image.Artist.trim();
+        }
+        if (typeof exifData.Image.Copyright === "string" && exifData.Image.Copyright.trim()) {
+          copyright = exifData.Image.Copyright.trim();
+        }
+      }
+      if (exifData.Photo && exifData.Photo.DateTimeOriginal instanceof Date) {
+        takenAt = exifData.Photo.DateTimeOriginal.toISOString();
+      }
+    } catch (err) {
+      console.error("[exif] Failed to parse EXIF metadata:", err);
+    }
+  }
 
   const [web, full] = await Promise.all([
     pipeline
@@ -50,5 +78,5 @@ export async function processImage(input: Buffer): Promise<ProcessedImage> {
       .toBuffer(),
   ]);
 
-  return { web, full };
+  return { web, full, artist, copyright, takenAt };
 }

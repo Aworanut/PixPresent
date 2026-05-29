@@ -34,7 +34,7 @@ export default async function EventDetailPage({
         .order("created_at", { ascending: true }),
       supabase
         .from("photos")
-        .select("id, r2_web_url, visibility, face_details, storage_file_id")
+        .select("id, r2_web_url, visibility, face_details, storage_file_id, original_filename, taken_at, photographer_name, copyright")
         .eq("event_id", id)
         .order("created_at", { ascending: true }),
       supabase.auth.getUser(),
@@ -60,6 +60,10 @@ export default async function EventDetailPage({
     visibility: (p.visibility ?? "match_only") as GalleryPhoto["visibility"],
     face_details: (p.face_details as GalleryPhoto["face_details"]) ?? [],
     storage_file_id: p.storage_file_id ?? "",
+    original_filename: p.original_filename ?? null,
+    taken_at: p.taken_at ?? null,
+    photographer_name: p.photographer_name ?? null,
+    copyright: p.copyright ?? null,
   }));
 
   const folderList = folders ?? [];

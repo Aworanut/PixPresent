@@ -258,6 +258,8 @@ async function runSync({
             downloadDriveFile,
             admin,
             hasR2,
+            folderDbId: folder.id,
+            folderLabel,
           });
           // backfill ไม่ใช่รูปใหม่ — ไม่นับเข้า totalProcessed
         } else {
@@ -271,6 +273,8 @@ async function runSync({
             admin,
             hasR2,
             hasAWS,
+            folderDbId: folder.id,
+            folderLabel,
           });
           totalProcessed++; // นับเฉพาะรูปใหม่จริงๆ
         }
@@ -308,21 +312,26 @@ async function backfillR2Url({
   downloadDriveFile,
   admin,
   hasR2,
+  folderDbId,
+  folderLabel,
 }: {
-  file: { id: string; name: string; mimeType: string };
+  file: { id: string; name: string; mimeType: string; modifiedTime?: string; imageMediaMetadata?: { time?: string } | null };
   existingPhotoId: string;
   eventId: string;
   drive: Awaited<ReturnType<typeof import("@/lib/google-drive-api").getDriveClient>>;
   downloadDriveFile: typeof import("@/lib/google-drive-api").downloadDriveFile;
   admin: ReturnType<typeof createServiceRoleClient>;
   hasR2: boolean;
+  folderDbId: string;
+  folderLabel: string;
 }): Promise<void> {
   if (!hasR2) return;
 
   const original = await withRetry(() => downloadDriveFile(drive, file.id), 3);
 
   const { processImage } = await import("@/lib/image-processing");
-  const { web, full } = await processImage(original);
+  const exif = await processImage(original);
+  const { web, full } = exif;
 
   const { uploadToR2, r2Paths } = await import("@/lib/r2");
   const webKey = r2Paths.photoWeb(eventId, existingPhotoId);
@@ -338,6 +347,11 @@ async function backfillR2Url({
     .update({
       r2_web_url: webUpload.ok ? webUpload.url : null,
       r2_full_url: fullUpload.ok ? fullUpload.url : null,
+      original_filename: file.name,
+      taken_at: exif.takenAt || file.imageMediaMetadata?.time || file.modifiedTime || new Date().toISOString(),
+      photographer_name: exif.artist || null,
+      copyright: exif.copyright || null,
+      event_storage_folder_id: folderDbId,
     })
     .eq("id", existingPhotoId);
 }
@@ -351,8 +365,10 @@ async function processOnePhoto({
   admin,
   hasR2,
   hasAWS,
+  folderDbId,
+  folderLabel,
 }: {
-  file: { id: string; name: string; mimeType: string };
+  file: { id: string; name: string; mimeType: string; modifiedTime?: string; imageMediaMetadata?: { time?: string } | null };
   eventId: string;
   collectionId: string;
   drive: Awaited<ReturnType<typeof import("@/lib/google-drive-api").getDriveClient>>;
@@ -360,13 +376,16 @@ async function processOnePhoto({
   admin: ReturnType<typeof createServiceRoleClient>;
   hasR2: boolean;
   hasAWS: boolean;
+  folderDbId: string;
+  folderLabel: string;
 }): Promise<void> {
   // 1. Download original from Drive (with exponential backoff on 429)
   const original = await withRetry(() => downloadDriveFile(drive, file.id), 3);
 
   // 2. Resize into web + full variants
   const { processImage } = await import("@/lib/image-processing");
-  const { web, full } = await processImage(original);
+  const exif = await processImage(original);
+  const { web, full } = exif;
 
   // 3. Generate a photo ID
   const photoId = crypto.randomUUID();
@@ -444,6 +463,11 @@ async function processOnePhoto({
     rekognition_face_ids: faceIds,
     face_details: faceDetails,
     indexed_at: new Date().toISOString(),
+    original_filename: file.name,
+    taken_at: exif.takenAt || file.imageMediaMetadata?.time || file.modifiedTime || new Date().toISOString(),
+    photographer_name: exif.artist || null,
+    copyright: exif.copyright || null,
+    event_storage_folder_id: folderDbId,
   });
 }
 

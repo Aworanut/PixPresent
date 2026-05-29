@@ -1,126 +1,159 @@
-# Pixture / PixPresent — Handoff Document
-
-**Date:** 2026-05-28  
+# Pixture (FaceFind) — Handoff Document
+**Date:** 2026-05-29  
 **Project root:** `/Users/nuk/Pixture`  
-**GitHub:** https://github.com/Aworanut/PixPresent
+**Stack:** Next.js 16 App Router · Supabase · AWS Rekognition · Cloudflare R2 · Google Drive API · SlipOK
 
 ---
 
-## What was done this session
+## What This Is
 
-### 1. Drive Modal redesign (`_event-toolbar.tsx`)
-- **Removed** per-row Connect / Disconnect button and `statuses` state
-- **Added** `onBlur` auto-fetch on the folder URL field using `testDriveFolder` server action
-  - Shows `⋯` / `✓` / `✗` inline inside the input field
-  - Auto-fills label with Drive folder name if label is empty
-  - Clears status when URL changes
-- **Save** now closes modal immediately (no toast)
-- **Renamed** Sync → Import throughout (`SyncModal` title, button labels, status messages)
-- **Fixed** `abortRef` bug: was `{ current: null }` plain object (re-created every render) → now `useRef<AbortController | null>(null)` so "หยุด" button actually works
+**PixPresent / FaceFind** — Thai event-photo distribution SaaS. Organizers upload photos from Google Drive, the system indexes faces via AWS Rekognition, then guests find their own photos by uploading a selfie (face search). Monetisation: credit-based top-up via bank transfer slip + SlipOK auto-verification.
 
-### 2. Account Management page (new)
-- Route: `/dashboard/account?tab=profile|security`
-- Entry point: click tenant name/email in dashboard header → `/dashboard/account`
-- **Profile tab:** edit organization name, display email (read-only)
-- **Security tab:** change password form (new password + confirm)
-- **Billing / Usage tabs:** visible but disabled + "(coming soon)" — intentional reminder
-
-**New files:**
-- `lib/actions/account.ts` — `updateTenantName`, `changePassword`, `disconnectGoogleAccount` (last one unused in UI for now)
-- `app/dashboard/account/page.tsx`
-- `app/dashboard/account/_profile-section.tsx`
-- `app/dashboard/account/_security-section.tsx`
-
-**Modified:**
-- `app/dashboard/layout.tsx` — tenant name/email wrapped in `<Link href="/dashboard/account">`
-
-### 3. ISSUES.md checkbox updates
-- **#3 DB Schema:** ticked core tables ✓, RLS ✓, TypeScript types ✓ — credit tables still pending
-- **#4 Auth:** all items ticked ✓
+Full PRD: `/Users/nuk/Pixture/facefind_spec.html`  
+Issue tracker: `/Users/nuk/Pixture/ISSUES.md`
 
 ---
 
-## Key design decisions (grill-me session)
+## Current State (as of this handoff)
 
-| Decision | Outcome |
-|---|---|
-| Per-folder "Connect" button | Removed — adding URL = connected by definition |
-| "Sync" rename | → **Import** (clearer intent: pull photos in) |
-| "Publish" concept | Not needed — share link already gates guest access |
-| Auto-sync vs on-demand | On-demand only (already the case) |
-| Multi-Gmail workaround | Not Pixture's problem — Drive is just import source; R2 is Pixture's storage |
-| Account Management scope | Profile + Security only for now; Billing + Usage depend on #12/#13 |
-| Google Drive section in Security | Removed — user didn't ask, Drive is managed in event modal |
+### ✅ Working end-to-end (tested locally with real credentials)
 
----
+| Flow | Status |
+|------|--------|
+| Organizer signup → tenant provisioning | ✅ |
+| Event CRUD + multi-folder Google Drive | ✅ |
+| Sync & Index: Drive → resize → R2 upload → Rekognition IndexFaces | ✅ confirmed today |
+| Guest link generation (token, expiry, revoke) | ✅ |
+| Guest face search: selfie → Rekognition SearchFacesByImage → matched photos | ✅ confirmed today (user reached face search step) |
+| Photo gallery + download (ZIP) | ✅ |
+| Credit top-up via bank slip + SlipOK auto-verify | ✅ (verified with real slip) |
+| Admin slip approval page `/admin/slips` | ✅ |
+| Credit balance indicator + history | ✅ |
+| Event activation / credit deduction / refund on delete | ✅ |
 
-## Current state of Phase 1 issues
+### ❌ Remaining before Internal Pilot (#18)
 
-See `/Users/nuk/Pixture/ISSUES.md` for full detail. Summary:
-
-| # | Issue | Status |
-|---|---|---|
-| #3 | DB Schema | Partial — credit tables missing |
-| #4 | Auth | ✅ Done |
-| #5 | Event CRUD | ✅ Done |
-| #7 | Import & Index (was Sync) | ✅ Done (NFR 1k photos unverified) |
-| #8 | Blacklist Manager | ✅ Done (E2E unverified) |
-| #9 | Guest Link Generation | ✅ Done |
-| #10 | Guest Face Search | ✅ Done (latency unverified) |
-| #11 | Photo Gallery + Download | ✅ Done (session persist deferred) |
-| #12 | Credit Package Pricing | ❌ HITL — pricing decision needed |
-| #13 | Slip Upload + Credit Ledger | ❌ Not started |
-| #14 | Credit Balance UI | ❌ Not started (maps to Account > Billing/Usage) |
-| #19 | Super Admin Panel | ❌ Not started |
+| # | Task | Notes |
+|---|------|-------|
+| #7 | 1,000 photos no timeout | Code is sequential; concurrent processing needed before real-scale test |
+| #8 | Verify blacklist blocks guest search E2E | Code ready; needs manual test |
+| #10 | Face search latency ≤ 5s for 1,000 photos | Needs real data |
+| #11 | Gallery load ≤ 2s | Needs real data |
+| #15 | PDPA consent modal | **HITL** — needs legal review of Thai/EN consent copy |
+| #16 | Rekognition cleanup policy | **HITL** — product decision required |
+| #17 | Supabase Cloud + Vercel production deploy | Blocked by all above |
+| #18 | Internal pilot | Blocked by #17 |
 
 ---
 
-## Architecture notes
+## Architecture Decisions (do not undo)
 
-### Import flow (Google Drive → Pixture)
+- **`create_event_deduct_credit` / `delete_event_with_refund` / `approve_topup_credit` / `reject_topup`** — all SECURITY DEFINER RPCs, EXECUTE revoked from public/anon/authenticated. Must always be called via `createServiceRoleClient()`.
+- **Sync route** uses Server-Sent Events (SSE) — `/api/events/[id]/sync` streams progress to `_sync-button.tsx`. No `maxDuration` set yet (needed before production for 1,000-photo batches).
+- **SlipOK auth header** is `x-authorization: {TOKEN}` — NO `Bearer` prefix.
+- **Admin guard** in `app/admin/layout.tsx` checks `user.email === ADMIN_EMAIL` (from `lib/payment-config.ts`).
+- **Tab routing** in account page: Profile/Security use `?tab=` query param; Credits/Top-up are full href routes (`/dashboard/account/credits`, `/dashboard/account/topup`).
+- **`rejected: boolean`** flag in `verifySlipWithSlipOK()` distinguishes SlipOK explicit rejection (auto-reject slip) vs network error (keep pending for admin).
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/api/events/[id]/sync/route.ts` | SSE sync route (sequential, no concurrency yet) |
+| `app/api/topup/upload-slip/route.ts` | Slip upload, SlipOK verify, auto-approve/reject |
+| `lib/topup.ts` | `validateTopupRequest` + `verifySlipWithSlipOK` |
+| `lib/aws/rekognition.ts` | Rekognition client wrapper |
+| `lib/google-drive-api.ts` | Drive client, `listImagesInFolder`, `downloadDriveFile` |
+| `lib/image-processing.ts` | Resize to web (1920px JPEG 85%) + full |
+| `lib/actions/events.ts` | `createEvent` / `softDeleteEvent` calling RPCs |
+| `app/dashboard/account/topup/` | Top-up UI (page + `_topup-flow.tsx`, `_package-selector.tsx`, `_payment-panel.tsx`) |
+| `app/dashboard/account/credits/page.tsx` | Credit ledger + slip history |
+| `app/admin/slips/` | Admin slip approval (page + `_slip-actions.tsx` + `_actions.ts`) |
+| `app/admin/layout.tsx` | Admin guard — email check |
+| `lib/payment-config.ts` | `TOPUP_PACKAGES`, `CUSTOM_TOPUP`, `ADMIN_EMAIL`, bank info |
+
+---
+
+## Environment Variables (`.env.local`)
+
+**Never commit these.** All required for full functionality:
+
 ```
-organizer adds folder URLs to event (event_storage_folders table)
-→ clicks Import in toolbar modal
-→ POST /api/events/[id]/sync (SSE stream)
-→ pulls photos from all folders using tenant's google_refresh_token
-→ resize + upload to R2
-→ index faces in Rekognition
-→ save to photos table
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# AWS Rekognition (3 vars user confirmed they have)
+AWS_REGION=ap-southeast-1
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+
+# Cloudflare R2
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_PUBLIC_URL=
+
+# Google OAuth (Drive)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+NEXTAUTH_URL=http://localhost:3000
+
+# SlipOK
+SLIPOK_API_URL=https://api.slipok.com/api/line/apikey/XXXXX
+SLIPOK_API_TOKEN=
+
+# Resend (email)
+RESEND_API_KEY=
 ```
 
-**Auth:** One Google OAuth token per tenant (`tenants.google_refresh_token`). Photographers must share folders to this account. Multi-Gmail workaround is acceptable (not Pixture's concern).
-
-### Key tables
-- `tenants` — `id, name, owner_user_id, google_refresh_token, credit_balance, plan`
-- `events` — `id, tenant_id, name, event_date, is_indexed, share_token, share_token_expires_at, ...`
-- `event_storage_folders` — `id, event_id, label, folder_id`
-- `photos` — `id, event_id, r2_web_url, is_hidden, face_details, storage_file_id, rekognition_face_ids`
-- `face_blacklist` — `id, event_id, face_id`
-
-### Important files
-- `app/dashboard/events/[id]/_event-toolbar.tsx` — Drive modal + Import modal + Share modal
-- `app/dashboard/events/[id]/_photo-gallery.tsx` — gallery with tabs (ทั้งหมด | ถูกแบน), grid/list, action menu
-- `app/dashboard/events/[id]/page.tsx` — event detail (gallery-first layout)
-- `app/e/[token]/_face-search.tsx` — guest face search + lightbox + download
-- `app/api/events/[id]/sync/route.ts` — SSE import route
-- `lib/actions/account.ts` — account management server actions
+> **Security note:** `ADMIN_EMAIL` is currently hardcoded as `"woranut.ak@gmail.com"` in `lib/payment-config.ts`. Move to `SUPER_ADMIN_EMAIL` env var before any public repo push.
 
 ---
 
-## What's next (suggested)
+## Known Issues / TODOs
 
-**Highest priority AFK work:**
-1. **#13 Slip Upload + Credit Ledger** — schema + server actions for manual payment flow
-2. **#19 Super Admin Panel** — slip verification UI
-3. **#14 Billing UI** — once #12/#13 done, add to Account page Billing/Usage tabs
-
-**HITL blockers:**
-- **#12 Credit Package Pricing** — needs pricing decision (packages, amounts, free trial)
+1. **`#13-race` comment** in `upload-slip/route.ts` — `verification.transactionId` not yet stored in `slip_uploads`. Should add unique constraint to prevent double-credit on duplicate slips (SlipOK rejects duplicates itself, but no DB-level guard).
+2. **Sync concurrency** — `app/api/events/[id]/sync/route.ts` processes photos sequentially. Needs concurrent Promise pool (5–10 concurrent) + `export const maxDuration = 300` before testing 1,000 photos.
+3. **`tenants.phone TEXT null`** column — planned in #3 schema but never migrated.
+4. **#19 Admin panel** — basic version exists at `/admin/slips` but full spec (audit log, dashboard, filter history) not complete.
 
 ---
 
-## Suggested skills
+## Recent Commits (for context)
 
-- `/grill-me` — for thinking through credit/billing UX before building #14
-- `/scrutinize` — after implementing #13 to check edge cases (double approve, race conditions)
-- `/debug-mantra` — if Rekognition face search issues surface during E2E testing
+```
+fb8201c fix: replace 'Indochina Time' with 'Bangkok Time' in SlipOK error messages
+fd95bc6 feat: auto-reject slips when SlipOK explicitly rejects them
+9ed8ee1 fix: remove Bearer prefix from SlipOK auth header + cleanup debug logs
+6279be0 feat: add /admin/slips approval page
+9b2e34b feat: add Credits and Top-up tabs to account page (#14)
+cac2ece fix: scope attrs + null-safe date in credits page (#14)
+e06ca54 feat: add /dashboard/account/credits history page (#14 Task 4)
+```
+
+---
+
+## Immediate Next Steps (suggested order)
+
+1. **E2E guest flow test** — open a guest link → upload selfie → view gallery → download ZIP. Confirm no errors.
+2. **Blacklist E2E test (#8)** — use Blacklist Manager to block a face → search again → verify photo is filtered out.
+3. **Sync concurrency fix (#7)** — add concurrent Promise pool + `maxDuration` to `app/api/events/[id]/sync/route.ts` to support 1,000 photos without timeout.
+4. **PDPA consent (#15)** — await legal approval, then add modal + `consent_given_at` column to `guest_sessions`.
+5. **Cleanup policy (#16)** — await product decision, then implement Supabase cron job.
+6. **Production deploy (#17)** — push migrations to Supabase Cloud + deploy to Vercel.
+
+---
+
+## Suggested Skills
+
+The next agent should invoke these skills as appropriate:
+
+- **`superpowers:subagent-driven-development`** — for any multi-task implementation work (concurrency fix, PDPA modal, etc.)
+- **`superpowers:writing-plans`** — before starting a new feature/issue
+- **`superpowers:test-driven-development`** — when implementing sync concurrency or any new feature
+- **`superpowers:finishing-a-development-branch`** — before merging completed work

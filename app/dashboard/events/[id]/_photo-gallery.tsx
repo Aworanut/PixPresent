@@ -19,6 +19,9 @@ import {
   XMarkIcon,
   ArrowDownTrayIcon,
   TrashIcon,
+  GlobeAltIcon,
+  UserIcon,
+  EyeSlashIcon,
 } from "@heroicons/react/24/outline";
 
 type FaceDetail = {
@@ -32,6 +35,10 @@ export type GalleryPhoto = {
   visibility: PhotoVisibility;
   face_details: FaceDetail[];
   storage_file_id: string;
+  original_filename: string | null;
+  taken_at: string | null;
+  photographer_name: string | null;
+  copyright: string | null;
 };
 
 type Tab = "active" | "hidden";
@@ -239,16 +246,28 @@ export function PhotoGallery({ eventId, photos }: Props) {
           {selectedIds.size > 0 && (
             <div className="ml-auto flex items-center gap-1.5 flex-wrap">
               <HairlineButton onClick={bulkSet("public")} disabled={bulkPending}>
-                🌐 เผยแพร่ทั้งหมด
+                <span className="flex items-center gap-1">
+                  <GlobeAltIcon className="h-3.5 w-3.5 stroke-[1.5] text-zinc-400 dark:text-zinc-500" />
+                  <span>เผยแพร่ทั้งหมด</span>
+                </span>
               </HairlineButton>
               <HairlineButton onClick={bulkSet("match_only")} disabled={bulkPending}>
-                👤 เฉพาะใบหน้าตรง
+                <span className="flex items-center gap-1">
+                  <UserIcon className="h-3.5 w-3.5 stroke-[1.5] text-zinc-400 dark:text-zinc-500" />
+                  <span>เฉพาะใบหน้าตรง</span>
+                </span>
               </HairlineButton>
               <HairlineButton onClick={bulkSet("hidden")} disabled={bulkPending}>
-                🚫 ไม่เผยแพร่
+                <span className="flex items-center gap-1">
+                  <EyeSlashIcon className="h-3.5 w-3.5 stroke-[1.5] text-zinc-400 dark:text-zinc-500" />
+                  <span>ไม่เผยแพร่</span>
+                </span>
               </HairlineButton>
               <HairlineButton onClick={bulkDelete} disabled={bulkPending} danger>
-                🗑 ลบ
+                <span className="flex items-center gap-1">
+                  <TrashIcon className="h-3.5 w-3.5 stroke-[1.5] text-zinc-600 dark:text-zinc-400 group-hover:text-rose-600 dark:group-hover:text-rose-400" />
+                  <span>ลบ</span>
+                </span>
               </HairlineButton>
             </div>
           )}
@@ -336,32 +355,35 @@ function GridCard({
     <div
       onClick={selectMode ? () => onToggleSelect(photo.id) : onViewPhoto}
       className={[
-        "group relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 transition-all duration-300 cursor-pointer",
+        "group relative aspect-square rounded-lg bg-zinc-100 dark:bg-zinc-800 transition-all duration-300 cursor-pointer",
         isHidden ? "opacity-50" : "",
         selected
           ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-white dark:ring-offset-zinc-950"
           : "",
       ].join(" ")}
     >
-      {url ? (
-        <Image
-          src={url}
-          alt="event photo"
-          fill
-          className="object-cover"
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-          loading="lazy"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <PhotoIcon className="h-6 w-6 text-zinc-300 dark:text-zinc-600" />
-        </div>
-      )}
+      {/* Image Wrapper to handle rounded corners and image boundary clipping */}
+      <div className="absolute inset-0 rounded-lg overflow-hidden">
+        {url ? (
+          <Image
+            src={url}
+            alt="event photo"
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+            loading="lazy"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <PhotoIcon className="h-6 w-6 text-zinc-300 dark:text-zinc-600" />
+          </div>
+        )}
 
-      {/* Selected overlay */}
-      {selectMode && selected && (
-        <div className="absolute inset-0 bg-[#D4AF37]/10" />
-      )}
+        {/* Selected overlay */}
+        {selectMode && selected && (
+          <div className="absolute inset-0 bg-[#D4AF37]/10" />
+        )}
+      </div>
 
       {/* Checkbox */}
       {selectMode && (
@@ -421,7 +443,7 @@ function ListRow({
 }) {
   const faceCount = photo.face_details.length;
   const url = photo.r2_web_url;
-  const filename = photo.storage_file_id.split("/").pop() ?? photo.storage_file_id;
+  const filename = photo.original_filename || (photo.storage_file_id.split("/").pop() ?? photo.storage_file_id);
   const isHidden = photo.visibility === "hidden";
 
   return (
@@ -440,7 +462,9 @@ function ListRow({
         {url ? (
           <Image src={url} alt="photo" fill className="object-cover" sizes="40px" loading="lazy" />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-base text-zinc-400">🖼️</div>
+          <div className="absolute inset-0 flex items-center justify-center text-zinc-400">
+            <PhotoIcon className="h-5 w-5 stroke-[1.5]" />
+          </div>
         )}
       </div>
 
@@ -449,12 +473,14 @@ function ListRow({
         <p className="text-sm text-zinc-900 dark:text-zinc-100 truncate font-mono text-xs">
           {filename}
         </p>
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+        <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
           {faceCount > 0 ? `${faceCount} ใบหน้า` : "ไม่พบใบหน้า"}
           {" · "}
           <span className={photo.visibility === "public" ? "text-[#D4AF37]" : isHidden ? "text-zinc-400" : ""}>
             {VISIBILITY_LABEL[photo.visibility]}
           </span>
+          {photo.photographer_name && ` · ช่างภาพ: ${photo.photographer_name}`}
+          {photo.taken_at && ` · ${formatThaiDate(photo.taken_at)}`}
         </p>
       </div>
 
@@ -483,7 +509,7 @@ function VisibilityBadge({ v }: { v: PhotoVisibility }) {
   if (v === "public") {
     return (
       <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium bg-[#D4AF37]/20 text-[#111111] dark:text-[#FBF9F6] backdrop-blur-sm">
-        🌐
+        <GlobeAltIcon className="h-3 w-3 stroke-[1.5]" />
       </span>
     );
   }
@@ -602,34 +628,37 @@ function PhotoMenu({ photo, eventId }: { photo: GalleryPhoto; eventId: string })
           <MenuItem
             onClick={() => setVis("public")}
             active={photo.visibility === "public"}
+            icon={GlobeAltIcon}
           >
-            🌐 เผยแพร่ทั้งหมด
+            เผยแพร่ทั้งหมด
           </MenuItem>
           <MenuItem
             onClick={() => setVis("match_only")}
             active={photo.visibility === "match_only"}
+            icon={UserIcon}
           >
-            👤 เฉพาะใบหน้าตรง
+            เฉพาะใบหน้าตรง
           </MenuItem>
           <MenuItem
             onClick={() => setVis("hidden")}
             active={photo.visibility === "hidden"}
+            icon={EyeSlashIcon}
           >
-            🚫 ไม่เผยแพร่
+            ไม่เผยแพร่
           </MenuItem>
 
           <div className="my-1 border-t border-[rgba(17,17,17,0.06)] dark:border-[rgba(251,249,246,0.06)]" />
 
           {photo.face_details.length > 0 && (
-            <MenuItem onClick={handleBanFaces}>
-              👤 ซ่อนใบหน้า{photo.face_details.length > 1 ? `ทั้ง ${photo.face_details.length} คน` : "นี้"}จากค้นหา
+            <MenuItem onClick={handleBanFaces} icon={EyeSlashIcon}>
+              ซ่อนใบหน้า{photo.face_details.length > 1 ? `ทั้ง ${photo.face_details.length} คน` : "นี้"}จากค้นหา
             </MenuItem>
           )}
 
           <div className="my-1 border-t border-[rgba(17,17,17,0.06)] dark:border-[rgba(251,249,246,0.06)]" />
 
-          <MenuItem onClick={handleDelete} danger>
-            🗑 ลบรูปถาวร
+          <MenuItem onClick={handleDelete} danger icon={TrashIcon}>
+            ลบรูปถาวร
           </MenuItem>
         </div>
       )}
@@ -641,11 +670,13 @@ function MenuItem({
   onClick,
   danger,
   active,
+  icon: Icon,
   children,
 }: {
   onClick: () => void;
   danger?: boolean;
   active?: boolean;
+  icon?: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
 }) {
   return (
@@ -659,7 +690,10 @@ function MenuItem({
           : "text-zinc-700 dark:text-zinc-300",
       ].join(" ")}
     >
-      <span>{children}</span>
+      <span className="flex items-center gap-2">
+        {Icon && <Icon className={`h-4 w-4 stroke-[1.5] ${danger ? "text-rose-600 dark:text-rose-400" : "text-zinc-400 dark:text-zinc-500"}`} />}
+        <span>{children}</span>
+      </span>
       {active && <span className="text-[#D4AF37] text-xs">✓</span>}
     </button>
   );
@@ -765,10 +799,14 @@ function Lightbox({
   const [isPending, startTransition] = useTransition();
   const [isImgLoading, setIsImgLoading] = useState(true);
   const [direction, setDirection] = useState<"left" | "right" | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Reset image loading state when photo changes
   useEffect(() => {
     setIsImgLoading(true);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [photo.id]);
 
   // Keyboard navigation
@@ -803,13 +841,34 @@ function Lightbox({
     });
   };
 
+  const metadataParts = [];
+  if (photo.photographer_name) {
+    metadataParts.push(photo.photographer_name);
+  }
+  if (photo.taken_at) {
+    const formatted = formatThaiDate(photo.taken_at);
+    if (formatted) metadataParts.push(formatted);
+  }
+  if (photo.copyright) {
+    const hasSymbol = photo.copyright.includes("©") || photo.copyright.toLowerCase().includes("copyright");
+    metadataParts.push(hasSymbol ? photo.copyright : `© ${photo.copyright}`);
+  }
+  const metadataStr = metadataParts.join(" · ");
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-between bg-black/95 backdrop-blur-md transition-all duration-300">
       {/* Top Header Row */}
       <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 bg-gradient-to-b from-black/50 to-transparent z-10">
-        {/* Photo index counter */}
-        <div className="font-mono text-xs text-zinc-400 tracking-widest uppercase">
-          IMAGE {index + 1} OF {total}
+        {/* Photo index counter & metadata */}
+        <div className="flex flex-col gap-1">
+          <div className="font-mono text-xs text-zinc-400 tracking-widest uppercase">
+            IMAGE {index + 1} OF {total}
+          </div>
+          {metadataStr && (
+            <div className="font-mono text-[10px] text-zinc-500 tracking-wider">
+              {metadataStr}
+            </div>
+          )}
         </div>
 
         {/* Close Button */}
@@ -849,12 +908,13 @@ function Lightbox({
                 </div>
               )}
               <Image
+                key={photo.id}
                 src={url}
                 alt={`Event photo ${index + 1}`}
                 fill
-                className={`object-contain transition-all duration-500 ease-out ${
+                className={`object-contain transition-all duration-[800ms] ease-out ${
                   isImgLoading
-                    ? `opacity-0 scale-95 blur-sm ${
+                    ? `opacity-0 scale-[0.98] blur-sm ${
                         direction === "right"
                           ? "translate-x-8"
                           : direction === "left"
@@ -865,7 +925,12 @@ function Lightbox({
                 }`}
                 sizes="100vw"
                 priority
-                onLoad={() => setIsImgLoading(false)}
+                onLoad={() => {
+                  if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                  timeoutRef.current = setTimeout(() => {
+                    setIsImgLoading(false);
+                  }, 40); // Small 40ms paint-tick timeout to ensure browser paints loading state first
+                }}
               />
             </>
           ) : (
@@ -943,4 +1008,27 @@ function Lightbox({
       </div>
     </div>
   );
+}
+
+// ─── Localized Thai date helper ──────────────────────────────────────────────
+
+function formatThaiDate(isoString: string | null): string {
+  if (!isoString) return "";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "";
+    const datePart = d.toLocaleDateString("th-TH", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const timePart = d.toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return `${datePart} ${timePart}`;
+  } catch (e) {
+    return "";
+  }
 }

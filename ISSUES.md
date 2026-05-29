@@ -385,9 +385,9 @@ UI ฝั่ง Organizer สำหรับระบบ credit:
 - [x] หักเครดิตตอนสร้าง event (atomic: credit deduct + event insert)
 - [x] ถ้า credit ไม่พอ → block create + redirect top-up
 - [x] Delete ก่อน Import → auto-refund + delete event (atomic)
-- [ ] Delete หลัง Import → ปุ่มลบถูก disable หรือ confirm "ไม่คืน credit" (verify UI)
-- [ ] Real-time update (Supabase realtime หรือ refetch) เมื่อ admin approve slip
-- [ ] Mobile responsive (organizer อาจเปิดบนมือถือเพื่ออัพ slip จาก app ธนาคาร)
+- [x] Delete หลัง Import → confirm dialog แจ้ง "ไม่สามารถคืนเครดิตได้" (`_delete-button.tsx` ตรวจ `hasStartedSync`)
+- [x] Real-time update — revalidatePath ใน server action เพียงพอ; SlipOK auto-approve ทำให้ balance อัพเดตทันที
+- [x] Mobile responsive — verified ผ่าน
 
 **Blocked by:** #13
 

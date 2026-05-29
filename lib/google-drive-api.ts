@@ -77,6 +77,9 @@ export type DriveFile = {
   mimeType: string;
   size?: number;
   modifiedTime?: string;
+  imageMediaMetadata?: {
+    time?: string;
+  } | null;
 };
 
 /**
@@ -95,7 +98,7 @@ export async function listImagesInFolder(
     // eslint-disable-next-line no-await-in-loop
     const res = await drive.files.list({
       q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
-      fields: "nextPageToken, files(id, name, mimeType, size, modifiedTime)",
+      fields: "nextPageToken, files(id, name, mimeType, size, modifiedTime, imageMediaMetadata)",
       pageSize: 1000,
       pageToken,
     });
@@ -108,6 +111,7 @@ export async function listImagesInFolder(
           mimeType: f.mimeType,
           size: f.size ? Number(f.size) : undefined,
           modifiedTime: f.modifiedTime ?? undefined,
+          imageMediaMetadata: f.imageMediaMetadata ?? null,
         });
       }
     }

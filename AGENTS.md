@@ -1,56 +1,88 @@
-# AGENTS.md
-
 <!-- BEGIN:nextjs-agent-rules -->
-## Next.js Version Warning
 
-This is NOT the Next.js you know. This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+## ⚠️ Next.js Version Notice
+
+The Next.js version in this project (16.0.0) may be newer than your training data. APIs, conventions, and best practices may have changed.
+
+**Before working with Next.js features, framework APIs, or anything you're unsure about, consult the official documentation in `node_modules/next/dist/docs/`** — these docs match the exact version installed here.
+
 <!-- END:nextjs-agent-rules -->
 
+# AGENTS.md
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## What this is
 
-A **single, self-contained HTML file** — `facefind_spec.html` — that renders the *FaceFind* PRD (an event-photo-distribution SaaS with face recognition) as an interactive spec: sticky sidebar nav, collapsible sections, priority/status badges, syntax-highlighted DB schema tables, and a Next-Steps timeline. All CSS and JS are embedded; there are **no dependencies, no build system, no tests, and no git repo**. Editing the spec = editing this one file.
+**PixPresent / FaceFind** — a multi-tenant SaaS that distributes event photos by face. A guest opens a public share link, uploads a selfie, and AWS Rekognition matches their face against the event's indexed photos so they can view and download just their own shots. Organizers (each a "tenant") create events, sync source photos from Google Drive, and spend prepaid **credits** to activate events; credits are bought by bank transfer and verified through the SlipOK API.
 
-The content is derived from `~/Downloads/FaceFind_PRD_v1.2.docx` (a bilingual Thai/English Word doc).
+The root also holds static design/PRD artifacts — `facefind_spec.html` (interactive PRD), `facefind_landing.html`, `facefind_design_lab.html`, `competitor_analysis.html`, `font_comparison.html`. These are reference docs, **not** part of the app build.
+
+## Tech stack
+
+- **Next.js 16** (App Router, Turbopack) · **React 19** · **TypeScript 5**
+- **Tailwind CSS v4** (PostCSS, `tw-animate-css`) · **shadcn/ui** (`base-nova` style, `@base-ui/react`, `lucide-react` + `@heroicons/react`)
+- **Supabase** — Postgres + Auth + Storage + RLS; local stack via the Supabase CLI + Docker
+- **AWS Rekognition** — per-event face collections (index + search)
+- **Cloudflare R2** — photo storage (via `@aws-sdk/client-s3` + presigner)
+- **Google Drive** (`googleapis`) — source folder for event photos
+- **Resend** — transactional email · **SlipOK** — Thai bank-slip verification
+- **sharp** (image derivatives/watermark) · **fflate** (zip download) · **qrcode.react** (PromptPay QR)
+- **Vitest** (unit tests, node env) · **ESLint 9** (`eslint-config-next`)
+
+> **Next.js 16 is not the version in your training data.** Read the relevant guide in `node_modules/next/dist/docs/` before using unfamiliar APIs. Two gotchas already in play: middleware was renamed to **`proxy.ts`** (the exported function must be named `proxy`), and **`cookies()` is async** — always `await` it (see `lib/supabase/server.ts`).
 
 ## Commands
 
-There is no build/lint/test pipeline. Working with this file means:
+`npm run dev` runs Supabase + Next.js together, so **Docker Desktop must be running first**.
 
-- **Preview:** open directly — `open facefind_spec.html` — or serve for tooling-based preview: `python3 -m http.server 4178` then visit `/facefind_spec.html`.
-- **Re-extract from the source PRD** (note: `pandoc` is *not* installed here): unzip the docx and parse the XML —
-  `unzip -o ~/Downloads/FaceFind_PRD_v1.2.docx -d /tmp/prd/` then read `/tmp/prd/word/document.xml` (paragraphs in `<w:p>`, tables in `<w:tbl>`, text in `<w:t>`).
+| Command | What it does |
+|---|---|
+| `npm run dev` | Supabase stack + Next.js (Turbopack) concurrently — app on :3000, API on :54321 |
+| `npm run dev:db` / `dev:web` | Just Supabase / just Next.js |
+| `npm run build` / `start` | Production build / serve |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest (run once) · `npm run test:watch` to watch |
+| `npm run db:reset` | Drop DB and re-run **all** migrations |
+| `npm run db:types` | Regenerate `lib/supabase/types.ts` from the live schema |
+| `npm run db:status` / `db:stop` | Show local URLs+keys / stop containers |
 
-## Architecture (all inside `facefind_spec.html`)
+Run one test file: `npx vitest run __tests__/topup.test.ts` · filter by name: `npx vitest run -t "validateTopupRequest"`.
 
-**Sections & nav.** 13 collapsible `<section class="section" id="...">` blocks in this order: `overview, users, tech, schema, features, image, mvp, nfr, commerce, payment, questions, cost, next`. The section *numbers shown in the UI* mirror the source PRD's own numbering (1–8, then 11–15 — the PRD skips 9–10). The `.nav` list is hand-maintained and must stay in sync with section ids/order; scrollspy maps each `href="#id"` to its section.
+Local URLs (during `npm run dev`): app `:3000` · Supabase Studio `:54323` · API `:54321` · Inbucket test mail `:54324` · Postgres `:54322`.
 
-**Theme.** `data-theme="light|dark"` on `<html>`, persisted to `localStorage['ff-theme']`, set pre-paint by an inline `<head>` script to avoid FOUC. Every color is a CSS custom property defined under `:root` (light) and `[data-theme="dark"]` — change colors there, not inline.
+## Architecture
 
-**Behavior** lives in one IIFE at the bottom of `<body>`: collapse toggles (`.section.collapsed`, `#expandAll`/`#collapseAll`), `IntersectionObserver` scrollspy (sets `.nav a.active`), `#search` nav filter, `#progress` reading bar, `#toTop`, and the mobile off-canvas sidebar (`#menuBtn` toggles `body.nav-open`).
+**Multi-tenancy.** One `tenants` row per signup (FK to `auth.users`, created by a DB trigger). `getCurrentTenant()` (`lib/auth/current-tenant.ts`, React-`cache`d) resolves the logged-in user → their tenant `{id, name, plan, credit_balance}`. Almost all app data hangs off `tenant_id`, isolated by RLS; the admin area is gated by `is_super_admin()` which reads a JWT `app_metadata.is_super_admin` flag.
 
-**Schema tables are authored as plain text and colorized by JS — do not hand-write highlight spans.** Write rows as:
-```html
-<td class="col">tenant_id</td><td class="type">UUID FK</td><td class="def">NULL</td><td class="desc">References tenants.id</td>
-```
-On load the script rewrites each cell from its `textContent`:
-- `hlType` tokenizes the **type** cell: SQL types (`UUID TEXT BOOLEAN TIMESTAMPTZ DATE NUMERIC INT`) → colored spans; `PK`/`FK` → badges; trailing `[]` → array marker.
-- `hlDef` colors the optional **Default** column (`NULL`/`TRUE`/`FALSE`/literals).
-- `hlDesc` turns `a | b | c` into enum chips, `Phase 1`/`Phase 2` into phase chips, and `References table.col` into a code ref.
+**Three Supabase clients — pick by context:**
+- `lib/supabase/server.ts` → Server Components / Route Handlers / Server Actions (anon key, user session via cookies, **RLS-enforced**).
+- `lib/supabase/client.ts` → browser client for Client Components.
+- `lib/supabase/service-role.ts` → **bypasses RLS**; server-only, for guest-facing flows (face search) and privileged writes. Never reaches the client.
+- `lib/supabase/middleware.ts` `updateSession()` refreshes the session and is called from `proxy.ts`.
 
-So a 3-column schema uses `col/type/desc`; a 4-column one adds `def`.
+**Auth & routing.** `proxy.ts` refreshes the session and gates routes: unauthenticated hits to `/dashboard` → `/login`; authenticated users on auth pages → `/dashboard`. Route groups: `app/(auth)/*` (login/signup/forgot/reset), `app/dashboard/*` (organizer app), `app/admin/*` (super-admin), `app/e/[token]/*` (public guest landing), `app/api/*` (route handlers), `app/auth/callback/route.ts` (Supabase OAuth callback). Page-private components are colocated as `_name.tsx`.
 
-**Reusable component vocabulary** — reuse these classes rather than inventing new patterns:
-- `.badge` variants: `p0 p1 ph1 ph2 ok warn muted info`
-- `.schema-wrap` + `table.schema` (DB tables) · `.feature` (F-xx feature blocks) · `ol.steps` (numbered journeys/flows)
-- `.timeline`/`.tnode` with phase classes `setup|dev|gate|launch` (Next Steps)
-- `.q` + `.q.resolved`/`.q.pending` and the `.qstats` summary (Open Questions)
-- `.card`/`.tech`/`.role`/`.plan` · `.note` (`.ok`/`.warn`) · `.paths`/`.pathrow`
+**Mutations go through Server Actions.** `lib/actions/*` (`"use server"`): auth, events, photos, share-link, face-search, blacklist, drive, account. Business logic that must stay unit-testable lives **outside** actions with no Next imports (`lib/topup.ts`, `lib/credit-packages.ts`, `lib/payment-config.ts`) so Vitest can exercise it directly.
 
-## Editing conventions
+**Photo pipeline.** Organizer connects a Google Drive folder (`lib/google-drive*.ts`, OAuth via `app/api/auth/google/*`) → **Sync** (`app/api/events/[id]/sync`, `lib/actions/photos.ts`) pulls files, processes them with sharp (`lib/image-processing.ts`) into web + full derivatives, uploads to R2 (`lib/r2.ts`), and indexes faces into a per-event Rekognition collection (`events.rekognition_collection_id`), storing the returned `rekognition_face_ids` (`text[]`, GIN-indexed) on each `photos` row. Idempotent via `unique(event_id, storage_file_id)`.
 
-- **Bilingual style:** English for structural labels, headings, and section titles; Thai for body/description text; keep technical terms (schema types, stack names, feature names) in English. Match this when adding content.
-- **Open Questions counts are manual:** the `.qstats` line (`✅ N Resolved` / `🔲 N Pending`) is hardcoded — update it whenever you add or resolve a question, and set the item's `.q.resolved`/`.q.pending` class + badge accordingly.
-- **"Phase 2 / paid-feature" prep pattern:** new monetized features follow the doc's Commerce-Readiness approach — add *nullable* schema columns (default `NULL`/`FALSE`), an R2 storage path, a Backlog entry (§7.2), and Open Questions; gate behind paid tiers. Provider/engine choices are wrapped in a swappable interface (e.g. `PaymentService` §12.2, `ReelRenderer` §11.4) so they can be replaced without touching business logic.
+**Guest face search (core product).** `app/e/[token]` → guest uploads selfie → `searchFaces` (`lib/actions/face-search.ts`, service-role) re-validates the share token + expiry, runs Rekognition `SearchFacesByImage` (threshold 80) against the event collection, filters `face_blacklist`, returns `match_only` photos merged with `public` photos, and logs a `guest_sessions` row (with PDPA `consent_at`). Bulk download via `app/api/download/zip` (fflate).
+
+**Credits & top-up.** Activating an event spends credits (logged as `activate_event` in `credit_ledger`). Tenants buy credits at `app/dashboard/account/topup`: pick a package (`lib/credit-packages.ts` / `payment-config.ts`), pay via PromptPay QR, upload the slip (`app/api/topup/upload-slip`). `verifySlipWithSlipOK` (`lib/topup.ts`) auto-verifies/auto-rejects via the SlipOK API; network errors fall back to `pending`. Admins review pending slips at `app/admin/slips`. `credit_ledger` is an **append-only** audit trail (RLS permits only service-role/RPC writes).
+
+**Data model & migrations.** Core tables: `tenants, events, photos, face_blacklist, guest_sessions, slip_uploads, credit_ledger`. Schema is built up by timestamped files in `supabase/migrations/` — **change schema only by adding a new migration**, then `npm run db:reset` + `npm run db:types`. Never edit an applied migration. The earliest migration is historical (e.g. the `photographers` table was later pivoted to `event_storage_folders`; `share_token`, photo `visibility`, etc. were added later) — **treat `lib/supabase/types.ts` and the latest migrations as the source of truth**, not the initial schema.
+
+**External-service degradation.** Rekognition, R2, Google, SlipOK, etc. all **stub gracefully when their env vars are absent**, so the app runs locally without real credentials. See `.env.example` and `docs/external-services-setup.md`.
+
+## Conventions
+
+- **Bilingual copy:** English for structural labels, headings, and technical terms (schema types, stack/feature names); Thai for user-facing body text and messages. Match this in UI copy and docs.
+- **Phase-2 / commerce prep:** monetized features are pre-staged as *nullable* schema columns defaulting `NULL`/`FALSE` (e.g. `price`, `watermark_url`, `commerce_enabled`, `highlight_reel_*`) and gated behind paid tiers, rather than branched later.
+- `CLAUDE.md` is the Claude Code-facing twin of this file — keep them in sync when project facts change.
+
+## Docs & issue tracking
+
+- `README.md` — setup, prerequisites, troubleshooting · `ISSUES.md` — vertical-slice issues + MVP critical path
+- `docs/external-services-setup.md` — wiring AWS/R2/Google/SlipOK/Resend · `docs/superpowers/{plans,specs}/` — feature plans & specs
+- `facefind_spec.html` — the original interactive PRD
