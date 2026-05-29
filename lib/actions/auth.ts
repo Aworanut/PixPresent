@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getPostAuthRedirect } from "@/lib/auth/onboarding";
 
 export type AuthState = { error: string } | undefined;
 
@@ -16,31 +17,28 @@ export async function signUp(
 ): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const organizationName = String(
-    formData.get("organization_name") ?? "",
-  ).trim();
 
-  if (!email || !password || !organizationName) {
-    return { error: "กรุณากรอกข้อมูลให้ครบทุกช่อง" };
+  if (!email || !password) {
+    return { error: "กรุณากรอกอีเมลและรหัสผ่าน" };
   }
   if (password.length < 8) {
     return { error: "รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร" };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { organization_name: organizationName },
-      emailRedirectTo: `${getOrigin()}/auth/callback`,
+      emailRedirectTo: `${getOrigin()}/auth/callback?next=/onboarding`,
     },
   });
 
   if (error) return { error: error.message };
+  if (!data.user) return { error: "ไม่สามารถสร้างบัญชีได้ กรุณาลองใหม่" };
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(await getPostAuthRedirect(data.user.id));
 }
 
 export async function signIn(
@@ -55,12 +53,16 @@ export async function signIn(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) return { error: error.message };
+  if (!data.user) return { error: "เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่" };
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(await getPostAuthRedirect(data.user.id));
 }
 
 export async function signOut() {
@@ -99,7 +101,11 @@ export async function updatePassword(
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: error.message };
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(user ? await getPostAuthRedirect(user.id) : "/dashboard");
 }
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarDaysIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTenant } from "@/lib/auth/current-tenant";
+import { getCurrentTenant, tenantDisplayName } from "@/lib/auth/current-tenant";
 import { buttonVariants } from "@/components/ui/button";
 
 export default async function DashboardPage() {
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
             Events
           </p>
           <h1 className="text-3xl font-medium tracking-tight text-zinc-900 dark:text-zinc-50 font-heading">
-            {ctx!.tenant.name}
+            {ctx ? tenantDisplayName(ctx.tenant) : ""}
           </h1>
         </div>
         <Link

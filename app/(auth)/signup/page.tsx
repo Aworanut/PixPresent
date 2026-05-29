@@ -6,6 +6,7 @@ import { signUp } from "@/lib/actions/auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { GoogleSignInButton } from "../_google-sign-in-button";
 
 export default function SignupPage() {
   const [state, action, pending] = useActionState(signUp, undefined);
@@ -22,18 +23,6 @@ export default function SignupPage() {
       </header>
 
       <form action={action} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="organization_name">ชื่อองค์กร / สตูดิโอ</Label>
-          <Input
-            id="organization_name"
-            name="organization_name"
-            type="text"
-            autoComplete="organization"
-            required
-            placeholder="Acme Studio"
-          />
-        </div>
-
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -69,6 +58,19 @@ export default function SignupPage() {
           {pending ? "กำลังสร้างบัญชี..." : "Create account"}
         </Button>
       </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-zinc-200 dark:border-zinc-800" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white px-2 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+            หรือ
+          </span>
+        </div>
+      </div>
+
+      <GoogleSignInButton label="Continue with Google" />
 
       <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
         มีบัญชีอยู่แล้ว?{" "}

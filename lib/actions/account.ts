@@ -4,28 +4,75 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getCurrentTenant } from "@/lib/auth/current-tenant";
+import { uploadUserAvatar } from "@/lib/avatar-upload";
 
 export type AccountActionState = { error: string } | { ok: true } | undefined;
 
-/** อัปเดตชื่อองค์กร */
-export async function updateTenantName(
+/** อัปเดต profile organizer */
+export async function updateProfile(
   _prev: AccountActionState,
   formData: FormData,
 ): Promise<AccountActionState> {
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "กรุณากรอกชื่อองค์กร" };
-  if (name.length > 120) return { error: "ชื่อยาวเกิน 120 ตัวอักษร" };
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  const displayName = String(formData.get("display_name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const existingAvatarUrl = String(
+    formData.get("existing_avatar_url") ?? "",
+  ).trim();
+  const avatarFile = formData.get("avatar");
+
+  if (!firstName) return { error: "กรุณากรอกชื่อ" };
+  if (!lastName) return { error: "กรุณากรอกนามสกุล" };
+  if (firstName.length > 80 || lastName.length > 80) {
+    return { error: "ชื่อหรือนามสกุลยาวเกิน 80 ตัวอักษร" };
+  }
+  if (displayName.length > 120) {
+    return { error: "Display name ยาวเกิน 120 ตัวอักษร" };
+  }
+  if (phone.length > 30) {
+    return { error: "เบอร์โทรศัพท์ยาวเกิน 30 ตัวอักษร" };
+  }
 
   const ctx = await getCurrentTenant();
   if (!ctx) return { error: "ยังไม่ได้ login" };
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const avatarResult = await uploadUserAvatar(
+    supabase,
+    ctx.user.id,
+    avatarFile,
+    existingAvatarUrl || ctx.tenant.avatar_url || "",
+  );
+
+  if (avatarResult.error) return { error: avatarResult.error };
+
+  const headerName = displayName || `${firstName} ${lastName}`.trim();
+
+  const { error: tenantError } = await supabase
     .from("tenants")
-    .update({ name })
+    .update({
+      first_name: firstName,
+      last_name: lastName,
+      display_name: displayName || null,
+      phone: phone || null,
+      avatar_url: avatarResult.avatarUrl ?? null,
+      name: headerName,
+    })
     .eq("id", ctx.tenant.id);
 
-  if (error) return { error: error.message };
+  if (tenantError) return { error: tenantError.message };
+
+  const { error: userError } = await supabase.auth.updateUser({
+    data: {
+      first_name: firstName,
+      last_name: lastName,
+      display_name: headerName,
+      avatar_url: avatarResult.avatarUrl ?? null,
+    },
+  });
+
+  if (userError) return { error: userError.message };
 
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/account");

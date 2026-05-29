@@ -80,3 +80,47 @@ export async function processImage(input: Buffer): Promise<ProcessedImage> {
 
   return { web, full, artist, copyright, takenAt };
 }
+
+/** Supabase avatars bucket limit (2 MB). */
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+
+/** Long edge for profile photos — enough for 2× retina at 96px display. */
+export const AVATAR_MAX_EDGE = 512;
+
+export type ProcessedAvatar = {
+  buffer: Buffer;
+  contentType: "image/jpeg";
+};
+
+/**
+ * Resize and compress a user-uploaded image to fit avatar storage limits.
+ * Output is always JPEG with EXIF stripped.
+ */
+export async function processAvatarImage(
+  input: Buffer,
+  maxBytes: number = AVATAR_MAX_BYTES,
+): Promise<ProcessedAvatar> {
+  const edges = [AVATAR_MAX_EDGE, 384, 256];
+
+  for (const edge of edges) {
+    for (let quality = 85; quality >= 50; quality -= 10) {
+      const buffer = await sharp(input, { failOn: "error", animated: false })
+        .rotate()
+        .resize({
+          width: edge,
+          height: edge,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality, mozjpeg: true })
+        .withMetadata({ exif: {} })
+        .toBuffer();
+
+      if (buffer.length <= maxBytes) {
+        return { buffer, contentType: "image/jpeg" };
+      }
+    }
+  }
+
+  throw new Error("AVATAR_TOO_LARGE");
+}

@@ -6,6 +6,7 @@ import { signIn } from "@/lib/actions/auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { GoogleSignInButton } from "../_google-sign-in-button";
 
 export default function LoginPage() {
   const [state, action, pending] = useActionState(signIn, undefined);
@@ -64,6 +65,19 @@ export default function LoginPage() {
           {pending ? "กำลังเข้าสู่ระบบ..." : "Sign in"}
         </Button>
       </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-zinc-200 dark:border-zinc-800" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white px-2 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+            หรือ
+          </span>
+        </div>
+      </div>
+
+      <GoogleSignInButton />
 
       <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
         ยังไม่มีบัญชี?{" "}

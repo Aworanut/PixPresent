@@ -411,43 +411,61 @@ export type Database = {
       }
       tenants: {
         Row: {
+          avatar_url: string | null
           created_at: string
           credit_balance: number
+          display_name: string | null
+          first_name: string | null
           google_connected_at: string | null
           google_refresh_token: string | null
           id: string
+          last_name: string | null
           name: string
+          onboarding_completed_at: string | null
           owner_user_id: string
           payment_provider: string | null
           payout_account_id: string | null
+          phone: string | null
           plan: string
           storage_provider: string
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           credit_balance?: number
+          display_name?: string | null
+          first_name?: string | null
           google_connected_at?: string | null
           google_refresh_token?: string | null
           id?: string
+          last_name?: string | null
           name: string
+          onboarding_completed_at?: string | null
           owner_user_id: string
           payment_provider?: string | null
           payout_account_id?: string | null
+          phone?: string | null
           plan?: string
           storage_provider?: string
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           credit_balance?: number
+          display_name?: string | null
+          first_name?: string | null
           google_connected_at?: string | null
           google_refresh_token?: string | null
           id?: string
+          last_name?: string | null
           name?: string
+          onboarding_completed_at?: string | null
           owner_user_id?: string
           payment_provider?: string | null
           payout_account_id?: string | null
+          phone?: string | null
           plan?: string
           storage_provider?: string
           updated_at?: string
