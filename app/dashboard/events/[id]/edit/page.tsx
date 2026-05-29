@@ -16,7 +16,7 @@ export default async function EditEventPage({
   const [{ data: event, error }, { data: folders }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, name, event_date, sync_started_at, credits_used")
+      .select("id, name, event_date, sync_started_at, credits_used, cover_image_url")
       .eq("id", id)
       .is("deleted_at", null)
       .single(),
@@ -63,6 +63,7 @@ export default async function EditEventPage({
               label: f.label,
               folder: f.folder_id,
             })),
+            cover_image_url: event.cover_image_url,
           }}
           cancelHref={`/dashboard/events/${event.id}`}
         />

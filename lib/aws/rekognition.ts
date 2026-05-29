@@ -2,6 +2,7 @@ import "server-only";
 import {
   RekognitionClient,
   DeleteCollectionCommand,
+  SearchFacesCommand,
 } from "@aws-sdk/client-rekognition";
 
 let cachedClient: RekognitionClient | null = null;
@@ -22,6 +23,39 @@ function getClient(): RekognitionClient | null {
     });
   }
   return cachedClient;
+}
+
+export async function searchFacesBySimilarFaceId(
+  faceId: string,
+  collectionId: string,
+  threshold = 80,
+): Promise<string[]> {
+  const client = getClient();
+  if (!client) {
+    console.warn("[rekognition] AWS creds missing — returning stub empty results");
+    return [];
+  }
+  try {
+    const result = await client.send(
+      new SearchFacesCommand({
+        CollectionId: collectionId,
+        FaceId: faceId,
+        MaxFaces: 500,
+        FaceMatchThreshold: threshold,
+      }),
+    );
+    return (result.FaceMatches ?? [])
+      .map((m) => m.Face?.FaceId)
+      .filter(Boolean) as string[];
+  } catch (err: unknown) {
+    if (
+      err instanceof Error &&
+      (err.name === "ResourceNotFoundException" ||
+        err.name === "InvalidParameterException")
+    )
+      return [];
+    throw err;
+  }
 }
 
 export async function deleteRekognitionCollection(

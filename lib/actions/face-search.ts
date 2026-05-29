@@ -23,9 +23,10 @@ export type SearchResult =
  *  1. Re-validate share token (still active)
  *  2. Rekognition SearchFacesByImage against the event collection
  *     (throws InvalidParameterException when no face detected → no_face error)
- *  3. Filter blacklisted face_ids (from face_blacklist table)
- *  4. Fetch matched photos and return R2 URLs
- *  5. Insert guest_session row
+ *  3. Fetch matched photos (visibility="match_only") + public photos and return
+ *     R2 URLs. Photos hidden via "ซ่อนบุคคลในภาพ" are excluded by the visibility
+ *     filter, so a banned person's photos never reach any guest.
+ *  4. Insert guest_session row
  */
 export async function searchFaces(formData: FormData): Promise<SearchResult> {
   const token = formData.get("share_token") as string | null;
@@ -188,23 +189,14 @@ async function runFaceSearch(
 
     if (faceIds.length === 0) return [];
 
-    // Load blacklist for this event
-    const { data: blacklist } = await supabase
-      .from("face_blacklist")
-      .select("face_id")
-      .eq("event_id", eventId);
-
-    const blockedSet = new Set((blacklist ?? []).map((b) => b.face_id));
-    const allowedFaceIds = faceIds.filter((fid) => !blockedSet.has(fid));
-
-    if (allowedFaceIds.length === 0) return [];
-
-    // Look up photos by face_id overlap (rekognition_face_ids is text[])
+    // Look up photos by face_id overlap (rekognition_face_ids is text[]).
+    // Hidden photos (e.g. a person hidden via "ซ่อนบุคคลในภาพ") are excluded by the
+    // visibility filter in searchFaces(), so no extra face-level filtering is needed.
     const { data: photoRows } = await supabase
       .from("photos")
       .select("id, rekognition_face_ids")
       .eq("event_id", eventId)
-      .overlaps("rekognition_face_ids", allowedFaceIds);
+      .overlaps("rekognition_face_ids", faceIds);
 
     return (photoRows ?? []).map((p) => p.id);
   } catch (err: unknown) {

@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { uploadUserAvatar } from "@/lib/avatar-upload";
+import {
+  uploadUserAvatar,
+  parseAvatarCrop,
+} from "@/lib/avatar-upload";
+import { isStoredAvatarUrl } from "@/lib/avatar-url";
 
 export type OnboardingState = { error: string } | undefined;
 
@@ -106,7 +110,9 @@ export async function completeOnboarding(
     return { error: tenantResult.error };
   }
 
-  let avatarUrl = existingAvatarUrl || null;
+  let avatarUrl = isStoredAvatarUrl(existingAvatarUrl)
+    ? existingAvatarUrl
+    : null;
 
   if (avatarFile instanceof File && avatarFile.size > 0) {
     const avatarResult = await uploadUserAvatar(
@@ -114,6 +120,7 @@ export async function completeOnboarding(
       user.id,
       avatarFile,
       existingAvatarUrl,
+      parseAvatarCrop(formData),
     );
     if (avatarResult.error) return { error: avatarResult.error };
     avatarUrl = avatarResult.avatarUrl ?? null;

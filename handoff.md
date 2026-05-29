@@ -14,6 +14,14 @@ Issue tracker: `/Users/nuk/Pixture/ISSUES.md`
 
 ---
 
+## Latest Session (2026-05-29)
+
+**Full handoff:** `/tmp/pixture-handoff-2026-05-29.md`
+
+Remote migrations pushed: `291200` (onboarding profile), `291700` (cover + social), `291800` (drop legacy crop columns). Server-side image crop replaces CSS zoom/position DB fields. Large uncommitted diff — onboarding, profile/cover crop, event cover, blacklist WIP. See temp handoff for file list and next steps.
+
+---
+
 ## Current State (as of this handoff)
 
 ### ✅ Working end-to-end (tested locally with real credentials)

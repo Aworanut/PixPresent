@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
+import { CameraIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { searchFaces, type SearchResult } from "@/lib/actions/face-search";
 
@@ -20,16 +21,30 @@ export function FaceSearch({ eventId, shareToken }: Props) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+
+  const applySelectedFile = (file: File) => {
+    setSelectedFile(file);
+    setPreview(URL.createObjectURL(file));
+    setStep("upload");
+    setSourcePickerOpen(false);
+    setCameraOpen(false);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSelectedFile(file);
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    setStep("upload");
+    applySelectedFile(file);
+    e.target.value = "";
+  };
+
+  const openSourcePicker = () => setSourcePickerOpen(true);
+
+  const clearInputs = () => {
+    if (galleryRef.current) galleryRef.current.value = "";
   };
 
   const handleSearch = () => {
@@ -61,7 +76,7 @@ export function FaceSearch({ eventId, shareToken }: Props) {
     setSelectedFile(null);
     setResult(null);
     setLightboxIndex(null);
-    if (fileRef.current) fileRef.current.value = "";
+    clearInputs();
   };
 
   // ─── Consent gate ──────────────────────────────────────────────────────────
@@ -284,8 +299,9 @@ export function FaceSearch({ eventId, shareToken }: Props) {
               onClick={() => {
                 setPreview(null);
                 setSelectedFile(null);
-                if (fileRef.current) fileRef.current.value = "";
+                clearInputs();
                 setStep("upload");
+                openSourcePicker();
               }}
               className="text-xs text-zinc-500 dark:text-zinc-400 underline underline-offset-2"
             >
@@ -293,20 +309,49 @@ export function FaceSearch({ eventId, shareToken }: Props) {
             </button>
           </div>
         ) : (
-          <label className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 px-4 py-10 cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors">
+          <button
+            type="button"
+            onClick={openSourcePicker}
+            className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 px-4 py-10 cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors"
+          >
             <span className="text-3xl">🤳</span>
             <span className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
               แตะเพื่อถ่ายหรือเลือกรูปจากคลัง
             </span>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              capture="user"
-              className="sr-only"
-              onChange={handleFileChange}
-            />
-          </label>
+          </button>
+        )}
+
+        <input
+          ref={galleryRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={handleFileChange}
+        />
+
+        {sourcePickerOpen && (
+          <SelfieSourcePicker
+            onCamera={() => {
+              setSourcePickerOpen(false);
+              setCameraOpen(true);
+            }}
+            onGallery={() => {
+              setSourcePickerOpen(false);
+              requestAnimationFrame(() => galleryRef.current?.click());
+            }}
+            onClose={() => setSourcePickerOpen(false)}
+          />
+        )}
+
+        {cameraOpen && (
+          <CameraCaptureModal
+            onCapture={applySelectedFile}
+            onClose={() => setCameraOpen(false)}
+            onUseGallery={() => {
+              setCameraOpen(false);
+              requestAnimationFrame(() => galleryRef.current?.click());
+            }}
+          />
         )}
 
         <Button
@@ -317,6 +362,278 @@ export function FaceSearch({ eventId, shareToken }: Props) {
         >
           {pending ? "กำลังค้นหา..." : "ค้นหารูปของฉัน"}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function CameraCaptureModal({
+  onCapture,
+  onClose,
+  onUseGallery,
+}: {
+  onCapture: (file: File) => void;
+  onClose: () => void;
+  onUseGallery: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("เบราว์เซอร์นี้ไม่รองรับกล้อง — กรุณาเลือกรูปจากคลัง");
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "user" } },
+          audio: false,
+        });
+
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (!video) return;
+
+        video.srcObject = stream;
+        await video.play();
+        setReady(true);
+      } catch {
+        setError("ไม่สามารถเปิดกล้องได้ — กรุณาอนุญาตการใช้กล้อง หรือเลือกรูปจากคลัง");
+      }
+    }
+
+    void startCamera();
+
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    };
+  }, []);
+
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  }
+
+  function handleCapture() {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (!width || !height) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.translate(width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, width, height);
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        stopCamera();
+        onCapture(new File([blob], "selfie.jpg", { type: "image/jpeg" }));
+      },
+      "image/jpeg",
+      0.92,
+    );
+  }
+
+  function handleClose() {
+    stopCamera();
+    onClose();
+  }
+
+  function handleUseGallery() {
+    stopCamera();
+    onUseGallery();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-4"
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="camera-capture-title"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
+          <h2
+            id="camera-capture-title"
+            className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+          >
+            ถ่าย selfie
+          </h2>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-lg leading-none px-1"
+            aria-label="ปิด"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {error ? (
+            <div className="space-y-4 text-center py-6">
+              <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>
+              <div className="flex flex-col gap-2">
+                <Button type="button" size="sm" onClick={handleUseGallery}>
+                  เลือกจากคลัง
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={handleClose}>
+                  ยกเลิก
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="relative aspect-[3/4] max-h-[55vh] w-full overflow-hidden rounded-lg bg-zinc-900">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`h-full w-full object-cover scale-x-[-1] ${ready ? "opacity-100" : "opacity-0"}`}
+                />
+                {!ready && (
+                  <div className="absolute inset-0 flex items-center justify-center text-xs text-zinc-400">
+                    กำลังเปิดกล้อง…
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
+                จัดใบหน้าให้อยู่กลางกรอบ แล้วกดถ่าย
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleClose}
+                >
+                  ยกเลิก
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="flex-1"
+                  disabled={!ready}
+                  onClick={handleCapture}
+                >
+                  ถ่ายรูป
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SelfieSourcePicker({
+  onCamera,
+  onGallery,
+  onClose,
+}: {
+  onCamera: () => void;
+  onGallery: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-sm rounded-xl bg-white dark:bg-zinc-900 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="selfie-source-title"
+      >
+        <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
+          <h2
+            id="selfie-source-title"
+            className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+          >
+            เลือกวิธีเพิ่มรูป selfie
+          </h2>
+        </div>
+        <div className="p-3 space-y-1">
+          <button
+            type="button"
+            onClick={onCamera}
+            className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm text-zinc-900 dark:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          >
+            <CameraIcon className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
+            <span>
+              <span className="block font-medium">ถ่ายรูป</span>
+              <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                เปิดกล้องหน้า
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={onGallery}
+            className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm text-zinc-900 dark:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          >
+            <PhotoIcon className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
+            <span>
+              <span className="block font-medium">เลือกจากคลัง</span>
+              <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                รูปที่ถ่ายไว้แล้วในเครื่อง
+              </span>
+            </span>
+          </button>
+        </div>
+        <div className="px-3 pb-3">
+          <Button type="button" variant="outline" size="sm" className="w-full" onClick={onClose}>
+            ยกเลิก
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -443,7 +760,7 @@ function Lightbox({
           </span>
           <div className="flex items-center gap-3">
             <a
-              href={photo.webUrl || photo.fullUrl}
+              href={`/api/download/photo?id=${photo.id}&token=${shareToken}`}
               download={`photo-${index + 1}.jpg`}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 text-xs font-medium text-white transition-colors"
@@ -460,7 +777,7 @@ function Lightbox({
                   clipRule="evenodd"
                 />
               </svg>
-              บันทึกรูปนี้
+              ดาวน์โหลดรูปนี้
             </a>
             <button
               type="button"

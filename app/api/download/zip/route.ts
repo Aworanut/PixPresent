@@ -7,6 +7,7 @@
 
 import { type NextRequest } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { uniqueDownloadFilenames } from "@/lib/download-filename";
 import { Zip, ZipPassThrough } from "fflate";
 
 export async function GET(request: NextRequest) {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
   // Fetch photo URLs
   const { data: photos } = await supabase
     .from("photos")
-    .select("id, r2_web_url")
+    .select("id, r2_web_url, original_filename")
     .in("id", photoIds)
     .eq("event_id", event.id)
     .not("r2_web_url", "is", null);
@@ -51,6 +52,13 @@ export async function GET(request: NextRequest) {
   if (!photos || photos.length === 0) {
     return new Response("No photos found", { status: 404 });
   }
+
+  const filenames = uniqueDownloadFilenames(
+    photos.map((photo, i) => ({
+      originalFilename: photo.original_filename,
+      fallbackStem: `photo-${String(i + 1).padStart(3, "0")}`,
+    })),
+  );
 
   // Stream ZIP
   const stream = new ReadableStream({
@@ -72,7 +80,7 @@ export async function GET(request: NextRequest) {
           const res = await fetch(photo.r2_web_url);
           if (!res.ok || !res.body) continue;
 
-          const filename = `photo-${String(i + 1).padStart(3, "0")}.jpg`;
+          const filename = filenames[i];
           const passThrough = new ZipPassThrough(filename);
           zip.add(passThrough);
 

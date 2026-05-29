@@ -1,14 +1,10 @@
-<!-- BEGIN:nextjs-agent-rules -->
-
-## ⚠️ Next.js Version Notice
-
-The Next.js version in this project (16.0.0) may be newer than your training data. APIs, conventions, and best practices may have changed.
-
-**Before working with Next.js features, framework APIs, or anything you're unsure about, consult the official documentation in `node_modules/next/dist/docs/`** — these docs match the exact version installed here.
-
-<!-- END:nextjs-agent-rules -->
-
 # AGENTS.md
+
+<!-- BEGIN:nextjs-agent-rules -->
+## Next.js Version Warning
+
+This is NOT the Next.js you know. This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 

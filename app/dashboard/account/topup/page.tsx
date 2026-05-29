@@ -8,7 +8,7 @@ export default async function TopupPage() {
   if (!ctx) redirect("/login");
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div className="space-y-8 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>

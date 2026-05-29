@@ -7,6 +7,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { deleteRekognitionCollection } from "@/lib/aws/rekognition";
 import { extractDriveFolderId } from "@/lib/google-drive";
 import { isValidTier, TIER_CONFIG, type EventTier } from "@/lib/credit-packages";
+import { uploadEventCover, parseCoverCrop } from "@/lib/cover-upload";
 
 export type EventActionState = { error: string } | undefined;
 
@@ -50,6 +51,7 @@ type ParsedForm = {
   event_date: string | null;
   folders: ParsedFolder[];
   tier: EventTier;
+  cover_photo: FormDataEntryValue | null;
 };
 
 function parseForm(formData: FormData): ParsedForm {
@@ -70,7 +72,15 @@ function parseForm(formData: FormData): ParsedForm {
     folders.push({ label: labels[i] ?? "", folder_id });
   }
 
-  return { name, event_date, folders, tier };
+  const cover_photo = formData.get("cover_photo");
+
+  return {
+    name,
+    event_date,
+    folders,
+    tier,
+    cover_photo,
+  };
 }
 
 function validate({ name }: ParsedForm): EventActionState {
@@ -140,6 +150,36 @@ export async function createEvent(
 
   if (!eventId) return { error: "สร้าง event ไม่สำเร็จ" };
 
+  // Handle cover image upload if present
+  let coverUrl: string | null = null;
+  if (input.cover_photo && input.cover_photo instanceof File && input.cover_photo.size > 0) {
+    const uploadResult = await uploadEventCover(
+      admin,
+      user.id,
+      eventId,
+      input.cover_photo,
+      "",
+      parseCoverCrop(formData),
+    );
+    if (uploadResult.error) {
+      await admin.from("events").delete().eq("id", eventId);
+      return { error: `อัปโหลดรูปปกไม่สำเร็จ: ${uploadResult.error}` };
+    }
+    coverUrl = uploadResult.coverUrl ?? null;
+  }
+
+  // Update event with cover URL when uploaded
+  if (coverUrl) {
+    const { error: coverErr } = await admin
+      .from("events")
+      .update({ cover_image_url: coverUrl })
+      .eq("id", eventId);
+    if (coverErr) {
+      await admin.from("events").delete().eq("id", eventId);
+      return { error: `บันทึกข้อมูลรูปปกไม่สำเร็จ: ${coverErr.message}` };
+    }
+  }
+
   if (input.folders.length > 0) {
     const { error: folderErr } = await admin
       .from("event_storage_folders")
@@ -171,11 +211,47 @@ export async function updateEvent(
   if (invalid) return invalid;
 
   const supabase = await createClient();
+  const admin = createServiceRoleClient();
+
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
+  if (!user) return { error: "ไม่พบ session" };
+
+  // Get existing event to check cover_image_url
+  const { data: existingEvent } = await admin
+    .from("events")
+    .select("cover_image_url")
+    .eq("id", id)
+    .single();
+
+  const hasCoverPhotoFile = input.cover_photo instanceof File && input.cover_photo.size > 0;
+  const isRemovingCover = formData.get("remove_cover") === "true";
+
+  let coverUrl = existingEvent?.cover_image_url ?? null;
+
+  if (isRemovingCover) {
+    coverUrl = null;
+  } else if (hasCoverPhotoFile) {
+    const uploadResult = await uploadEventCover(
+      admin,
+      user.id,
+      id,
+      input.cover_photo,
+      existingEvent?.cover_image_url ?? "",
+      parseCoverCrop(formData),
+    );
+    if (uploadResult.error) {
+      return { error: `อัปโหลดรูปปกไม่สำเร็จ: ${uploadResult.error}` };
+    }
+    coverUrl = uploadResult.coverUrl ?? null;
+  }
+
   const { error } = await supabase
     .from("events")
     .update({
       name: input.name,
       event_date: input.event_date,
+      cover_image_url: coverUrl,
     })
     .eq("id", id);
 

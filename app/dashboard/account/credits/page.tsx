@@ -242,7 +242,7 @@ export default async function CreditsPage() {
   const slips: SlipRow[] = slipsData ?? [];
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="space-y-8 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>

@@ -114,6 +114,7 @@ export type Database = {
         Row: {
           activated_at: string | null
           commerce_enabled: boolean
+          cover_image_url: string | null
           created_at: string
           credits_used: number
           currency: string | null
@@ -142,6 +143,7 @@ export type Database = {
         Insert: {
           activated_at?: string | null
           commerce_enabled?: boolean
+          cover_image_url?: string | null
           created_at?: string
           credits_used?: number
           currency?: string | null
@@ -170,6 +172,7 @@ export type Database = {
         Update: {
           activated_at?: string | null
           commerce_enabled?: boolean
+          cover_image_url?: string | null
           created_at?: string
           credits_used?: number
           currency?: string | null
@@ -412,14 +415,18 @@ export type Database = {
       tenants: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           credit_balance: number
           display_name: string | null
+          facebook_url: string | null
           first_name: string | null
           google_connected_at: string | null
           google_refresh_token: string | null
           id: string
+          instagram_username: string | null
           last_name: string | null
+          line_id: string | null
           name: string
           onboarding_completed_at: string | null
           owner_user_id: string
@@ -428,18 +435,23 @@ export type Database = {
           phone: string | null
           plan: string
           storage_provider: string
+          tiktok_username: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           credit_balance?: number
           display_name?: string | null
+          facebook_url?: string | null
           first_name?: string | null
           google_connected_at?: string | null
           google_refresh_token?: string | null
           id?: string
+          instagram_username?: string | null
           last_name?: string | null
+          line_id?: string | null
           name: string
           onboarding_completed_at?: string | null
           owner_user_id: string
@@ -448,18 +460,23 @@ export type Database = {
           phone?: string | null
           plan?: string
           storage_provider?: string
+          tiktok_username?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           credit_balance?: number
           display_name?: string | null
+          facebook_url?: string | null
           first_name?: string | null
           google_connected_at?: string | null
           google_refresh_token?: string | null
           id?: string
+          instagram_username?: string | null
           last_name?: string | null
+          line_id?: string | null
           name?: string
           onboarding_completed_at?: string | null
           owner_user_id?: string
@@ -468,6 +485,7 @@ export type Database = {
           phone?: string | null
           plan?: string
           storage_provider?: string
+          tiktok_username?: string | null
           updated_at?: string
         }
         Relationships: []

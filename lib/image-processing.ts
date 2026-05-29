@@ -9,6 +9,7 @@
 
 import sharp from "sharp";
 import exifReader from "exif-reader";
+import { clampCropToImage, type CropPixels } from "@/lib/crop";
 
 export type ProcessedImage = {
   web: Buffer; // ~300-800 KB
@@ -92,24 +93,19 @@ export type ProcessedAvatar = {
   contentType: "image/jpeg";
 };
 
-/**
- * Resize and compress a user-uploaded image to fit avatar storage limits.
- * Output is always JPEG with EXIF stripped.
- */
-export async function processAvatarImage(
-  input: Buffer,
-  maxBytes: number = AVATAR_MAX_BYTES,
-): Promise<ProcessedAvatar> {
-  const edges = [AVATAR_MAX_EDGE, 384, 256];
-
-  for (const edge of edges) {
+async function compressToJpeg(
+  pipeline: sharp.Sharp,
+  maxBytes: number,
+  sizes: { width: number; height: number }[],
+): Promise<Buffer> {
+  for (const size of sizes) {
     for (let quality = 85; quality >= 50; quality -= 10) {
-      const buffer = await sharp(input, { failOn: "error", animated: false })
-        .rotate()
+      const buffer = await pipeline
+        .clone()
         .resize({
-          width: edge,
-          height: edge,
-          fit: "inside",
+          width: size.width,
+          height: size.height,
+          fit: "cover",
           withoutEnlargement: true,
         })
         .jpeg({ quality, mozjpeg: true })
@@ -117,10 +113,137 @@ export async function processAvatarImage(
         .toBuffer();
 
       if (buffer.length <= maxBytes) {
-        return { buffer, contentType: "image/jpeg" };
+        return buffer;
       }
     }
   }
 
-  throw new Error("AVATAR_TOO_LARGE");
+  throw new Error("IMAGE_TOO_LARGE");
+}
+
+/**
+ * Crop (EXIF-aware) then resize/compress for profile avatars.
+ */
+export async function processCroppedAvatar(
+  input: Buffer,
+  crop: CropPixels,
+  maxBytes: number = AVATAR_MAX_BYTES,
+): Promise<ProcessedAvatar> {
+  const meta = await sharp(input, { failOn: "error", animated: false })
+    .rotate()
+    .metadata();
+  const imageWidth = meta.width ?? 1;
+  const imageHeight = meta.height ?? 1;
+  const region = clampCropToImage(crop, imageWidth, imageHeight);
+
+  const cropped = sharp(input, { failOn: "error", animated: false })
+    .rotate()
+    .extract(region);
+  const buffer = await compressToJpeg(cropped, maxBytes, [
+    { width: AVATAR_MAX_EDGE, height: AVATAR_MAX_EDGE },
+    { width: 384, height: 384 },
+    { width: 256, height: 256 },
+  ]);
+
+  return { buffer, contentType: "image/jpeg" };
+}
+
+/**
+ * Resize and compress without crop (legacy / fallback).
+ */
+export async function processAvatarImage(
+  input: Buffer,
+  maxBytes: number = AVATAR_MAX_BYTES,
+): Promise<ProcessedAvatar> {
+  const fullImage = sharp(input, { failOn: "error", animated: false }).rotate();
+  const meta = await fullImage.metadata();
+  const w = meta.width ?? AVATAR_MAX_EDGE;
+  const h = meta.height ?? AVATAR_MAX_EDGE;
+  const size = Math.min(w, h, AVATAR_MAX_EDGE);
+
+  return processCroppedAvatar(
+    input,
+    {
+      x: Math.round((w - size) / 2),
+      y: Math.round((h - size) / 2),
+      width: size,
+      height: size,
+    },
+    maxBytes,
+  );
+}
+
+/** Supabase cover photo size limit (5 MB). */
+export const COVER_MAX_BYTES = 5 * 1024 * 1024;
+
+/** Max width for cover photo banner. */
+export const COVER_MAX_WIDTH = 1920;
+export const COVER_MAX_HEIGHT = 1080;
+
+export type ProcessedCover = {
+  buffer: Buffer;
+  contentType: "image/jpeg";
+};
+
+/**
+ * Crop (EXIF-aware) then resize/compress for event cover banners (16:9).
+ */
+export async function processCroppedCover(
+  input: Buffer,
+  crop: CropPixels,
+  maxBytes: number = COVER_MAX_BYTES,
+): Promise<ProcessedCover> {
+  const meta = await sharp(input, { failOn: "error", animated: false })
+    .rotate()
+    .metadata();
+  const imageWidth = meta.width ?? 1;
+  const imageHeight = meta.height ?? 1;
+  const region = clampCropToImage(crop, imageWidth, imageHeight);
+
+  const cropped = sharp(input, { failOn: "error", animated: false })
+    .rotate()
+    .extract(region);
+  const buffer = await compressToJpeg(cropped, maxBytes, [
+    { width: COVER_MAX_WIDTH, height: COVER_MAX_HEIGHT },
+    { width: 1440, height: 810 },
+    { width: 1024, height: 576 },
+  ]);
+
+  return { buffer, contentType: "image/jpeg" };
+}
+
+/**
+ * Resize and compress without explicit crop (center 16:9 fallback).
+ */
+export async function processCoverImage(
+  input: Buffer,
+  maxBytes: number = COVER_MAX_BYTES,
+): Promise<ProcessedCover> {
+  const oriented = sharp(input, { failOn: "error", animated: false }).rotate();
+  const meta = await oriented.metadata();
+  const w = meta.width ?? COVER_MAX_WIDTH;
+  const h = meta.height ?? COVER_MAX_HEIGHT;
+  const targetAspect = COVER_MAX_WIDTH / COVER_MAX_HEIGHT;
+  const imageAspect = w / h;
+
+  let crop: CropPixels;
+  if (imageAspect > targetAspect) {
+    const cropW = Math.round(h * targetAspect);
+    crop = {
+      x: Math.round((w - cropW) / 2),
+      y: 0,
+      width: cropW,
+      height: h,
+    };
+  } else {
+    const cropH = Math.round(w / targetAspect);
+    crop = {
+      x: 0,
+      y: Math.round((h - cropH) / 2),
+      width: w,
+      height: cropH,
+    };
+  }
+
+  return processCroppedCover(input, crop, maxBytes);
 }

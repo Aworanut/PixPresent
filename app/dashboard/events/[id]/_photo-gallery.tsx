@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
   setPhotoVisibility,
@@ -9,7 +10,7 @@ import {
   deletePhotos,
   type PhotoVisibility,
 } from "@/lib/actions/photos";
-import { addToBlacklist } from "@/lib/actions/blacklist";
+import { PersonPickerModal } from "./_person-ban-modal";
 import { PhotoBadge } from "@/components/ui/photo-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -22,6 +23,7 @@ import {
   GlobeAltIcon,
   UserIcon,
   EyeSlashIcon,
+  EyeIcon,
 } from "@heroicons/react/24/outline";
 
 type FaceDetail = {
@@ -574,6 +576,7 @@ function HairlineButton({
 
 function PhotoMenu({ photo, eventId }: { photo: GalleryPhoto; eventId: string }) {
   const [open, setOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -594,13 +597,7 @@ function PhotoMenu({ photo, eventId }: { photo: GalleryPhoto; eventId: string })
   const setVis = (v: PhotoVisibility) =>
     act(() => setPhotoVisibility(photo.id, eventId, v));
 
-  const handleBanFaces = () => {
-    if (photo.face_details.length === 0) return;
-    if (!window.confirm(`ซ่อนใบหน้าทั้ง ${photo.face_details.length} คนในรูปนี้จากการค้นหา?`)) return;
-    act(async () => {
-      for (const f of photo.face_details) await addToBlacklist(eventId, f.face_id);
-    });
-  };
+  const isHidden = photo.visibility === "hidden";
 
   const handleDelete = () => {
     if (!window.confirm("ลบรูปนี้ถาวร? ไม่สามารถกู้คืนได้")) return;
@@ -650,8 +647,11 @@ function PhotoMenu({ photo, eventId }: { photo: GalleryPhoto; eventId: string })
           <div className="my-1 border-t border-[rgba(17,17,17,0.06)] dark:border-[rgba(251,249,246,0.06)]" />
 
           {photo.face_details.length > 0 && (
-            <MenuItem onClick={handleBanFaces} icon={EyeSlashIcon}>
-              ซ่อนใบหน้า{photo.face_details.length > 1 ? `ทั้ง ${photo.face_details.length} คน` : "นี้"}จากค้นหา
+            <MenuItem
+              onClick={() => { setOpen(false); setPickerOpen(true); }}
+              icon={isHidden ? EyeIcon : EyeSlashIcon}
+            >
+              {isHidden ? "แสดงบุคคล" : "ซ่อนบุคคล"}
             </MenuItem>
           )}
 
@@ -662,6 +662,20 @@ function PhotoMenu({ photo, eventId }: { photo: GalleryPhoto; eventId: string })
           </MenuItem>
         </div>
       )}
+
+      {/* Person picker → preview → ban (rendered to body so the card's
+          group-hover opacity wrapper can't fade the modal out) */}
+      {pickerOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <PersonPickerModal
+            eventId={eventId}
+            photo={photo}
+            mode={isHidden ? "unhide" : "hide"}
+            onClose={() => setPickerOpen(false)}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

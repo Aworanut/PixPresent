@@ -1,7 +1,9 @@
 import {
   AVATAR_MAX_BYTES,
-  processAvatarImage,
+  processCroppedAvatar,
 } from "@/lib/image-processing";
+import { parseCropFromForm, type CropPixels } from "@/lib/crop";
+import { isStoredAvatarUrl } from "@/lib/avatar-url";
 
 export const ALLOWED_AVATAR_TYPES = new Set([
   "image/jpeg",
@@ -30,12 +32,14 @@ export async function uploadUserAvatar(
   userId: string,
   avatarFile: FormDataEntryValue | null,
   existingAvatarUrl: string,
+  crop: CropPixels | null,
 ): Promise<
   | { avatarUrl: string | null; error?: undefined }
   | { avatarUrl?: undefined; error: string }
 > {
   if (!(avatarFile instanceof File) || avatarFile.size === 0) {
-    return { avatarUrl: existingAvatarUrl.trim() || null };
+    const kept = existingAvatarUrl.trim();
+    return { avatarUrl: isStoredAvatarUrl(kept) ? kept : null };
   }
 
   if (!ALLOWED_AVATAR_TYPES.has(avatarFile.type)) {
@@ -44,10 +48,13 @@ export async function uploadUserAvatar(
   if (avatarFile.size > MAX_AVATAR_INPUT_BYTES) {
     return { error: "รูปต้นฉบับใหญ่เกิน 20 MB กรุณาเลือกรูปที่เล็กลง" };
   }
+  if (!crop) {
+    return { error: "กรุณาปรับ crop รูปก่อนบันทึก" };
+  }
 
   try {
     const raw = Buffer.from(await avatarFile.arrayBuffer());
-    const processed = await processAvatarImage(raw, AVATAR_MAX_BYTES);
+    const processed = await processCroppedAvatar(raw, crop, AVATAR_MAX_BYTES);
     const objectPath = `${userId}/avatar.jpg`;
 
     const { error: uploadError } = await supabase.storage
@@ -67,4 +74,8 @@ export async function uploadUserAvatar(
   } catch {
     return { error: "ไม่สามารถบีบอัดรูปให้พอดีกับระบบได้ กรุณาเลือกรูปอื่น" };
   }
+}
+
+export function parseAvatarCrop(formData: FormData): CropPixels | null {
+  return parseCropFromForm(formData, "avatar_crop");
 }

@@ -1,184 +1,382 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { CameraIcon } from "@heroicons/react/24/outline";
+import { useActionState, useRef, useState } from "react";
+import { PencilSquareIcon, PhoneIcon } from "@heroicons/react/24/outline";
 import { updateProfile } from "@/lib/actions/account";
+import { isStoredAvatarUrl } from "@/lib/avatar-url";
 import type { TenantProfile } from "@/lib/auth/current-tenant";
+import { ImageCropField } from "@/components/image-crop-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+// ─── Minimal Custom SVG Icons ──────────────────────────────────────────────────
+
+function LineIcon({ className }: { className?: string }) {
+  return (
+    <svg className={cn("fill-current", className)} viewBox="0 0 24 24">
+      <path 
+        fillRule="evenodd" 
+        clipRule="evenodd" 
+        d="M12 3C7.03 3 3 6.2 3 10.1c0 3.5 3.2 6.4 7.6 7l-.2 1.5c-.05.38.14.5.44.29l2-1.45c.22-.16.5-.22.77-.18c3.9.3 7.4-2.7 7.4-7.25C21 6.2 16.97 3 12 3z M7 8.5h1v3h1.2v1H7V8.5z M10.2 8.5h1v4h-1V8.5z M12.8 8.5h0.9l1.6 3v-3h0.9v4h-0.9l-1.6-3v3h-0.9V8.5z M17.5 8.5h2.5v0.9H18.4v0.6h1.3v0.9H18.4v0.7H20v0.9h-2.5V8.5z" 
+      />
+    </svg>
+  );
+}
+
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  );
+}
+
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+    </svg>
+  );
+}
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+    </svg>
+  );
+}
+
+// ─── Studio Name Field with In-place Edit ──────────────────────────────────────
+
+type StudioNameProps = {
+  value: string;
+  onChange: (val: string) => void;
+  fallbackName: string;
+};
+
+function StudioNameField({ value, onChange, fallbackName }: StudioNameProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [editing, setEditing] = useState(false);
+
+  function startEdit() {
+    setEditing(true);
+    requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      input.focus();
+      input.select();
+    });
+  }
+
+  function stopEdit() {
+    setEditing(false);
+  }
+
+  const studioNameDisplay = value.trim() || fallbackName;
+
+  return (
+    <div className="w-full border-t border-zinc-150 dark:border-zinc-800/60 pt-4">
+      <div className="group relative flex justify-center min-w-0 px-1">
+        <input
+          ref={inputRef}
+          id="display_name"
+          name="display_name"
+          type="text"
+          maxLength={120}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={fallbackName || "ชื่อสตูดิโอ"}
+          readOnly={!editing}
+          onBlur={stopEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              inputRef.current?.blur();
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              stopEdit();
+            }
+          }}
+          onClick={() => {
+            if (!editing) startEdit();
+          }}
+          className={cn(
+            "w-full min-w-0 bg-transparent text-center text-lg font-semibold font-heading text-zinc-950 dark:text-zinc-50 outline-none truncate transition-colors",
+            editing
+              ? "border-b border-[#D4AF37] pb-0.5 cursor-text"
+              : "border-b border-transparent cursor-pointer group-hover:text-[#D4AF37]/90",
+          )}
+        />
+        {!editing && (
+          <button
+            type="button"
+            onClick={startEdit}
+            aria-label="แก้ไขชื่อสตูดิโอ"
+            className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-400 opacity-0 transition-all duration-200 hover:text-[#D4AF37] focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] group-hover:opacity-100 group-focus-within:opacity-100"
+          >
+            <PencilSquareIcon className="h-4 w-4" strokeWidth={1.5} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 type Props = {
   tenant: TenantProfile;
   email: string;
 };
 
+// ─── Main Component ────────────────────────────────────────────────────────────
+
 export function ProfileSection({ tenant, email }: Props) {
   const [state, action, pending] = useActionState(updateProfile, undefined);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(
-    tenant.avatar_url,
-  );
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const storedAvatarUrl = isStoredAvatarUrl(tenant.avatar_url)
+    ? tenant.avatar_url
+    : null;
 
-  useEffect(() => {
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [objectUrl]);
+  // Form states for Live-Preview
+  const [firstName, setFirstName] = useState(tenant.first_name ?? "");
+  const [lastName, setLastName] = useState(tenant.last_name ?? "");
+  const [displayName, setDisplayName] = useState(tenant.display_name ?? tenant.name ?? "");
+  const [phone, setPhone] = useState(tenant.phone ?? "");
+  const [lineId, setLineId] = useState(tenant.line_id ?? "");
+  const [instagram, setInstagram] = useState(tenant.instagram_username ?? "");
+  const [facebook, setFacebook] = useState(tenant.facebook_url ?? "");
+  const [tiktok, setTiktok] = useState(tenant.tiktok_username ?? "");
 
-  function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    const nextObjectUrl = URL.createObjectURL(file);
-    setObjectUrl(nextObjectUrl);
-    setPreviewUrl(nextObjectUrl);
-  }
-
-  const initials =
-    `${(tenant.first_name ?? tenant.name).charAt(0)}${(tenant.last_name ?? "").charAt(0)}`.toUpperCase() ||
-    tenant.name.charAt(0).toUpperCase();
+  const fallbackName = [firstName, lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim() || tenant.name;
 
   return (
     <div className="space-y-8">
-      <form action={action} className="space-y-6">
+      <form action={action} className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <input
           type="hidden"
           name="existing_avatar_url"
-          value={tenant.avatar_url ?? ""}
+          value={storedAvatarUrl ?? ""}
         />
 
-        <div className="flex flex-col items-start gap-3 pb-2 border-b border-zinc-100 dark:border-zinc-800/60 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-none border border-[#D4AF37]/50 bg-white dark:bg-zinc-900 shadow-sm transition-all duration-500 hover:border-[#D4AF37] hover:shadow-[0_0_10px_rgba(212,175,55,0.2)]"
-            aria-label="เลือกรูปโปรไฟล์"
-          >
-            {previewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={previewUrl}
-                alt="รูปโปรไฟล์"
-                className="h-full w-full object-cover"
-                referrerPolicy="no-referrer"
+        {/* Left Column - Vertical Business Card Preview */}
+        <div className="flex flex-col items-center text-center p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 rounded-none shadow-sm h-fit space-y-5 min-w-0 w-full">
+          <ImageCropField
+            inputName="avatar"
+            cropPrefix="avatar_crop"
+            aspect={1}
+            label="Profile Photo"
+            initialUrl={storedAvatarUrl}
+            variant="avatar"
+            emptyHint="อัปโหลดรูปโปรไฟล์"
+          />
+
+          <StudioNameField
+            value={displayName}
+            onChange={setDisplayName}
+            fallbackName={fallbackName}
+          />
+
+          {/* Social Links Preview List - Stacked vertically */}
+          {(phone || lineId || instagram || facebook || tiktok) && (
+            <div className="w-full pt-4 border-t border-zinc-150 dark:border-zinc-800/60 space-y-3 text-left">
+              {/* Phone */}
+              {phone && (
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+                  <PhoneIcon className="h-4 w-4 stroke-[1.5] text-[#D4AF37] flex-shrink-0" />
+                  <span className="font-mono truncate">{phone}</span>
+                </div>
+              )}
+              
+              {/* Line ID */}
+              {lineId && (
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+                  <LineIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <span className="font-mono truncate">@{lineId.replace(/^@/, "")}</span>
+                </div>
+              )}
+              
+              {/* Instagram */}
+              {instagram && (
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+                  <InstagramIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <span className="font-mono truncate">@{instagram.replace(/^@/, "")}</span>
+                </div>
+              )}
+              
+              {/* Facebook */}
+              {facebook && (
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400 min-w-0">
+                  <FacebookIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <span className="font-mono truncate" title={facebook}>
+                    {facebook.replace(/^https?:\/\/(www\.)?facebook\.com\//, "")}
+                  </span>
+                </div>
+              )}
+              
+              {/* TikTok */}
+              {tiktok && (
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+                  <TikTokIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <span className="font-mono truncate">@{tiktok.replace(/^@/, "")}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Form Fields (2/3 width on md) */}
+        <div className="md:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="first_name">
+                ชื่อ <span className="text-[#D4AF37]">*</span>
+              </Label>
+              <Input
+                id="first_name"
+                name="first_name"
+                type="text"
+                autoComplete="given-name"
+                required
+                maxLength={80}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full"
               />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center text-xl font-bold font-mono text-[#D4AF37]">
-                {initials}
-              </span>
-            )}
-            <span className="absolute inset-0 flex items-center justify-center bg-zinc-900/0 opacity-0 transition-all duration-300 group-hover:bg-zinc-900/40 group-hover:opacity-100">
-              <CameraIcon className="h-5 w-5 text-white" />
-            </span>
-          </button>
-          <div className="space-y-0.5">
-            <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-50 font-mono tracking-widest uppercase">
-              Profile Photo
-            </h3>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 opacity-60 max-w-sm leading-relaxed">
-              แตะเพื่อเปลี่ยนรูป — ระบบจะบีบอัดให้พอดีอัตโนมัติ
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="last_name">
+                นามสกุล <span className="text-[#D4AF37]">*</span>
+              </Label>
+              <Input
+                id="last_name"
+                name="last_name"
+                type="text"
+                autoComplete="family-name"
+                required
+                maxLength={80}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="phone">เบอร์โทรศัพท์</Label>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              maxLength={30}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0812345678"
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="line_id">Line ID</Label>
+            <Input
+              id="line_id"
+              name="line_id"
+              type="text"
+              maxLength={80}
+              value={lineId}
+              onChange={(e) => setLineId(e.target.value)}
+              placeholder="@yourstudio"
+              className="w-full font-mono text-xs"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="instagram_username">Instagram Account</Label>
+            <Input
+              id="instagram_username"
+              name="instagram_username"
+              type="text"
+              maxLength={80}
+              value={instagram}
+              onChange={(e) => setInstagram(e.target.value)}
+              placeholder="yourstudio.weddings"
+              className="w-full font-mono text-xs"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="facebook_url">Facebook Page URL</Label>
+            <Input
+              id="facebook_url"
+              name="facebook_url"
+              type="url"
+              maxLength={200}
+              value={facebook}
+              onChange={(e) => setFacebook(e.target.value)}
+              placeholder="https://facebook.com/yourstudio"
+              className="w-full font-mono text-xs"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="tiktok_username">TikTok Account</Label>
+            <Input
+              id="tiktok_username"
+              name="tiktok_username"
+              type="text"
+              maxLength={80}
+              value={tiktok}
+              onChange={(e) => setTiktok(e.target.value)}
+              placeholder="yourstudio.tiktok"
+              className="w-full font-mono text-xs"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="bio">คำแนะนำตัว / Studio Bio</Label>
+            <textarea
+              id="bio"
+              name="bio"
+              maxLength={500}
+              defaultValue={tenant.bio ?? ""}
+              placeholder="บริการถ่ายภาพงานแต่งงาน งานอีเวนต์ แนว Minimalist Editorial..."
+              rows={4}
+              className="flex w-full rounded-none border border-zinc-200 bg-white px-3 py-2 text-xs font-sans ring-offset-white placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-600 dark:focus-visible:ring-[#D4AF37] text-zinc-900 dark:text-zinc-50"
+            />
+          </div>
+
+          <div className="space-y-1.5 border-t border-zinc-150 dark:border-zinc-800/60 pt-4">
+            <Label className="text-zinc-500 dark:text-zinc-400">Email</Label>
+            <p className="text-sm text-zinc-700 dark:text-zinc-300 py-1 font-mono">
+              {email}
+            </p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 opacity-65">
+              เปลี่ยนอีเมลผ่าน Supabase dashboard
             </p>
           </div>
-          <input
-            ref={fileInputRef}
-            id="avatar"
-            name="avatar"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="sr-only"
-            onChange={handleAvatarChange}
-          />
-        </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="first_name">
-              ชื่อ <span className="text-[#D4AF37]">*</span>
-            </Label>
-            <Input
-              id="first_name"
-              name="first_name"
-              type="text"
-              autoComplete="given-name"
-              required
-              maxLength={80}
-              defaultValue={tenant.first_name ?? ""}
-              className="max-w-sm"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="last_name">
-              นามสกุล <span className="text-[#D4AF37]">*</span>
-            </Label>
-            <Input
-              id="last_name"
-              name="last_name"
-              type="text"
-              autoComplete="family-name"
-              required
-              maxLength={80}
-              defaultValue={tenant.last_name ?? ""}
-              className="max-w-sm"
-            />
+          {state && "error" in state && (
+            <p className="text-sm text-rose-600 dark:text-rose-400">{state.error}</p>
+          )}
+          {state && "ok" in state && (
+            <p className="text-sm text-emerald-600 dark:text-emerald-400">
+              บันทึกเรียบร้อยแล้ว
+            </p>
+          )}
+
+          <div className="pt-2 flex justify-end">
+            <Button type="submit" size="sm" disabled={pending} className="w-full sm:w-auto">
+              {pending ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+            </Button>
           </div>
         </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="display_name">Display name</Label>
-          <Input
-            id="display_name"
-            name="display_name"
-            type="text"
-            autoComplete="nickname"
-            maxLength={120}
-            defaultValue={tenant.display_name ?? ""}
-            placeholder="ชื่อที่แสดงบนแดชบอร์ด"
-            className="max-w-sm"
-          />
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 opacity-60">
-            ถ้าไม่กรอก จะใช้ชื่อ + นามสกุล
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="phone">เบอร์โทรศัพท์</Label>
-          <Input
-            id="phone"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            maxLength={30}
-            defaultValue={tenant.phone ?? ""}
-            placeholder="0812345678"
-            className="max-w-sm"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-zinc-500 dark:text-zinc-400">Email</Label>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300 py-2">
-            {email}
-          </p>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            เปลี่ยนอีเมลผ่าน Supabase dashboard
-          </p>
-        </div>
-
-        {state && "error" in state && (
-          <p className="text-sm text-rose-600 dark:text-rose-400">{state.error}</p>
-        )}
-        {state && "ok" in state && (
-          <p className="text-sm text-emerald-600 dark:text-emerald-400">
-            บันทึกแล้ว
-          </p>
-        )}
-
-        <Button type="submit" size="sm" disabled={pending}>
-          {pending ? "กำลังบันทึก..." : "บันทึก"}
-        </Button>
       </form>
     </div>
   );
