@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { ADMIN_EMAIL } from "@/lib/payment-config";
+import { getPrimaryAdminEmail } from "@/lib/auth/super-admin";
 
 // Initialize Resend client
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -41,7 +41,7 @@ Credits Claimed: ${params.credits}
 
     const result = await resend.emails.send({
       from: getFromEmail(),
-      to: ADMIN_EMAIL,
+      to: getPrimaryAdminEmail(),
       subject,
       text,
     });
@@ -135,7 +135,7 @@ Slip ของคุณไม่ผ่านการตรวจสอบ
 
 Reason: ${params.reason}
 
-กรุณาติดต่อ ${ADMIN_EMAIL} หากมีข้อสงสัย
+กรุณาติดต่อ ${getPrimaryAdminEmail()} หากมีข้อสงสัย
     `.trim();
 
     const result = await resend.emails.send({

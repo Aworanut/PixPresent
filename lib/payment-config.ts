@@ -54,11 +54,6 @@ export const CUSTOM_TOPUP = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Admin notification
-// ---------------------------------------------------------------------------
-export const ADMIN_EMAIL = "woranut.ak@gmail.com";
-
-// ---------------------------------------------------------------------------
 // SlipOK API (slip auto-verification)
 // ใส่ใน .env.local: SLIPOK_API_KEY=67363  (ตัวเลขท้าย URL จาก dashboard)
 // URL จริง: https://api.slipok.com/api/line/apikey/{SLIPOK_API_KEY}

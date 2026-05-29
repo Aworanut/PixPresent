@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ADMIN_EMAIL } from "@/lib/payment-config";
+import { isSuperAdminEmail } from "@/lib/auth/super-admin";
 
 export default async function AdminLayout({
   children,
@@ -11,6 +11,6 @@ export default async function AdminLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || user.email !== ADMIN_EMAIL) redirect("/dashboard");
+  if (!isSuperAdminEmail(user?.email)) redirect("/dashboard");
   return <>{children}</>;
 }
