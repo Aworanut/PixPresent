@@ -26,7 +26,7 @@ export default async function GuestEventPage({ params }: Props) {
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, name, event_date, share_token_expires_at")
+    .select("id, name, event_date, share_token_expires_at, activated_at, data_retention_days")
     .eq("share_token", token)
     .is("deleted_at", null)
     .single();
@@ -34,9 +34,20 @@ export default async function GuestEventPage({ params }: Props) {
   // Token not found at all → 404
   if (!event) notFound();
 
+  const now = new Date();
+
+  // Data retention window + 7-day grace period has elapsed → Rekognition
+  // collection was cleaned up by the nightly cron. Show a specific message
+  // rather than letting face-search fail with a generic error.
+  const isDataExpired = !!event.activated_at && (() => {
+    const cutoff = new Date(event.activated_at!);
+    cutoff.setDate(cutoff.getDate() + (event.data_retention_days ?? 7) + 7);
+    return cutoff < now;
+  })();
+
   const isExpired =
     !event.share_token_expires_at ||
-    new Date(event.share_token_expires_at) <= new Date();
+    new Date(event.share_token_expires_at) <= now;
 
   const formattedDate = event.event_date
     ? new Date(event.event_date).toLocaleDateString("th-TH", {
@@ -45,6 +56,10 @@ export default async function GuestEventPage({ params }: Props) {
         day: "numeric",
       })
     : null;
+
+  if (isDataExpired) {
+    return <DataExpiredPage eventName={event.name} />;
+  }
 
   if (isExpired) {
     return <ExpiredPage eventName={event.name} />;
@@ -84,7 +99,25 @@ export default async function GuestEventPage({ params }: Props) {
   );
 }
 
-// ─── Expired / revoked state ──────────────────────────────────────────────────
+// ─── Error states ─────────────────────────────────────────────────────────────
+
+function DataExpiredPage({ eventName }: { eventName: string }) {
+  return (
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-4">
+      <div className="max-w-sm w-full text-center space-y-4">
+        <div className="text-5xl">🗂️</div>
+        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+          {eventName}
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+          ข้อมูลงานนี้ถูกลบออกจากระบบแล้ว
+          <br />
+          เกินระยะเวลาเก็บข้อมูลตามแพ็กเกจที่เลือกไว้
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function ExpiredPage({ eventName }: { eventName: string }) {
   return (

@@ -161,3 +161,39 @@ Reason: ${params.reason}
     return { error: `Email error: ${errorMsg}` };
   }
 }
+
+/**
+ * sendCleanupFailureAlert
+ * Alerts admin when the nightly Rekognition collection cleanup partially fails.
+ * Non-critical — failures are logged regardless; this is a best-effort alert.
+ */
+export async function sendCleanupFailureAlert(params: {
+  failures: string[];
+}): Promise<void> {
+  const to = getPrimaryAdminEmail();
+  if (!resend || !to) {
+    console.warn(
+      "[Email] Resend not configured or no admin email; skipping cleanup failure alert",
+    );
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: getFromEmail(),
+      to,
+      subject: `[PixPresent] ⚠️ Rekognition Cleanup — ${params.failures.length} failure(s)`,
+      text: [
+        "พบ error ระหว่าง nightly Rekognition collection cleanup:",
+        "",
+        ...params.failures.map((f, i) => `${i + 1}. ${f}`),
+        "",
+        "Collection เหล่านี้ยังคงอยู่ใน AWS — จะลองอีกครั้งในรันถัดไป",
+        "ถ้า error ต่อเนื่อง กรุณาตรวจสอบ AWS credentials และ Rekognition quotas",
+      ].join("\n"),
+    });
+  } catch (err) {
+    // Swallow — this is a non-critical alert, don't let it propagate.
+    console.error("[Email] sendCleanupFailureAlert failed:", err);
+  }
+}
