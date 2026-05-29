@@ -117,7 +117,10 @@ export async function createEvent(
     {
       p_tenant_id: tenant.id,
       p_name: input.name,
-      p_event_date: input.event_date,
+      // p_event_date is a nullable DB `date` param, but `supabase gen types`
+      // can't model function-arg nullability and emits `string`. null ("no date")
+      // is valid here — accepted by the RPC and the nullable events.event_date column.
+      p_event_date: input.event_date as string,
       p_tier: input.tier,
       p_storage_limit_gb: tierCfg.storageLimitGb,
       p_link_active_days: tierCfg.linkActiveDays,

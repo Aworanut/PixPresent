@@ -36,6 +36,7 @@ export type Database = {
     Tables: {
       credit_ledger: {
         Row: {
+          actor_user_id: string | null
           balance_after: number
           created_at: string
           delta: number
@@ -46,6 +47,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          actor_user_id?: string | null
           balance_after: number
           created_at?: string
           delta: number
@@ -56,6 +58,7 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          actor_user_id?: string | null
           balance_after?: number
           created_at?: string
           delta?: number
@@ -434,28 +437,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      approve_topup_credit: { Args: { p_slip_id: string }; Returns: undefined }
+      adjust_credit: {
+        Args: {
+          p_actor: string
+          p_delta: number
+          p_note: string
+          p_tenant_id: string
+        }
+        Returns: undefined
+      }
+      approve_topup_credit: {
+        Args: { p_actor?: string; p_slip_id: string }
+        Returns: undefined
+      }
       create_event_deduct_credit: {
         Args: {
-          p_tenant_id: string
-          p_name: string
-          p_event_date: string | null
-          p_tier: string
-          p_storage_limit_gb: number
-          p_link_active_days: number
-          p_data_retention_days: number
           p_credit_cost: number
+          p_data_retention_days: number
+          p_event_date: string
+          p_link_active_days: number
+          p_name: string
+          p_storage_limit_gb: number
+          p_tenant_id: string
+          p_tier: string
         }
         Returns: string
       }
       current_tenant_id: { Args: never; Returns: string }
       delete_event_with_refund: {
         Args: { p_event_id: string; p_tenant_id: string }
-        Returns: undefined
+        Returns: Json
       }
       is_super_admin: { Args: never; Returns: boolean }
       reject_topup: {
-        Args: { p_reason: string; p_slip_id: string }
+        Args: { p_actor?: string; p_reason: string; p_slip_id: string }
         Returns: undefined
       }
     }
