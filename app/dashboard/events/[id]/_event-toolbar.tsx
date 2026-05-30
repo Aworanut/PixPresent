@@ -309,7 +309,7 @@ function Modal({
 
 // ─── Drive Modal ──────────────────────────────────────────────────────────────
 
-type FolderRow = { label: string; folder_id: string };
+type FolderRow = { label: string; folder_id: string; source_type: "gdrive" | "dropbox" };
 
 type FetchStatus = "fetching" | TestResult;
 
@@ -326,8 +326,8 @@ function DriveModal({
 }) {
   const [rows, setRows] = useState<FolderRow[]>(
     folders.length > 0
-      ? folders.map((f) => ({ label: f.label ?? "", folder_id: f.folder_id }))
-      : [{ label: "", folder_id: "" }],
+      ? folders.map((f) => ({ label: f.label ?? "", folder_id: f.folder_id, source_type: "gdrive" as const }))
+      : [{ label: "", folder_id: "", source_type: "gdrive" as const }],
   );
   // per-row fetch status: undefined=ยังไม่ตรวจ, "fetching"=กำลังตรวจ, TestResult=ผลลัพธ์
   const [fetchStatuses, setFetchStatuses] = useState<Record<number, FetchStatus>>({});
@@ -355,11 +355,11 @@ function DriveModal({
     });
     setRows((prev) => {
       const next = prev.filter((_, i) => i !== idx);
-      return next.length === 0 ? [{ label: "", folder_id: "" }] : next;
+      return next.length === 0 ? [{ label: "", folder_id: "", source_type: "gdrive" as const }] : next;
     });
   };
 
-  const add = () => setRows((prev) => [...prev, { label: "", folder_id: "" }]);
+  const add = () => setRows((prev) => [...prev, { label: "", folder_id: "", source_type: "gdrive" as const }]);
 
   // Auto-fetch folder name เมื่อ user ออกจาก field
   const onFolderBlur = (idx: number) => {
