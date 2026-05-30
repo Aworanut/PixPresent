@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { FolderIcon, ArrowPathIcon, ArrowUpOnSquareIcon } from "@heroicons/react/24/outline";
@@ -59,6 +59,13 @@ export function EventToolbar(props: ToolbarProps) {
   const [syncStatus, setSyncStatus] = useState<SyncPhase>({ phase: "idle" });
   const abortRef = useRef<AbortController | null>(null);
   const isRunning = syncStatus.phase === "listing" || syncStatus.phase === "syncing";
+
+  // Auto-dismiss toast 4s after done
+  useEffect(() => {
+    if (syncStatus.phase !== "done") return;
+    const t = setTimeout(() => setSyncStatus({ phase: "idle" }), 4000);
+    return () => clearTimeout(t);
+  }, [syncStatus.phase]);
 
   // Derive toast from sync status
   const syncToast: SyncToast = (() => {
@@ -213,7 +220,6 @@ export function EventToolbar(props: ToolbarProps) {
           toast={syncToast}
           isRunning={isRunning}
           onStop={handleStop}
-          onDismiss={() => setSyncStatus({ phase: "idle" })}
         />
       )}
       {open === "share" && (
@@ -499,12 +505,10 @@ function SyncProgressToast({
   toast,
   isRunning,
   onStop,
-  onDismiss,
 }: {
   toast: NonNullable<SyncToast>;
   isRunning: boolean;
   onStop: () => void;
-  onDismiss: () => void;
 }) {
   const isDone = toast.phase === "done";
   const pct =
@@ -558,8 +562,8 @@ function SyncProgressToast({
         </div>
 
         {/* Actions */}
-        <div className="flex-shrink-0 flex items-center gap-1">
-          {isRunning && (
+        {isRunning && (
+          <div className="flex-shrink-0">
             <button
               type="button"
               onClick={onStop}
@@ -567,16 +571,8 @@ function SyncProgressToast({
             >
               หยุด
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="ml-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-sm leading-none"
-            title="ปิด"
-          >
-            ×
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
