@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { FolderIcon, ArrowPathIcon, ArrowUpOnSquareIcon } from "@heroicons/react/24/outline";
@@ -39,13 +39,18 @@ export function EventToolbar(props: ToolbarProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [open, setOpen] = useState<Modal>(null);
+  const [syncRunning, setSyncRunning] = useState(false);
+  const [syncToast, setSyncToast] = useState<SyncToast>(null);
 
-  // Listen to URL search parameter to auto-open Google Drive Folders modal
-  useEffect(() => {
-    if (searchParams?.get("open") === "folders") {
+  // Auto-open Drive modal when URL has ?open=folders — render-time adjustment (no useEffect)
+  const [prevSearchOpen, setPrevSearchOpen] = useState(searchParams?.get("open") ?? "");
+  const currentSearchOpen = searchParams?.get("open") ?? "";
+  if (currentSearchOpen !== prevSearchOpen) {
+    setPrevSearchOpen(currentSearchOpen);
+    if (currentSearchOpen === "folders") {
       setOpen("drive");
     }
-  }, [searchParams]);
+  }
 
   const close = () => {
     setOpen(null);
@@ -65,12 +70,13 @@ export function EventToolbar(props: ToolbarProps) {
           text="Folders"
         />
 
-        {/* Import */}
+        {/* Import — แสดง spinning icon เมื่อ sync วิ่งอยู่ใน background */}
         <IconButton
           label="Import & Index"
           onClick={() => setOpen("sync")}
           icon={ArrowPathIcon}
           text="Sync"
+          animate={syncRunning}
         />
 
         {/* Share */}
@@ -91,14 +97,25 @@ export function EventToolbar(props: ToolbarProps) {
           onClose={close}
         />
       )}
-      {open === "sync" && (
-        <SyncModal
-          eventId={props.eventId}
-          isIndexed={props.isIndexed}
-          lastSyncAt={props.lastSyncAt}
-          lastSyncCount={props.lastSyncCount}
-          driveConnected={props.driveConnected}
-          onClose={close}
+      {/* SyncModal: always mounted (ไม่ใช้ conditional) เพื่อให้ SSE ไม่ขาดตอนปิด modal */}
+      <SyncModal
+        eventId={props.eventId}
+        isIndexed={props.isIndexed}
+        lastSyncAt={props.lastSyncAt}
+        lastSyncCount={props.lastSyncCount}
+        driveConnected={props.driveConnected}
+        onClose={close}
+        isOpen={open === "sync"}
+        onRunningChange={setSyncRunning}
+        onToastChange={setSyncToast}
+      />
+
+      {/* Progress toast — แสดงเมื่อ sync วิ่ง background (modal ปิดอยู่) */}
+      {syncToast !== null && open !== "sync" && (
+        <SyncProgressToast
+          toast={syncToast}
+          onOpen={() => setOpen("sync")}
+          onDismiss={() => setSyncToast(null)}
         />
       )}
       {open === "share" && (
@@ -122,11 +139,13 @@ function IconButton({
   onClick,
   icon: Icon,
   text,
+  animate = false,
 }: {
   label: string;
   onClick: () => void;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   text: string;
+  animate?: boolean;
 }) {
   return (
     <button
@@ -135,7 +154,7 @@ function IconButton({
       onClick={onClick}
       className="cta-button h-8 px-2.5 sm:px-3 text-[10px] sm:text-xs rounded-[2px] text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer font-mono leading-none"
     >
-      <Icon className="h-4 w-4 stroke-[1.5] flex-shrink-0 relative top-[-0.5px]" />
+      <Icon className={`h-4 w-4 stroke-[1.5] flex-shrink-0 relative top-[-0.5px]${animate ? " animate-spin" : ""}`} />
       <span className="hidden sm:inline relative top-[0.5px]">{text}</span>
     </button>
   );
@@ -373,6 +392,14 @@ function DriveModal({
   );
 }
 
+// ─── Sync toast (progress indicator shown when modal is closed) ───────────────
+
+type SyncToast =
+  | { phase: "listing"; folder: string }
+  | { phase: "syncing"; folder: string; done: number; total: number }
+  | { phase: "done"; photoCount: number }
+  | null;
+
 // ─── Sync Modal ───────────────────────────────────────────────────────────────
 
 type SyncPhase =
@@ -391,6 +418,9 @@ function SyncModal({
   lastSyncCount,
   driveConnected,
   onClose,
+  isOpen,
+  onRunningChange,
+  onToastChange,
 }: {
   eventId: string;
   isIndexed: boolean;
@@ -398,6 +428,9 @@ function SyncModal({
   lastSyncCount: number;
   driveConnected: boolean;
   onClose: () => void;
+  isOpen: boolean;
+  onRunningChange: (running: boolean) => void;
+  onToastChange: (toast: SyncToast) => void;
 }) {
   const [status, setStatus] = useState<SyncPhase>({ phase: "idle" });
   const router = useRouter();
@@ -411,6 +444,7 @@ function SyncModal({
     const controller = new AbortController();
     abortRef.current = controller;
     setStatus({ phase: "listing", folder: "…" });
+    onRunningChange(true);
 
     let res: Response;
     try {
@@ -451,24 +485,43 @@ function SyncModal({
               case "progress":
                 if (ev.phase === "listing") {
                   setStatus({ phase: "listing", folder: String(ev.folder ?? "…") });
+                  onToastChange({ phase: "listing", folder: String(ev.folder ?? "…") });
                 } else {
+                  const done = Number(ev.done ?? 0);
+                  const total = Number(ev.total ?? 0);
                   setStatus({
                     phase: "syncing",
                     folder: String(ev.folder ?? "…"),
-                    done: Number(ev.done ?? 0),
-                    total: Number(ev.total ?? 0),
+                    done,
+                    total,
                   });
+                  onToastChange({
+                    phase: "syncing",
+                    folder: String(ev.folder ?? "…"),
+                    done,
+                    total,
+                  });
+                  // อัพเดต gallery ทุก 20 รูป — แสดงรูปค่อยๆ ไม่ต้องรอ sync เสร็จ
+                  if (done > 0 && done % 20 === 0) {
+                    router.refresh();
+                  }
                 }
                 break;
               case "done":
                 setStatus({ phase: "done", photoCount: Number(ev.photoCount ?? 0) });
+                onToastChange({ phase: "done", photoCount: Number(ev.photoCount ?? 0) });
+                onRunningChange(false);
                 router.refresh();
                 break;
               case "warn":
                 setStatus({ phase: "warned", message: String(ev.message ?? "stub mode") });
+                onToastChange(null);
+                onRunningChange(false);
                 break;
               case "error":
                 setStatus({ phase: "error", message: String(ev.message ?? "Unknown error") });
+                onToastChange(null);
+                onRunningChange(false);
                 break;
             }
           } catch { /* ignore parse */ }
@@ -477,6 +530,8 @@ function SyncModal({
     } catch (err: unknown) {
       if ((err as Error).name !== "AbortError") {
         setStatus({ phase: "error", message: (err as Error).message });
+        onToastChange(null);
+        onRunningChange(false);
       }
     }
   };
@@ -484,7 +539,12 @@ function SyncModal({
   const handleStop = () => {
     abortRef.current?.abort();
     setStatus({ phase: "cancelled" });
+    onToastChange(null);
+    onRunningChange(false);
   };
+
+  // ซ่อนด้วย CSS แทนการ unmount — รักษา SSE connection ไว้เมื่อปิด modal
+  if (!isOpen) return null;
 
   return (
     <Modal title="Import & Index" onClose={onClose}>
@@ -567,6 +627,93 @@ function SyncModal({
         </div>
       </div>
     </Modal>
+  );
+}
+
+// ─── Sync Progress Toast ──────────────────────────────────────────────────────
+
+function SyncProgressToast({
+  toast,
+  onOpen,
+  onDismiss,
+}: {
+  toast: NonNullable<SyncToast>;
+  onOpen: () => void;
+  onDismiss: () => void;
+}) {
+  const isDone = toast.phase === "done";
+  const pct =
+    toast.phase === "syncing" && toast.total > 0
+      ? Math.round((toast.done / toast.total) * 100)
+      : null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-40 w-72 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+      {/* Progress bar strip at top */}
+      {pct !== null && (
+        <div className="h-0.5 w-full bg-zinc-100 dark:bg-zinc-800">
+          <div
+            className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+      {isDone && <div className="h-0.5 w-full bg-emerald-500" />}
+
+      <div className="px-4 py-3 flex items-center gap-3">
+        {/* Icon */}
+        <div className="flex-shrink-0">
+          {isDone ? (
+            <span className="text-emerald-500 text-base">✓</span>
+          ) : (
+            <ArrowPathIcon className="h-4 w-4 text-zinc-500 animate-spin" />
+          )}
+        </div>
+
+        {/* Text */}
+        <div className="flex-1 min-w-0">
+          {toast.phase === "listing" && (
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 truncate">
+              กำลังนับรูปใน <span className="font-medium">{toast.folder}</span>…
+            </p>
+          )}
+          {toast.phase === "syncing" && (
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 truncate">
+              <span className="font-medium">{toast.folder}</span>
+              {" · "}
+              {toast.done.toLocaleString()} / {toast.total.toLocaleString()} รูป
+            </p>
+          )}
+          {toast.phase === "done" && (
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+              Import สำเร็จ —{" "}
+              <span className="font-medium">{toast.photoCount.toLocaleString()} รูปใหม่</span>
+            </p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex-shrink-0 flex items-center gap-1">
+          {!isDone && (
+            <button
+              type="button"
+              onClick={onOpen}
+              className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 underline underline-offset-2"
+            >
+              ดู
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="ml-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-sm leading-none"
+            title="ปิด"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

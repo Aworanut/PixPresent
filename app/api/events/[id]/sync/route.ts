@@ -46,7 +46,7 @@ export async function POST(
 
   const { data: event } = await admin
     .from("events")
-    .select("id, name, rekognition_collection_id, tenant_id")
+    .select("id, name, rekognition_collection_id, tenant_id, storage_limit_gb, tier")
     .eq("id", eventId)
     .is("deleted_at", null)
     .single();
@@ -98,7 +98,7 @@ export async function POST(
       };
 
       try {
-        const totalPhotos = await runSync({
+        const result = await runSync({
           eventId,
           folders,
           tenantId: tenant.id,
@@ -106,19 +106,32 @@ export async function POST(
           admin,
           send,
           signal: request.signal,  // propagate abort signal into the loop
+          storageLimitGb: event.storage_limit_gb ?? 5,
+          tier: event.tier ?? "starter",
         });
 
-        // Mark sync complete
+        // Mark sync complete (partial or full)
         await admin
           .from("events")
           .update({
             sync_completed_at: new Date().toISOString(),
-            sync_photo_count: totalPhotos,
-            is_indexed: true,
+            sync_photo_count: result.totalPhotos,
+            is_indexed: result.totalPhotos > 0,
           })
           .eq("id", eventId);
 
-        send({ type: "done", photoCount: totalPhotos });
+        if (result.exceeded) {
+          send({
+            type: "storage_exceeded",
+            photoCount: result.totalPhotos,
+            usedGb: result.usedGb,
+            limitGb: result.limitGb,
+            tier: result.tier,
+            nextTier: result.nextTier,
+          });
+        } else {
+          send({ type: "done", photoCount: result.totalPhotos });
+        }
       } catch (err) {
         if ((err as Error).name === "AbortError") {
           // Client disconnected — exit cleanly without sending error
@@ -149,15 +162,27 @@ export async function POST(
 
 type Folder = { id: string; label: string | null; folder_id: string };
 type SendFn = (data: Record<string, unknown>) => void;
+type NextTier = { label: string; limitGb: number };
+
+const NEXT_TIER: Record<string, NextTier | null> = {
+  starter: { label: "Gallery", limitGb: 20 },
+  gallery: { label: "Studio", limitGb: 50 },
+  studio: null,
+};
+
+type SyncResult =
+  | { exceeded: false; totalPhotos: number }
+  | { exceeded: true; totalPhotos: number; usedGb: number; limitGb: number; tier: string; nextTier: NextTier | null };
 
 async function runSync({
   eventId,
   folders,
-  tenantId,
   googleRefreshToken,
   admin,
   send,
   signal,
+  storageLimitGb,
+  tier,
 }: {
   eventId: string;
   folders: Folder[];
@@ -166,7 +191,9 @@ async function runSync({
   admin: ReturnType<typeof createServiceRoleClient>;
   send: SendFn;
   signal: AbortSignal;
-}): Promise<number> {
+  storageLimitGb: number;
+  tier: string;
+}): Promise<SyncResult> {
   const hasGoogle = !!googleRefreshToken && !!process.env.GOOGLE_CLIENT_ID;
   const hasAWS =
     !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY;
@@ -181,9 +208,22 @@ async function runSync({
   // Ensure Rekognition collection exists for this event
   const collectionId = await ensureRekognitionCollection(eventId, admin);
 
+  // Fetch current storage usage for this event
+  const storageLimitBytes = storageLimitGb * 1024 * 1024 * 1024;
+  const { data: storageData } = await admin
+    .from("photos")
+    .select("storage_bytes")
+    .eq("event_id", eventId);
+  let currentStorageBytes = (storageData ?? []).reduce(
+    (sum, p) => sum + ((p as unknown as { storage_bytes: number }).storage_bytes ?? 0),
+    0,
+  );
+
   let totalProcessed = 0;
+  let storageExceeded = false;
 
   for (const folder of folders) {
+    if (storageExceeded) break;
     const folderLabel = folder.label ?? folder.folder_id;
 
     if (!hasGoogle) {
@@ -263,8 +303,8 @@ async function runSync({
           });
           // backfill ไม่ใช่รูปใหม่ — ไม่นับเข้า totalProcessed
         } else {
-          // New file — full process: download → resize → R2 → Rekognition
-          await processOnePhoto({
+          // New file — full process: download → resize → quota check → R2 → Rekognition
+          const result = await processOnePhoto({
             file,
             eventId,
             collectionId,
@@ -275,7 +315,14 @@ async function runSync({
             hasAWS,
             folderDbId: folder.id,
             folderLabel,
+            storageLimitBytes,
+            currentStorageBytes,
           });
+          if (result.exceeded) {
+            storageExceeded = true;
+            break; // stop this folder; outer loop will also break
+          }
+          currentStorageBytes += result.storageBytes;
           totalProcessed++; // นับเฉพาะรูปใหม่จริงๆ
         }
 
@@ -300,7 +347,19 @@ async function runSync({
     }
   }
 
-  return totalProcessed;
+  if (storageExceeded) {
+    const usedGb = Math.round((currentStorageBytes / 1024 / 1024 / 1024) * 100) / 100;
+    return {
+      exceeded: true,
+      totalPhotos: totalProcessed,
+      usedGb,
+      limitGb: storageLimitGb,
+      tier,
+      nextTier: NEXT_TIER[tier] ?? null,
+    };
+  }
+
+  return { exceeded: false, totalPhotos: totalProcessed };
 }
 
 /** Backfill R2 URLs for photos that were indexed but never uploaded to R2. */
@@ -313,7 +372,6 @@ async function backfillR2Url({
   admin,
   hasR2,
   folderDbId,
-  folderLabel,
 }: {
   file: { id: string; name: string; mimeType: string; modifiedTime?: string; imageMediaMetadata?: { time?: string } | null };
   existingPhotoId: string;
@@ -352,6 +410,8 @@ async function backfillR2Url({
       photographer_name: exif.artist || null,
       copyright: exif.copyright || null,
       event_storage_folder_id: folderDbId,
+      // @ts-expect-error -- storage_bytes added in migration 20260530010000; regenerate with `npm run db:types`
+      storage_bytes: web.length + full.length,
     })
     .eq("id", existingPhotoId);
 }
@@ -366,7 +426,8 @@ async function processOnePhoto({
   hasR2,
   hasAWS,
   folderDbId,
-  folderLabel,
+  storageLimitBytes,
+  currentStorageBytes,
 }: {
   file: { id: string; name: string; mimeType: string; modifiedTime?: string; imageMediaMetadata?: { time?: string } | null };
   eventId: string;
@@ -378,7 +439,9 @@ async function processOnePhoto({
   hasAWS: boolean;
   folderDbId: string;
   folderLabel: string;
-}): Promise<void> {
+  storageLimitBytes: number;
+  currentStorageBytes: number;
+}): Promise<{ exceeded: false; storageBytes: number } | { exceeded: true }> {
   // 1. Download original from Drive (with exponential backoff on 429)
   const original = await withRetry(() => downloadDriveFile(drive, file.id), 3);
 
@@ -386,6 +449,12 @@ async function processOnePhoto({
   const { processImage } = await import("@/lib/image-processing");
   const exif = await processImage(original);
   const { web, full } = exif;
+
+  // 3. Quota check — after processing (sizes known), before uploading
+  const storageBytes = web.length + full.length;
+  if (currentStorageBytes + storageBytes > storageLimitBytes) {
+    return { exceeded: true };
+  }
 
   // 3. Generate a photo ID
   const photoId = crypto.randomUUID();
@@ -468,7 +537,11 @@ async function processOnePhoto({
     photographer_name: exif.artist || null,
     copyright: exif.copyright || null,
     event_storage_folder_id: folderDbId,
+    // @ts-expect-error -- storage_bytes added in migration 20260530010000; regenerate with `npm run db:types`
+    storage_bytes: storageBytes,
   });
+
+  return { exceeded: false, storageBytes };
 }
 
 /** Ensure the Rekognition collection exists; create if missing. */
