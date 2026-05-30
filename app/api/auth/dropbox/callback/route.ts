@@ -1,9 +1,9 @@
 /**
- * GET /auth/dropbox/callback
+ * GET /api/auth/dropbox/callback
  * Exchanges the auth code for a refresh token, stores it in
  * tenants.dropbox_refresh_token. Redirects back to state.redirectTo.
  *
- * DROPBOX_REDIRECT_URI must match exactly: http://localhost:3000/auth/dropbox/callback
+ * DROPBOX_REDIRECT_URI must match exactly: http://localhost:3000/api/auth/dropbox/callback
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
