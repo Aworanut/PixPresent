@@ -24,6 +24,7 @@
 import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import type { SourceType, SourceFile, StorageProvider } from "@/lib/storage";
 
 export async function POST(
   request: NextRequest,
@@ -58,7 +59,7 @@ export async function POST(
   // Verify ownership via tenant
   const { data: tenant } = await admin
     .from("tenants")
-    .select("id, owner_user_id, google_refresh_token")
+    .select("id, owner_user_id, google_refresh_token, dropbox_refresh_token")
     .eq("id", event.tenant_id)
     .single();
 
@@ -69,7 +70,7 @@ export async function POST(
   // 3. Get folder list
   const { data: folders } = await admin
     .from("event_storage_folders")
-    .select("id, label, folder_id")
+    .select("id, label, folder_id, source_type")
     .eq("event_id", eventId)
     .order("created_at", { ascending: true });
 
@@ -100,9 +101,10 @@ export async function POST(
       try {
         const result = await runSync({
           eventId,
-          folders,
+          folders: folders as Folder[],
           tenantId: tenant.id,
           googleRefreshToken: tenant.google_refresh_token,
+          dropboxRefreshToken: tenant.dropbox_refresh_token,
           admin,
           send,
           signal: request.signal,  // propagate abort signal into the loop
@@ -160,7 +162,7 @@ export async function POST(
 
 // ─── Core sync logic ──────────────────────────────────────────────────────────
 
-type Folder = { id: string; label: string | null; folder_id: string };
+type Folder = { id: string; label: string | null; folder_id: string; source_type: SourceType };
 type SendFn = (data: Record<string, unknown>) => void;
 type NextTier = { label: string; limitGb: number };
 
@@ -178,6 +180,7 @@ async function runSync({
   eventId,
   folders,
   googleRefreshToken,
+  dropboxRefreshToken,
   admin,
   send,
   signal,
@@ -188,22 +191,19 @@ async function runSync({
   folders: Folder[];
   tenantId: string;
   googleRefreshToken: string | null;
+  dropboxRefreshToken: string | null;
   admin: ReturnType<typeof createServiceRoleClient>;
   send: SendFn;
   signal: AbortSignal;
   storageLimitGb: number;
   tier: string;
 }): Promise<SyncResult> {
-  const hasGoogle = !!googleRefreshToken && !!process.env.GOOGLE_CLIENT_ID;
+  const { getProvider } = await import("@/lib/storage");
   const hasAWS =
     !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY;
   const hasR2 =
     !!process.env.R2_ACCESS_KEY_ID &&
     !!(process.env.R2_BUCKET ?? process.env.R2_BUCKET_NAME);
-
-  if (!hasGoogle) {
-    send({ type: "warn", message: "Google Drive not connected — skipping file sync (stub mode)" });
-  }
 
   // Ensure Rekognition collection exists for this event
   const collectionId = await ensureRekognitionCollection(eventId, admin);
@@ -226,27 +226,33 @@ async function runSync({
     if (storageExceeded) break;
     const folderLabel = folder.label ?? folder.folder_id;
 
-    if (!hasGoogle) {
+    // Resolve the provider for this folder's source. Skip (with a warning)
+    // if the tenant hasn't connected that provider — mirrors stub-skip.
+    let provider: StorageProvider;
+    try {
+      provider = await getProvider(folder.source_type, {
+        googleRefreshToken,
+        dropboxRefreshToken,
+      });
+    } catch (err) {
+      send({
+        type: "warn",
+        message: `${folderLabel}: ${err instanceof Error ? err.message : "provider unavailable"} — skipped`,
+      });
       send({ type: "progress", folder: folderLabel, done: 0, total: 0, stub: true });
       continue;
     }
 
-    // Lazy import to avoid loading googleapis when not needed
-    const { getDriveClient, listImagesInFolder, downloadDriveFile } =
-      await import("@/lib/google-drive-api");
-
-    const drive = getDriveClient(googleRefreshToken!);
-
     send({ type: "progress", folder: folderLabel, done: 0, total: -1, phase: "listing" });
 
     // List images in this folder
-    const driveFiles = await listImagesInFolder(drive, folder.folder_id);
+    const sourceFiles = await provider.listImages(folder.folder_id);
 
     send({
       type: "progress",
       folder: folderLabel,
       done: 0,
-      total: driveFiles.length,
+      total: sourceFiles.length,
       phase: "syncing",
     });
 
@@ -271,7 +277,7 @@ async function runSync({
 
     let doneFolderCount = 0;
 
-    for (const file of driveFiles) {
+    for (const file of sourceFiles) {
       // Check if client cancelled — stop immediately
       signal.throwIfAborted();
 
@@ -281,7 +287,7 @@ async function runSync({
           type: "progress",
           folder: folderLabel,
           done: doneFolderCount,
-          total: driveFiles.length,
+          total: sourceFiles.length,
           skipped: true,
         });
         continue;
@@ -294,8 +300,7 @@ async function runSync({
             file,
             existingPhotoId: needsUrlMap.get(file.id)!,
             eventId,
-            drive,
-            downloadDriveFile,
+            provider,
             admin,
             hasR2,
             folderDbId: folder.id,
@@ -308,8 +313,7 @@ async function runSync({
             file,
             eventId,
             collectionId,
-            drive,
-            downloadDriveFile,
+            provider,
             admin,
             hasR2,
             hasAWS,
@@ -331,7 +335,7 @@ async function runSync({
           type: "progress",
           folder: folderLabel,
           done: doneFolderCount,
-          total: driveFiles.length,
+          total: sourceFiles.length,
         });
       } catch (err) {
         // Log but don't abort the whole sync on single-file error
@@ -367,17 +371,15 @@ async function backfillR2Url({
   file,
   existingPhotoId,
   eventId,
-  drive,
-  downloadDriveFile,
+  provider,
   admin,
   hasR2,
   folderDbId,
 }: {
-  file: { id: string; name: string; mimeType: string; modifiedTime?: string; imageMediaMetadata?: { time?: string } | null };
+  file: SourceFile;
   existingPhotoId: string;
   eventId: string;
-  drive: Awaited<ReturnType<typeof import("@/lib/google-drive-api").getDriveClient>>;
-  downloadDriveFile: typeof import("@/lib/google-drive-api").downloadDriveFile;
+  provider: StorageProvider;
   admin: ReturnType<typeof createServiceRoleClient>;
   hasR2: boolean;
   folderDbId: string;
@@ -385,7 +387,7 @@ async function backfillR2Url({
 }): Promise<void> {
   if (!hasR2) return;
 
-  const original = await withRetry(() => downloadDriveFile(drive, file.id), 3);
+  const original = await provider.downloadFile(file.id);
 
   const { processImage } = await import("@/lib/image-processing");
   const exif = await processImage(original);
@@ -406,11 +408,10 @@ async function backfillR2Url({
       r2_web_url: webUpload.ok ? webUpload.url : null,
       r2_full_url: fullUpload.ok ? fullUpload.url : null,
       original_filename: file.name,
-      taken_at: exif.takenAt || file.imageMediaMetadata?.time || file.modifiedTime || new Date().toISOString(),
+      taken_at: exif.takenAt || file.modifiedTime || new Date().toISOString(),
       photographer_name: exif.artist || null,
       copyright: exif.copyright || null,
       event_storage_folder_id: folderDbId,
-      // @ts-expect-error -- storage_bytes added in migration 20260530010000; regenerate with `npm run db:types`
       storage_bytes: web.length + full.length,
     })
     .eq("id", existingPhotoId);
@@ -420,8 +421,7 @@ async function processOnePhoto({
   file,
   eventId,
   collectionId,
-  drive,
-  downloadDriveFile,
+  provider,
   admin,
   hasR2,
   hasAWS,
@@ -429,11 +429,10 @@ async function processOnePhoto({
   storageLimitBytes,
   currentStorageBytes,
 }: {
-  file: { id: string; name: string; mimeType: string; modifiedTime?: string; imageMediaMetadata?: { time?: string } | null };
+  file: SourceFile;
   eventId: string;
   collectionId: string;
-  drive: Awaited<ReturnType<typeof import("@/lib/google-drive-api").getDriveClient>>;
-  downloadDriveFile: typeof import("@/lib/google-drive-api").downloadDriveFile;
+  provider: StorageProvider;
   admin: ReturnType<typeof createServiceRoleClient>;
   hasR2: boolean;
   hasAWS: boolean;
@@ -442,8 +441,8 @@ async function processOnePhoto({
   storageLimitBytes: number;
   currentStorageBytes: number;
 }): Promise<{ exceeded: false; storageBytes: number } | { exceeded: true }> {
-  // 1. Download original from Drive (with exponential backoff on 429)
-  const original = await withRetry(() => downloadDriveFile(drive, file.id), 3);
+  // 1. Download original from the source provider (provider handles its own retry)
+  const original = await provider.downloadFile(file.id);
 
   // 2. Resize into web + full variants
   const { processImage } = await import("@/lib/image-processing");
@@ -533,11 +532,10 @@ async function processOnePhoto({
     face_details: faceDetails,
     indexed_at: new Date().toISOString(),
     original_filename: file.name,
-    taken_at: exif.takenAt || file.imageMediaMetadata?.time || file.modifiedTime || new Date().toISOString(),
+    taken_at: exif.takenAt || file.modifiedTime || new Date().toISOString(),
     photographer_name: exif.artist || null,
     copyright: exif.copyright || null,
     event_storage_folder_id: folderDbId,
-    // @ts-expect-error -- storage_bytes added in migration 20260530010000; regenerate with `npm run db:types`
     storage_bytes: storageBytes,
   });
 
@@ -598,27 +596,3 @@ async function ensureRekognitionCollection(
   return collectionId;
 }
 
-/** Simple exponential backoff retry for Drive 429 errors. */
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries: number,
-  baseDelay = 1000,
-): Promise<T> {
-  let lastErr: unknown;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (err: unknown) {
-      lastErr = err;
-      // Retry on rate limit (429) or transient 5xx
-      const isRetryable =
-        err instanceof Error &&
-        (err.message.includes("429") ||
-          err.message.includes("500") ||
-          err.message.includes("503"));
-      if (!isRetryable || attempt === maxRetries) throw err;
-      await new Promise((r) => setTimeout(r, baseDelay * 2 ** attempt));
-    }
-  }
-  throw lastErr;
-}
