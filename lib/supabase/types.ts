@@ -85,6 +85,7 @@ export type Database = {
           folder_id: string
           id: string
           label: string
+          source_type: string
         }
         Insert: {
           created_at?: string
@@ -92,6 +93,7 @@ export type Database = {
           folder_id: string
           id?: string
           label?: string
+          source_type?: string
         }
         Update: {
           created_at?: string
@@ -99,6 +101,7 @@ export type Database = {
           folder_id?: string
           id?: string
           label?: string
+          source_type?: string
         }
         Relationships: [
           {
@@ -126,6 +129,7 @@ export type Database = {
           id: string
           is_indexed: boolean
           link_active_days: number
+          liveness_required: boolean
           name: string
           reel_quota: number | null
           rekognition_collection_id: string | null
@@ -155,6 +159,7 @@ export type Database = {
           id?: string
           is_indexed?: boolean
           link_active_days?: number
+          liveness_required?: boolean
           name: string
           reel_quota?: number | null
           rekognition_collection_id?: string | null
@@ -184,6 +189,7 @@ export type Database = {
           id?: string
           is_indexed?: boolean
           link_active_days?: number
+          liveness_required?: boolean
           name?: string
           reel_quota?: number | null
           rekognition_collection_id?: string | null
@@ -302,6 +308,7 @@ export type Database = {
           r2_full_url: string | null
           r2_web_url: string | null
           rekognition_face_ids: string[]
+          storage_bytes: number
           storage_file_id: string
           taken_at: string | null
           visibility: string
@@ -321,6 +328,7 @@ export type Database = {
           r2_full_url?: string | null
           r2_web_url?: string | null
           rekognition_face_ids?: string[]
+          storage_bytes?: number
           storage_file_id: string
           taken_at?: string | null
           visibility?: string
@@ -340,6 +348,7 @@ export type Database = {
           r2_full_url?: string | null
           r2_web_url?: string | null
           rekognition_face_ids?: string[]
+          storage_bytes?: number
           storage_file_id?: string
           taken_at?: string | null
           visibility?: string
@@ -419,6 +428,8 @@ export type Database = {
           created_at: string
           credit_balance: number
           display_name: string | null
+          dropbox_connected_at: string | null
+          dropbox_refresh_token: string | null
           facebook_url: string | null
           first_name: string | null
           google_connected_at: string | null
@@ -444,6 +455,8 @@ export type Database = {
           created_at?: string
           credit_balance?: number
           display_name?: string | null
+          dropbox_connected_at?: string | null
+          dropbox_refresh_token?: string | null
           facebook_url?: string | null
           first_name?: string | null
           google_connected_at?: string | null
@@ -469,6 +482,8 @@ export type Database = {
           created_at?: string
           credit_balance?: number
           display_name?: string | null
+          dropbox_connected_at?: string | null
+          dropbox_refresh_token?: string | null
           facebook_url?: string | null
           first_name?: string | null
           google_connected_at?: string | null
