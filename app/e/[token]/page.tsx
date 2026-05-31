@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { FaceSearch } from "./_face-search";
+import { InAppBrowserNotice } from "./_inapp-browser-notice";
 
 type Props = { params: Promise<{ token: string }> };
 
@@ -105,6 +106,9 @@ export default async function GuestEventPage({ params }: Props) {
               </p>
             )}
           </div>
+
+          {/* In-app browser nudge (LINE/FB camera often blocked) */}
+          <InAppBrowserNotice />
 
           {/* Face search widget */}
           <FaceSearch eventId={event.id} shareToken={token} />

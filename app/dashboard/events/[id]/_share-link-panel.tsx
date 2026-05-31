@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { setShareLink, revokeShareLink } from "@/lib/actions/share-link";
+import { withExternalBrowserParam } from "@/lib/line-browser";
 
 type Props = {
   eventId: string;
@@ -34,7 +35,9 @@ export function ShareLinkPanel({
   const [copied, setCopied] = useState(false);
 
   const status = deriveStatus(token, expiresAt);
-  const url = token ? `${appUrl}/e/${token}` : null;
+  // LINE opens links in an in-app browser where the camera is flaky; the param
+  // makes a tapped link escape to the system browser. Harmless elsewhere.
+  const url = token ? withExternalBrowserParam(`${appUrl}/e/${token}`) : null;
 
   const onGenerate = () => {
     startTransition(async () => {
