@@ -11,8 +11,12 @@ The platform owner (us), who operates the `/admin` console — verifies fallback
 _Avoid_: Admin (ambiguous), Staff.
 
 **Organizer**:
-The human customer who signs up, creates events, and tops up credit. Identified person-first by their own name; may optionally operate under an Organization (studio/brand) name.
+The human customer who signs up, creates events, and tops up credit. Identified person-first by their own name; may optionally operate under an Organization (studio/brand) name. Frequently the event's **photographer**, and distinct from the **Host** who owns and pays for the event.
 _Avoid_: User (reserved for the auth-layer account), Client.
+
+**Host** (เจ้าภาพ):
+The party who owns and pays for an event and hires the photographer. The ultimate bearer of an event's photo-distribution cost, but never a FaceFind account holder: the Host is reached only through the Organizer. Distinct from the Guest (an attendee) and from the Organizer (the account/billing identity).
+_Avoid_: conflating Host with Organizer; bare "owner" (too vague).
 
 **Tenant**:
 The account row that owns an Organizer's identity, billing profile, events, photos, and credit balance. One Tenant per Organizer signup. Use "Tenant" for the data/billing entity, "Organizer" for the person.
@@ -43,6 +47,19 @@ The image of a bank-transfer receipt an Organizer uploads to claim a Top-up. Ver
 
 **Credit Ledger**:
 The append-only record of every Credit movement. The source of truth for audit; balances are derived snapshots.
+
+### Photos & Distribution
+
+**Handover photo**:
+A photo from a presentation ceremony showing a Presenter giving an item to a Recipient — typically framing exactly two people. The unit of distribution for these events.
+
+**Recipient**:
+The Guest a Handover photo belongs to: the person who received the item in that shot, and the only party entitled to obtain it. A specialization of **Guest** for handover-style events.
+_Avoid_: เจ้าของภาพ / "owner" (too vague), subject.
+
+**Presenter** (VIP):
+The chair/dignitary who appears in an event's *sensitive subset* of photos (the Handover shots plus their own shots — usually a minority of the event; most photos are ordinary Guest photos). The Organizer identifies the Presenter by **selecting their face**, which hides that subset from ordinary search (so the Presenter's face can't be used to pull those photos) while a liveness-enabled event still surfaces them to their true Recipients. Selecting the Presenter is the act that defines which photos are protected.
+_Avoid_: bare "VIP" (the trait is "present in the sensitive subset", not status); assuming the Presenter is in *every* event photo (only the sensitive subset).
 
 ## Example dialogue
 

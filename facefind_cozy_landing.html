@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="h-full scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FaceFind Cozy — Every Smile, Found in a Heartbeat</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Playfair Display (Warm Serifs), Nunito (Soft/Friendly Sans), IBM Plex Sans Thai -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Nunito:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@200;300;400;500;600;700&family=Varela+Round&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['"Playfair Display"', 'Georgia', 'serif'],
+            sans: ['"Nunito"', '"IBM Plex Sans Thai"', 'sans-serif'],
+            round: ['"Varela Round"', 'sans-serif']
+          },
+          colors: {
+            linen: '#FDFBF7', // Ultra warm cream bg
+            terracotta: {
+              50: '#FFF7ED',
+              100: '#FFEDD5',
+              400: '#FB923C',
+              500: '#F97316', // Warm Orange accent
+              600: '#EA580C',
+              900: '#7C2D12'  // Rust Brown
+            },
+            espresso: {
+              DEFAULT: '#271A12', // Cozy deep brown
+              light: '#3D2A1D',
+              dark: '#140C07'
+            },
+            sage: {
+              50: '#F4F7F4',
+              500: '#84A98C', // Warm accent trust green
+              900: '#354F52'
+            }
+          },
+          letterSpacing: {
+            widest: '0.2em',
+            mega: '0.35em'
+          },
+          boxShadow: {
+            'cozy': '0 8px 30px rgba(124, 45, 18, 0.05)',
+            'cozy-hover': '0 20px 40px rgba(124, 45, 18, 0.08)',
+            'warm-glow': '0 0 25px rgba(249, 115, 22, 0.15)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Reset & Base Rules */
+    body {
+      background-color: #FDFBF7;
+      color: #271A12;
+      font-family: 'Nunito', 'IBM Plex Sans Thai', sans-serif;
+      transition: background-color 0.5s ease, color 0.5s ease;
+      overflow-x: hidden;
+    }
+
+    html.dark body {
+      background-color: #140C07;
+      color: #FDFBF7;
+    }
+
+    /* Fix Thai letter-spacing issue (prevent vowels & tone marks from separating) */
+    html[lang="th"] [data-i18n],
+    html[lang="th"] .tracking-widest,
+    html[lang="th"] .tracking-mega {
+      letter-spacing: -0.01em !important;
+    }
+
+    /* Polaroid & Motion Card Custom Styles */
+    .polaroid-card {
+      background: #FFFFFF;
+      box-shadow: 0 4px 20px rgba(39, 26, 18, 0.06);
+      border-radius: 4px;
+      padding: 10px 10px 24px 10px;
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    html.dark .polaroid-card {
+      background: #271A12;
+      border: 1px solid rgba(253, 251, 247, 0.05);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* 3D Overlapping Card Animation */
+    .motion-card {
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .motion-card:hover {
+      transform: translateY(-8px) rotate(2deg) scale(1.03);
+      box-shadow: 0 15px 35px rgba(249, 115, 22, 0.12);
+    }
+
+    /* Soft Glow Hearts */
+    .glow-heart {
+      filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.3));
+    }
+
+    /* Subtle Heartwarming Pulsing Scanner */
+    @keyframes warm-pulse {
+      0%, 100% { opacity: 0.1; }
+      50% { opacity: 0.8; }
+    }
+    .pulse-glow {
+      animation: warm-pulse 3s infinite ease-in-out;
+    }
+
+    @keyframes cozy-scan {
+      0% { top: 0%; opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+    .scanner-beam {
+      animation: cozy-scan 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+    }
+
+    /* Custom Webkit scrollbar for cozy theme */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FDFBF7;
+    }
+    html.dark ::-webkit-scrollbar-track {
+      background: #140C07;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #FB923C;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #F97316;
+    }
+  </style>
+  <script>
+    // Theme Initializer
+    const savedTheme = localStorage.getItem('fc-theme') || 'light';
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+</head>
+<body class="selection:bg-terracotta-100 selection:text-terracotta-900 dark:selection:bg-terracotta-900/40 dark:selection:text-terracotta-100 min-h-screen flex flex-col">
+
+  <!-- Header Navigation -->
+  <header class="w-full border-b border-terracotta-500/5 px-6 md:px-12 py-5 flex items-center justify-between sticky top-0 bg-linen/90 dark:bg-espresso-dark/90 backdrop-blur-md z-40 transition-all duration-500">
+    <a href="#" class="font-round text-xl tracking-wider font-bold text-espresso dark:text-linen flex items-center gap-2">
+      <!-- Hearts SVG Camera logo -->
+      <svg class="h-6 w-6 text-terracotta-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      Face<span class="text-terracotta-500 font-serif italic font-medium">Find</span>
+      <span class="text-[9px] uppercase tracking-widest font-mono text-terracotta-500/80 border border-terracotta-500/20 px-2 py-0.5 rounded-full">COZY</span>
+    </a>
+    
+    <nav class="hidden md:flex items-center gap-10 text-xs tracking-widest uppercase font-semibold text-espresso/70 dark:text-linen/70">
+      <a href="#about" data-i18n="navConcept" class="hover:text-terracotta-500 transition-colors">Our Heart</a>
+      <a href="#how-it-works" data-i18n="navProcess" class="hover:text-terracotta-500 transition-colors">The Journey</a>
+      <a href="#experience" data-i18n="navDemo" class="hover:text-terracotta-500 transition-colors">Find Your Face</a>
+      <a href="#stories" data-i18n="navStories" class="hover:text-terracotta-500 transition-colors">Happy Guests</a>
+    </nav>
+    
+    <div class="flex items-center gap-4">
+      <!-- Language Toggle EN/TH -->
+      <button id="lang-toggle" class="text-xs font-bold tracking-wider uppercase text-espresso/60 dark:text-linen/50 hover:text-terracotta-500 border border-espresso/10 dark:border-linen/10 px-3 py-1.5 rounded-full transition-all">
+        TH
+      </button>
+
+      <!-- Cozy Theme Toggle -->
+      <button id="theme-toggle" class="w-9 h-9 rounded-full border border-espresso/10 dark:border-linen/10 flex items-center justify-center text-espresso/70 dark:text-linen/75 hover:border-terracotta-500 transition-all">
+        <!-- Sun Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <!-- Moon Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+      
+      <a href="#contact" data-i18n="navBtn" class="bg-terracotta-500 text-white hover:bg-terracotta-600 px-5 py-2.5 text-xs font-bold tracking-wider uppercase rounded-full transition-all duration-300 shadow-cozy hover:shadow-warm-glow">
+        Share the Love
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section: Heartwarming & Welcoming -->
+  <section class="relative overflow-hidden w-full max-w-7xl mx-auto px-6 md:px-12 pt-12 pb-20 md:py-28 flex flex-col lg:flex-row items-center gap-16">
+    
+    <!-- Background glowing warmth spots -->
+    <div class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-terracotta-400/5 dark:bg-terracotta-400/2 blur-[80px] pointer-events-none"></div>
+    <div class="absolute -right-32 bottom-0 w-96 h-96 rounded-full bg-sage-500/10 dark:bg-sage-500/2 blur-[90px] pointer-events-none"></div>
+    
+    <!-- Left Hero Text -->
+    <div class="flex-1 space-y-8 text-left z-10">
+      <div class="inline-flex items-center gap-2 bg-terracotta-50 dark:bg-terracotta-900/20 border border-terracotta-100 dark:border-terracotta-900/30 px-4 py-1.5 rounded-full text-xs font-bold text-terracotta-500 uppercase tracking-wider">
+        <!-- Pulse heart -->
+        <span class="flex h-2 w-2 relative">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-terracotta-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-terracotta-500"></span>
+        </span>
+        <span data-i18n="heroBadge">Every smile, reunited instantly</span>
+      </div>
+      
+      <h1 class="font-serif text-5xl sm:text-6xl lg:text-7xl font-light text-espresso dark:text-linen leading-[1.15]">
+        <span data-i18n="heroTitleMain">Reunite with Your</span><br>
+        <span data-i18n="heroTitleSub" class="italic font-normal text-terracotta-500">Precious Moments.</span>
+      </h1>
+      
+      <p data-i18n="heroDesc" class="text-espresso/70 dark:text-linen/70 text-base font-light tracking-wide leading-relaxed max-w-xl">
+        สัมผัสความอบอุ่นใจในทุกภาพถ่ายของคุณจากงานเลี้ยงแสนสำคัญ ด้วย AI ค้นหาใบหน้าที่เข้าใจทุกอารมณ์ของคุณ เพียงแค่อัปโหลดรูปเซลฟี่สั้น ๆ รูปแห่งความสุขทั้งหมดของคุณจะถูกคัดแยกส่งตรงถึงหน้าจอใน 3 วินาทีทันที
+      </p>
+      
+      <!-- Micro stats / trusts -->
+      <div class="grid grid-cols-3 gap-6 pt-4 border-t border-terracotta-500/10 max-w-md text-espresso/60 dark:text-linen/60">
+        <div>
+          <h4 class="font-serif text-2xl font-bold text-terracotta-500">50k+</h4>
+          <p data-i18n="stat1" class="text-[10px] uppercase font-bold tracking-widest mt-1">Smiling Guests</p>
+        </div>
+        <div>
+          <h4 class="font-serif text-2xl font-bold text-terracotta-500">200+</h4>
+          <p data-i18n="stat2" class="text-[10px] uppercase font-bold tracking-widest mt-1">Cozy Weddings</p>
+        </div>
+        <div>
+          <h4 class="font-serif text-2xl font-bold text-terracotta-500">3 Sec</h4>
+          <p data-i18n="stat3" class="text-[10px] uppercase font-bold tracking-widest mt-1">Search Time</p>
+        </div>
+      </div>
+      
+      <!-- Action buttons -->
+      <div class="flex flex-wrap gap-4 pt-2">
+        <a href="#experience" class="bg-terracotta-500 text-white hover:bg-terracotta-600 px-8 py-3.5 text-sm font-bold tracking-wider uppercase rounded-full transition-all duration-300 shadow-cozy flex items-center gap-2">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span data-i18n="heroBtnPrimary">Try Living Search</span>
+        </a>
+        <a href="#how-it-works" class="border border-terracotta-500/20 text-terracotta-500 hover:bg-terracotta-500/5 px-8 py-3.5 text-sm font-bold tracking-wider uppercase rounded-full transition-all duration-300">
+          <span data-i18n="heroBtnSecondary">See the Vibe</span>
+        </a>
+      </div>
+    </div>
+    
+    <!-- Right Hero Content: Motion Cards Cascade -->
+    <div class="w-full lg:w-[480px] h-[480px] relative z-10 flex items-center justify-center">
+      
+      <!-- Center warm circle -->
+      <div class="absolute w-80 h-80 bg-terracotta-500/5 rounded-full pulse-glow"></div>
+      
+      <!-- Motion Polaroid Cards (Overlapping) -->
+      
+      <!-- Card 1: The Bride Guest -->
+      <div class="motion-card polaroid-card absolute top-4 left-6 w-[200px] -rotate-6 z-10">
+        <div class="w-full h-36 overflow-hidden rounded bg-terracotta-50 mb-3 relative">
+          <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=300&auto=format&fit=crop" alt="Bridal Guest" class="w-full h-full object-cover">
+          <span class="absolute top-2 left-2 bg-sage-500 text-white text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Matched</span>
+        </div>
+        <p class="font-serif italic text-xs text-center text-espresso/70 dark:text-espresso/70">"Found me in seconds! ✨"</p>
+        <div class="flex justify-center gap-1 mt-2 text-terracotta-500">
+          <svg class="h-3 w-3 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="h-3 w-3 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="h-3 w-3 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+        </div>
+      </div>
+      
+      <!-- Card 2: Couple Joy -->
+      <div class="motion-card polaroid-card absolute bottom-4 right-4 w-[210px] rotate-3 z-20">
+        <div class="w-full h-40 overflow-hidden rounded bg-terracotta-50 mb-3">
+          <img src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300&auto=format&fit=crop" alt="Wedding Couple" class="w-full h-full object-cover">
+        </div>
+        <p class="font-serif italic text-xs text-center text-espresso/70 dark:text-espresso/70">"Unforgettable Sunset Hug"</p>
+        <span class="text-[9px] uppercase font-bold tracking-widest text-terracotta-500/60 block text-center mt-2">Vogue Ceremony</span>
+      </div>
+
+      <!-- Card 3: The Groom's Father (Small floating detail) -->
+      <div class="motion-card polaroid-card absolute top-20 right-6 w-[140px] -rotate-12 z-0 hidden sm:block">
+        <div class="w-full h-24 overflow-hidden rounded bg-terracotta-50 mb-2">
+          <img src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=200&auto=format&fit=crop" alt="Father Portrait" class="w-full h-full object-cover">
+        </div>
+        <span class="text-[8px] uppercase tracking-widest text-center block text-terracotta-500 font-bold">Dad's Tears 💍</span>
+      </div>
+      
+      <!-- Matching Connecting Line Overlay (Dashed soft orange line with small heart) -->
+      <div class="absolute inset-0 pointer-events-none z-30 hidden sm:block">
+        <svg class="w-full h-full" viewBox="0 0 400 400" fill="none">
+          <path d="M 120,190 C 180,240 210,120 280,210" stroke="#F97316" stroke-width="2" stroke-dasharray="6,6" stroke-linecap="round" class="opacity-40 animate-pulse"></path>
+          <!-- Floating heart marker in the middle -->
+          <g transform="translate(185, 175)" class="text-terracotta-500 fill-current animate-bounce glow-heart">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#F97316"/>
+          </g>
+        </svg>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Cozy Content Intro: The Heart -->
+  <section id="about" class="w-full bg-white dark:bg-espresso-light border-y border-terracotta-500/5 py-20 md:py-28 transition-colors duration-500">
+    <div class="max-w-7xl mx-auto px-6 md:px-12 space-y-16">
+      
+      <!-- 2-column welcoming intro -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div class="space-y-6">
+          <span data-i18n="aboutBadge" class="text-xs uppercase tracking-mega text-terracotta-500 font-bold block">The Vibe & Spirit</span>
+          <h2 data-i18n="aboutTitle" class="font-serif text-4xl sm:text-5xl font-light text-espresso dark:text-linen leading-tight">
+            เพราะภาพถ่ายเก็บความรัก...<br>
+            <span class="italic font-normal text-terracotta-500 font-serif">และเราคืนความอบอุ่นให้คุณ</span>
+          </h2>
+          <div class="w-20 h-1 bg-terracotta-500 rounded"></div>
+        </div>
+        
+        <p data-i18n="aboutDesc" class="text-espresso/70 dark:text-linen/70 text-base font-light leading-relaxed">
+          FaceFind Cozy ไม่ใช่แค่แอปพลิเคชันคัดรูปด้วยหน้าตาที่เย็นชา แต่คือสะพานเชื่อมรอยยิ้มและเสียงหัวเราะของแขกในงานของคุณเข้ากับช่างภาพมืออาชีพ เราออกแบบโทนดีไซน์และพฤติกรรมการใช้งานที่อ่อนโยน อบอุ่น เพื่อเพิ่มความสุขให้แขกทุกคนในงานของคุณได้เก็บความทรงจำที่ล้ำค่าโดยไม่ต้องทวงถาม
+        </p>
+      </div>
+
+      <!-- Feature highlight with cozy icons -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-8">
+        
+        <!-- Point 1 -->
+        <div class="p-6 bg-linen dark:bg-espresso border border-terracotta-500/10 rounded-2xl space-y-4 shadow-cozy hover:shadow-cozy-hover transition-all">
+          <div class="w-10 h-10 rounded-full bg-terracotta-50 flex items-center justify-center text-terracotta-500">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 data-i18n="feat1Title" class="font-serif text-lg font-bold text-espresso dark:text-linen">Warm Friendly Biometrics</h3>
+          <p data-i18n="feat1Desc" class="text-xs text-espresso/60 dark:text-linen/50 leading-relaxed font-light">
+            AI ค้นหาที่ปลอดภัยสูงสุด ละเอียดอ่อน แต่ยังคงความรู้สึกอบอุ่น ไม่เก็บประวัติส่วนตัว สแกนใบหน้าและทำลายข้อมูลเพื่อความเป็นส่วนตัวสูงสุด (Biometric Privacy)
+          </p>
+        </div>
+
+        <!-- Point 2 -->
+        <div class="p-6 bg-linen dark:bg-espresso border border-terracotta-500/10 rounded-2xl space-y-4 shadow-cozy hover:shadow-cozy-hover transition-all">
+          <div class="w-10 h-10 rounded-full bg-terracotta-50 flex items-center justify-center text-terracotta-500">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
+          <h3 data-i18n="feat2Title" class="font-serif text-lg font-bold text-espresso dark:text-linen">Warm Sun-kissed Palette</h3>
+          <p data-i18n="feat2Desc" class="text-xs text-espresso/60 dark:text-linen/50 leading-relaxed font-light">
+            สุนทรียศาสตร์ของดีไซน์ที่คัดสรรมาเฉพาะเพื่อความรู้สึกสบายตา สีครีมอุ่นและส้มแมนดารินอ่อน ๆ ทำให้การเลือกรูปเต็มไปด้วยอรรถรสแห่งความอบอุ่น
+          </p>
+        </div>
+
+        <!-- Point 3 -->
+        <div class="p-6 bg-linen dark:bg-espresso border border-terracotta-500/10 rounded-2xl space-y-4 shadow-cozy hover:shadow-cozy-hover transition-all">
+          <div class="w-10 h-10 rounded-full bg-terracotta-50 flex items-center justify-center text-terracotta-500">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </div>
+          <h3 data-i18n="feat3Title" class="font-serif text-lg font-bold text-espresso dark:text-linen">Share the Love Instantly</h3>
+          <p data-i18n="feat3Desc" class="text-xs text-espresso/60 dark:text-linen/50 leading-relaxed font-light">
+            ช่วยช่างภาพและผู้จัดงานส่งตรงความสุขถึงใจแขกได้ทันทีโดยไม่ต้องรอแชร์ไดรฟ์รวมยาวนาน ลดความยุ่งยากให้แขกสูงวัยใช้งานได้ง่ายด้วยคลิกเดียว
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- The Journey (How it Works) -->
+  <section id="how-it-works" class="w-full py-20 md:py-28 relative">
+    
+    <div class="max-w-7xl mx-auto px-6 md:px-12 space-y-20">
+      
+      <!-- Section title -->
+      <div class="text-center max-w-xl mx-auto space-y-4">
+        <span data-i18n="journeyBadge" class="text-xs uppercase tracking-mega text-terracotta-500 font-bold block">The 3-Step Smile Journey</span>
+        <h2 data-i18n="journeyTitle" class="font-serif text-4xl font-light text-espresso dark:text-linen">สัมผัสประสบการณ์ง่าย ๆ ใน 3 ขั้นตอน</h2>
+        <p data-i18n="journeyDesc" class="text-espresso/60 dark:text-linen/60 text-sm font-light leading-relaxed">
+          ความสุขที่ออกแบบมาอย่างพิถีพิถันเพื่อให้ทุกคนในงานเลี้ยง ไม่ว่าจะเด็กหรือผู้ใหญ่ สามารถค้นพบภาพของตัวเองได้ง่ายที่สุด
+        </p>
+      </div>
+
+      <!-- Steps grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-16 relative">
+        
+        <!-- Connection line for visual desktop -->
+        <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-dashed border-t border-dashed border-terracotta-500/10 -translate-y-1/2 z-0 hidden md:block"></div>
+
+        <!-- Step 1 -->
+        <div class="flex flex-col items-center text-center space-y-4 z-10 relative group">
+          <div class="w-16 h-16 rounded-full bg-terracotta-500 text-white flex items-center justify-center font-serif text-xl font-bold shadow-cozy group-hover:scale-110 transition-transform duration-300">
+            01
+          </div>
+          <h3 data-i18n="step1Title" class="font-serif text-xl font-bold text-espresso dark:text-linen">เซลฟี่ผ่านมือถือ</h3>
+          <p data-i18n="step1Desc" class="text-xs text-espresso/60 dark:text-linen/50 leading-relaxed font-light max-w-[240px]">
+            สแกน QR Code หน้างานแต่งหรืออีเวนต์ แล้วถ่ายรูปเซลฟี่ใบหน้าของคุณด้วยโทรศัพท์มือถือส่วนตัวอย่างปลอดภัย
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="flex flex-col items-center text-center space-y-4 z-10 relative group">
+          <div class="w-16 h-16 rounded-full bg-terracotta-500 text-white flex items-center justify-center font-serif text-xl font-bold shadow-cozy group-hover:scale-110 transition-transform duration-300">
+            02
+          </div>
+          <h3 data-i18n="step2Title" class="font-serif text-xl font-bold text-espresso dark:text-linen">สแกนอัจฉริยะ</h3>
+          <p data-i18n="step2Desc" class="text-xs text-espresso/60 dark:text-linen/50 leading-relaxed font-light max-w-[240px]">
+            ระบบ AI Rekognition เปรียบเทียบใบหน้ากับแกลเลอรีภาพถ่ายหลักทั้งหมดในงานเลี้ยง ประมวลผลรวดเร็วใน 3 วินาที
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="flex flex-col items-center text-center space-y-4 z-10 relative group">
+          <div class="w-16 h-16 rounded-full bg-terracotta-500 text-white flex items-center justify-center font-serif text-xl font-bold shadow-cozy group-hover:scale-110 transition-transform duration-300">
+            03
+          </div>
+          <h3 data-i18n="step3Title" class="font-serif text-xl font-bold text-espresso dark:text-linen">รับความอบอุ่นใจ</h3>
+          <p data-i18n="step3Desc" class="text-xs text-espresso/60 dark:text-linen/50 leading-relaxed font-light max-w-[240px]">
+            รับรูปเดี่ยวและรูปคู่ของคุณครบถ้วนทันที สามารถดาวน์โหลดหรือแชร์เข้า Social Media สไตล์คุณได้ทันใจ
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive Search Filters Preview & Gallery Section (The Wow Core) -->
+  <section id="experience" class="w-full bg-white dark:bg-espresso border-y border-terracotta-500/5 py-20 md:py-28 transition-colors duration-500 relative">
+    
+    <div class="max-w-7xl mx-auto px-6 md:px-12 space-y-16">
+      
+      <!-- Grid header with controls -->
+      <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-8 border-b border-terracotta-500/10 pb-8">
+        <div class="space-y-4">
+          <span data-i18n="demoBadge" class="text-xs uppercase tracking-mega text-terracotta-500 font-bold block">Live Interactive Preview</span>
+          <h2 data-i18n="demoTitle" class="font-serif text-3xl sm:text-4xl font-light text-espresso dark:text-linen">ทดลองค้นหาด้วยใบหน้าแบบเรียลไทม์</h2>
+          <p data-i18n="demoDesc" class="text-espresso/60 dark:text-linen/50 text-sm font-light max-w-xl">
+            ลองลากอัปโหลดรูปภาพใบหน้า หรือคลิกเลือกตัวกรองฟิลเตอร์ (Search Filters) ด้านล่างเพื่อสัมผัสความเร็วในการสแกนและการกรองผลลัพธ์ของ FaceFind แสนอบอุ่น
+          </p>
+        </div>
+        
+        <!-- Search Filters preview -->
+        <div class="flex flex-wrap gap-2.5 text-xs">
+          <button onclick="filterCozyGallery('all')" id="filter-all" class="cozy-filter-btn px-4 py-2 border-2 border-terracotta-500 text-white bg-terracotta-500 font-bold rounded-full transition-all">
+            All Photos (<span id="all-count">6</span>)
+          </button>
+          <button onclick="filterCozyGallery('ceremony')" id="filter-ceremony" class="cozy-filter-btn px-4 py-2 border border-espresso/10 dark:border-linen/10 text-espresso/70 dark:text-linen/70 font-semibold rounded-full hover:border-terracotta-500 transition-all">
+            Ceremony (2)
+          </button>
+          <button onclick="filterCozyGallery('banquet')" id="filter-banquet" class="cozy-filter-btn px-4 py-2 border border-espresso/10 dark:border-linen/10 text-espresso/70 dark:text-linen/70 font-semibold rounded-full hover:border-terracotta-500 transition-all">
+            Banquet (2)
+          </button>
+          <button onclick="filterCozyGallery('candid')" id="filter-candid" class="cozy-filter-btn px-4 py-2 border border-espresso/10 dark:border-linen/10 text-espresso/70 dark:text-linen/70 font-semibold rounded-full hover:border-terracotta-500 transition-all">
+            Candid (2)
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Interactive Panel -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        
+        <!-- Left panel: Interactive Upload Sandbox -->
+        <div class="lg:col-span-4 space-y-6">
+          <div id="drop-zone" class="border-2 border-dashed border-terracotta-500/20 dark:border-terracotta-500/10 hover:border-terracotta-500 bg-linen dark:bg-espresso-light p-8 rounded-3xl text-center relative overflow-hidden transition-all duration-500 cursor-pointer shadow-cozy flex flex-col justify-center min-h-[340px]">
+            
+            <!-- Scanning Line -->
+            <div id="glow-beam" class="absolute left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-terracotta-500 to-transparent shadow-warm-glow opacity-0 pointer-events-none"></div>
+
+            <!-- Default state inside drop zone -->
+            <div id="drop-default" class="space-y-6 transition-all duration-300">
+              <div class="w-14 h-14 bg-terracotta-50 dark:bg-terracotta-900/20 rounded-full flex items-center justify-center mx-auto text-terracotta-500">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div class="space-y-2">
+                <h4 data-i18n="zoneTitle" class="font-serif text-lg font-bold text-espresso dark:text-linen">ค้นหารูปของคุณในงานนี้</h4>
+                <p data-i18n="zoneDesc" class="text-xs text-espresso/60 dark:text-linen/50 leading-relaxed font-light px-4">
+                  วางรูปเซลฟี่ของคุณที่นี่ หรือคลิกปุ่มด้านล่างเพื่ออัปโหลดทดลองใช้ระบบสแกน
+                </p>
+              </div>
+              
+              <!-- Quick test trigger button -->
+              <button onclick="event.stopPropagation(); simulateScan();" data-i18n="zoneBtn" class="bg-terracotta-500 text-white hover:bg-terracotta-600 px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-full transition-all duration-300 shadow-cozy inline-block">
+                Simulate Face Scan
+              </button>
+            </div>
+
+            <!-- Scanning state -->
+            <div id="drop-scanning" class="hidden space-y-6 animate-pulse">
+              <div class="relative w-36 h-36 mx-auto rounded-full overflow-hidden border-2 border-terracotta-500/30">
+                <!-- Avatar image (Tuscany Bride sample as simulated input) -->
+                <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=300&auto=format&fit=crop" class="w-full h-full object-cover">
+                <!-- Glowing scan beam overlay -->
+                <div class="scanner-beam absolute left-0 w-full h-[4px] bg-terracotta-500 shadow-warm-glow"></div>
+              </div>
+              <div class="space-y-1">
+                <h4 data-i18n="scanningStateTitle" class="font-serif text-base font-bold text-terracotta-500">Mapping facial features</h4>
+                <p class="text-[10px] uppercase font-bold tracking-widest text-espresso/40 dark:text-linen/40">AWS Rekognition (Confidence: 99.8%)</p>
+              </div>
+            </div>
+
+            <!-- Success state -->
+            <div id="drop-success" class="hidden space-y-4">
+              <div class="w-14 h-14 bg-sage-500 text-white rounded-full flex items-center justify-center mx-auto shadow-cozy">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div class="space-y-1">
+                <h4 data-i18n="successStateTitle" class="font-serif text-lg font-bold text-espresso dark:text-linen">ค้นหาเสร็จสิ้น!</h4>
+                <p class="text-xs text-terracotta-500 font-bold" id="match-status-msg">Found 3 matched photos for you</p>
+              </div>
+              <button onclick="event.stopPropagation(); resetDropZone();" class="text-[10px] font-bold uppercase tracking-wider text-espresso/40 dark:text-linen/40 underline hover:text-terracotta-500 transition-colors">
+                Clear & Reset Search
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Quick Tip toast-like information -->
+          <div class="p-4 bg-terracotta-50 dark:bg-terracotta-900/10 border border-terracotta-500/10 rounded-2xl flex gap-3 text-xs text-espresso/70 dark:text-linen/70 leading-relaxed font-light">
+            <svg class="h-5 w-5 text-terracotta-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p data-i18n="galleryTip">
+              *การกด <strong>Simulate Face Scan</strong> ด้านบนจะสาธิตการจับคู่รูปของคุณในงานแต่ง โดยภาพที่แมตช์จะได้รับป้าย <strong>"Matched Photo"</strong> โดดเด่นขึ้นมาในตารางด้านขวาครับ
+            </p>
+          </div>
+        </div>
+
+        <!-- Right panel: Gorgeous grid gallery of matched event photos -->
+        <div class="lg:col-span-8">
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" id="cozy-gallery-grid">
+            
+            <!-- Photo 1 (Ceremony - Matchable) -->
+            <div class="cozy-gallery-item bg-linen dark:bg-espresso-light border border-terracotta-500/10 p-3 rounded-2xl transition-all duration-500 hover:shadow-cozy-hover" data-category="ceremony" data-matched="false" id="cozy-photo-1">
+              <div class="h-48 overflow-hidden rounded-xl bg-terracotta-50 relative group cursor-pointer" onclick="openLightbox('https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop', 'I. Ceremony Ring Exchange', 'Tuscany Villa Wedding')">
+                <img src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=400&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div class="absolute inset-0 bg-espresso/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span class="bg-white/90 text-espresso text-[9px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-full">Zoom View</span>
+                </div>
+                <!-- Heart matched badge (hidden initially) -->
+                <span class="cozy-match-badge absolute top-3 right-3 bg-terracotta-500 text-white text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-cozy hidden">Matched Photo</span>
+              </div>
+              <div class="pt-3 flex items-center justify-between text-xs">
+                <span class="font-serif italic text-espresso dark:text-linen">Ring Exchange</span>
+                <span class="text-terracotta-500/80 font-bold uppercase tracking-wider text-[9px] font-mono">Ceremony</span>
+              </div>
+            </div>
+
+            <!-- Photo 2 (Banquet - Matchable) -->
+            <div class="cozy-gallery-item bg-linen dark:bg-espresso-light border border-terracotta-500/10 p-3 rounded-2xl transition-all duration-500 hover:shadow-cozy-hover" data-category="banquet" data-matched="false" id="cozy-photo-2">
+              <div class="h-48 overflow-hidden rounded-xl bg-terracotta-50 relative group cursor-pointer" onclick="openLightbox('https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=1200&auto=format&fit=crop', 'II. Groom Toast Moments', 'Tuscany Villa Wedding')">
+                <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=400&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div class="absolute inset-0 bg-espresso/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span class="bg-white/90 text-espresso text-[9px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-full">Zoom View</span>
+                </div>
+                <span class="cozy-match-badge absolute top-3 right-3 bg-terracotta-500 text-white text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-cozy hidden">Matched Photo</span>
+              </div>
+              <div class="pt-3 flex items-center justify-between text-xs">
+                <span class="font-serif italic text-espresso dark:text-linen">Groom Toast Moments</span>
+                <span class="text-terracotta-500/80 font-bold uppercase tracking-wider text-[9px] font-mono">Banquet</span>
+              </div>
+            </div>
+
+            <!-- Photo 3 (Candid - Non-matchable) -->
+            <div class="cozy-gallery-item bg-linen dark:bg-espresso-light border border-terracotta-500/10 p-3 rounded-2xl transition-all duration-500 hover:shadow-cozy-hover" data-category="candid" data-matched="false" id="cozy-photo-3">
+              <div class="h-48 overflow-hidden rounded-xl bg-terracotta-50 relative group cursor-pointer" onclick="openLightbox('https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1200&auto=format&fit=crop', 'III. Golden Hour Banquet Setting', 'Tuscany Villa Wedding')">
+                <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=400&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div class="absolute inset-0 bg-espresso/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span class="bg-white/90 text-espresso text-[9px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-full">Zoom View</span>
+                </div>
+              </div>
+              <div class="pt-3 flex items-center justify-between text-xs">
+                <span class="font-serif italic text-espresso dark:text-linen">Banquet Table Vibe</span>
+                <span class="text-terracotta-500/80 font-bold uppercase tracking-wider text-[9px] font-mono">Candid</span>
+              </div>
+            </div>
+
+            <!-- Photo 4 (Ceremony - Matchable) -->
+            <div class="cozy-gallery-item bg-linen dark:bg-espresso-light border border-terracotta-500/10 p-3 rounded-2xl transition-all duration-500 hover:shadow-cozy-hover" data-category="ceremony" data-matched="false" id="cozy-photo-4">
+              <div class="h-48 overflow-hidden rounded-xl bg-terracotta-50 relative group cursor-pointer" onclick="openLightbox('https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?q=80&w=1200&auto=format&fit=crop', 'IV. Tears of Happiness', 'Tuscany Villa Wedding')">
+                <img src="https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?q=80&w=400&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div class="absolute inset-0 bg-espresso/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span class="bg-white/90 text-espresso text-[9px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-full">Zoom View</span>
+                </div>
+                <span class="cozy-match-badge absolute top-3 right-3 bg-terracotta-500 text-white text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-cozy hidden">Matched Photo</span>
+              </div>
+              <div class="pt-3 flex items-center justify-between text-xs">
+                <span class="font-serif italic text-espresso dark:text-linen">Tears of Happiness</span>
+                <span class="text-terracotta-500/80 font-bold uppercase tracking-wider text-[9px] font-mono">Ceremony</span>
+              </div>
+            </div>
+
+            <!-- Photo 5 (Banquet - Non-matchable) -->
+            <div class="cozy-gallery-item bg-linen dark:bg-espresso-light border border-terracotta-500/10 p-3 rounded-2xl transition-all duration-500 hover:shadow-cozy-hover" data-category="banquet" data-matched="false" id="cozy-photo-5">
+              <div class="h-48 overflow-hidden rounded-xl bg-terracotta-50 relative group cursor-pointer" onclick="openLightbox('https://images.unsplash.com/photo-1519225495810-7517c24a8e5b?q=80&w=1200&auto=format&fit=crop', 'V. Happy Banqueting Conversations', 'Tuscany Villa Wedding')">
+                <img src="https://images.unsplash.com/photo-1519225495810-7517c24a8e5b?q=80&w=400&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div class="absolute inset-0 bg-espresso/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span class="bg-white/90 text-espresso text-[9px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-full">Zoom View</span>
+                </div>
+              </div>
+              <div class="pt-3 flex items-center justify-between text-xs">
+                <span class="font-serif italic text-espresso dark:text-linen">Table Conversations</span>
+                <span class="text-terracotta-500/80 font-bold uppercase tracking-wider text-[9px] font-mono">Banquet</span>
+              </div>
+            </div>
+
+            <!-- Photo 6 (Candid - Matchable) -->
+            <div class="cozy-gallery-item bg-linen dark:bg-espresso-light border border-terracotta-500/10 p-3 rounded-2xl transition-all duration-500 hover:shadow-cozy-hover" data-category="candid" data-matched="false" id="cozy-photo-6">
+              <div class="h-48 overflow-hidden rounded-xl bg-terracotta-50 relative group cursor-pointer" onclick="openLightbox('https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=1200&auto=format&fit=crop', 'VI. Dancing Under Lights', 'Tuscany Villa Wedding')">
+                <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=400&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div class="absolute inset-0 bg-espresso/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span class="bg-white/90 text-espresso text-[9px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-full">Zoom View</span>
+                </div>
+                <span class="cozy-match-badge absolute top-3 right-3 bg-terracotta-500 text-white text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-cozy hidden">Matched Photo</span>
+              </div>
+              <div class="pt-3 flex items-center justify-between text-xs">
+                <span class="font-serif italic text-espresso dark:text-linen">Dancing Under Lights</span>
+                <span class="text-terracotta-500/80 font-bold uppercase tracking-wider text-[9px] font-mono">Candid</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Happy Stories Section (Testimonials Carousel) -->
+  <section id="stories" class="w-full py-20 md:py-28 relative">
+    
+    <div class="max-w-7xl mx-auto px-6 md:px-12 space-y-16">
+      
+      <!-- Intro title -->
+      <div class="text-center max-w-xl mx-auto space-y-4">
+        <span data-i18n="storyBadge" class="text-xs uppercase tracking-mega text-terracotta-500 font-bold block">Heartwarming Success Stories</span>
+        <h2 data-i18n="storyTitle" class="font-serif text-4xl font-light text-espresso dark:text-linen">ความประทับใจแสนอบอุ่นจากทุกครอบครัว</h2>
+        <p data-i18n="storyDesc" class="text-espresso/60 dark:text-linen/60 text-sm font-light">
+          อ่านเรื่องราวความตื้นตันใจของคู่แต่งงานและแขกที่ได้รูปใบสำคัญของตนเองทันใจแบบเรียลไทม์
+        </p>
+      </div>
+
+      <!-- Testimonial Slider / Cards Row -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        
+        <!-- Story 1 -->
+        <div class="bg-white dark:bg-espresso-light border border-terracotta-500/10 p-8 rounded-3xl space-y-6 shadow-cozy flex flex-col justify-between">
+          <div class="space-y-4">
+            <!-- Warm Orange Stars -->
+            <div class="flex text-terracotta-500 gap-0.5">
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            </div>
+            <p data-i18n="story1Text" class="text-espresso/70 dark:text-linen/70 text-sm font-light leading-relaxed italic">
+              "คุณแม่น้ำตาซึมเลยค่ะ... ท่านเปิดสแกนหน้าและได้เห็นรูปขณะสวมแหวนแต่งงานที่ประทับใจที่สุดใน 3 วินาทีแรก ไม่ต้องนั่งเลื่อนหากว่าพันรูปให้เหนื่อย แขกคนอื่นในงานแต่งก็ประทับใจและได้รูปแชร์คืนนั้นเลย ขอบคุณดีไซน์แอปที่น่ารักและอบอุ่นนี้มาก ๆ ค่ะ"
+            </p>
+          </div>
+          <div class="flex items-center gap-4 pt-6 border-t border-terracotta-500/10">
+            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop" class="w-12 h-12 rounded-full object-cover">
+            <div>
+              <h4 data-i18n="story1Name" class="font-serif font-bold text-espresso dark:text-linen">คุณวรวรรณ & นนทวัฒน์</h4>
+              <p data-i18n="story1Sub" class="text-[10px] text-terracotta-500 uppercase tracking-wider font-bold">เจ้าของงานแต่ง Tuscany Villa</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Story 2 -->
+        <div class="bg-white dark:bg-espresso-light border border-terracotta-500/10 p-8 rounded-3xl space-y-6 shadow-cozy flex flex-col justify-between">
+          <div class="space-y-4">
+            <div class="flex text-terracotta-500 gap-0.5">
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            </div>
+            <p data-i18n="story2Text" class="text-espresso/70 dark:text-linen/70 text-sm font-light leading-relaxed italic">
+              "ผมเดินทางมาไกลจากลอนดอนเพื่อมาร่วมงานแต่งนี้ ประทับใจมากที่พอจบพิธีการตอนเย็นปุ๊บ สแกนใบหน้าเพียง 2 วินาที รูปเซลฟี่ของผมก็นำทางไปเจอรูปเดี่ยวของตัวเองและรูปคู่กับเพื่อนเจ้าบ่าวทุกคนอย่างรวดเร็ว ได้ดาวน์โหลดรูปภาพคมชัดเต็มขนาดเก็บไว้ทันทีก่อนขึ้นเครื่องบินกลับเลยครับ"
+            </p>
+          </div>
+          <div class="flex items-center gap-4 pt-6 border-t border-terracotta-500/10">
+            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop" class="w-12 h-12 rounded-full object-cover">
+            <div>
+              <h4 class="font-serif font-bold text-espresso dark:text-linen">Mr. Albert Hughes</h4>
+              <p data-i18n="story2Sub" class="text-[10px] text-terracotta-500 uppercase tracking-wider font-bold">แขกผู้มีเกียรติชาวอังกฤษ</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Cozy Venue & Creative Partnerships (Shelter Partnerships Equivalent) -->
+  <section class="w-full bg-white dark:bg-espresso-light border-y border-terracotta-500/5 py-12 md:py-16 transition-colors duration-500">
+    <div class="max-w-7xl mx-auto px-6 md:px-12 space-y-8">
+      <h3 data-i18n="partnerTitle" class="text-center font-bold text-[10px] uppercase tracking-widest text-espresso/40 dark:text-linen/40">
+        Trusted by Warm-hearted Organizers & Studios
+      </h3>
+      
+      <!-- Row of elegant minimal warm-tone logos/placeholders -->
+      <div class="flex flex-wrap items-center justify-center gap-12 md:gap-16 opacity-65 grayscale hover:grayscale-0 transition-all duration-300 text-espresso dark:text-linen">
+        <span class="font-serif text-lg tracking-widest font-semibold italic">Tuscany Planners</span>
+        <span class="font-serif text-lg tracking-widest font-light">AVIGNON ST.</span>
+        <span class="font-serif text-lg tracking-widest font-bold tracking-widest uppercase text-terracotta-500">Aman Riviera</span>
+        <span class="font-serif text-lg tracking-widest font-medium font-sans">BOUQUET & CO.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cozy Adoption CTA Section -->
+  <section id="contact" class="w-full bg-linen dark:bg-espresso py-20 md:py-28 relative overflow-hidden">
+    
+    <div class="absolute -bottom-16 -left-16 w-80 h-80 rounded-full bg-terracotta-500/5 blur-[70px]"></div>
+    
+    <div class="max-w-4xl mx-auto px-6 md:px-12 text-center space-y-8 relative z-10">
+      
+      <div class="w-16 h-16 bg-terracotta-500 text-white rounded-full flex items-center justify-center mx-auto shadow-cozy animate-bounce glow-heart">
+        <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
+      </div>
+
+      <div class="space-y-4">
+        <span data-i18n="ctaBadge" class="text-xs uppercase tracking-mega text-terracotta-500 font-bold block">Bring FaceFind to Your Special Event</span>
+        <h2 data-i18n="ctaTitle" class="font-serif text-4xl sm:text-5xl font-light text-espresso dark:text-linen leading-tight">
+          ส่งมอบความอบอุ่นใจ และรอยยิ้มแสนล้ำค่า<br>
+          <span class="italic font-normal text-terracotta-500 font-serif">ให้แขกทุกคนในงานของคุณ</span>
+        </h2>
+        <p data-i18n="ctaDesc" class="text-espresso/70 dark:text-linen/70 text-sm md:text-base font-light max-w-xl mx-auto leading-relaxed">
+          ให้แขกได้ดาวน์โหลดความทรงจำที่สวยงาม คมชัด โดยไม่ต้องทวงถามช่างภาพ สะดวกสบาย รวดเร็ว และเปี่ยมล้นด้วยความประทับใจที่ไม่รู้ลืม
+        </p>
+      </div>
+
+      <!-- Compact Inquiry Form Card inside CTA -->
+      <div class="max-w-md mx-auto bg-white dark:bg-espresso-light border border-terracotta-500/10 p-8 rounded-3xl shadow-cozy text-left">
+        <form onsubmit="event.preventDefault(); triggerInquirySuccess();" class="space-y-5">
+          
+          <div class="flex flex-col space-y-1.5">
+            <label for="c-name" data-i18n="formName" class="text-[10px] uppercase tracking-wider font-bold text-espresso/40 dark:text-linen/40">Full Name *</label>
+            <input type="text" id="c-name" required placeholder="คุณวรวรรณ สุขุมวิท" class="w-full bg-linen dark:bg-espresso py-2.5 px-4 text-xs rounded-full border border-terracotta-500/10 text-espresso dark:text-linen focus:outline-none focus:border-terracotta-500">
+          </div>
+
+          <div class="flex flex-col space-y-1.5">
+            <label for="c-email" data-i18n="formEmail" class="text-[10px] uppercase tracking-wider font-bold text-espresso/40 dark:text-linen/40">Email Address *</label>
+            <input type="email" id="c-email" required placeholder="bride@example.com" class="w-full bg-linen dark:bg-espresso py-2.5 px-4 text-xs rounded-full border border-terracotta-500/10 text-espresso dark:text-linen focus:outline-none focus:border-terracotta-500">
+          </div>
+
+          <div class="flex flex-col space-y-1.5">
+            <label for="c-date" data-i18n="formDate" class="text-[10px] uppercase tracking-wider font-bold text-espresso/40 dark:text-linen/40">Event Date</label>
+            <input type="date" id="c-date" class="w-full bg-linen dark:bg-espresso py-2.5 px-4 text-xs rounded-full border border-terracotta-500/10 text-espresso dark:text-linen focus:outline-none focus:border-terracotta-500">
+          </div>
+
+          <button type="submit" data-i18n="formBtn" class="w-full bg-terracotta-500 text-white hover:bg-terracotta-600 py-3 text-xs font-bold tracking-wider uppercase rounded-full transition-all duration-300 shadow-cozy hover:shadow-warm-glow">
+            Adopt FaceFind for My Event
+          </button>
+
+        </form>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Cozy Footer -->
+  <footer class="w-full border-t border-terracotta-500/5 bg-linen/50 dark:bg-espresso-dark py-12 px-6 md:px-12 mt-auto transition-colors duration-500">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-espresso/50 dark:text-linen/40 font-semibold tracking-wider">
+      <span data-i18n="footerCopy">© 2026 FACEFIND. ALL RIGHTS RESERVED. (COZY SPECIMEN LAB)</span>
+      <div class="flex items-center gap-6">
+        <a href="#" data-i18n="footerPrivacy" class="hover:text-terracotta-500 transition-colors">Privacy Policy</a>
+        <a href="#" data-i18n="footerTerms" class="hover:text-terracotta-500 transition-colors">Terms of Service</a>
+        
+        <!-- Dev Health status check link -->
+        <span class="flex items-center gap-1.5 text-sage-500 bg-sage-50 dark:bg-sage-900/10 px-3 py-1 rounded-full font-mono text-[10px] tracking-normal font-medium border border-sage-500/20">
+          <span class="w-1.5 h-1.5 rounded-full bg-sage-500 inline-block animate-pulse"></span>
+          SYS ACTIVE
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Alert Container for interactive feedback -->
+  <div id="cozy-toast-box" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+  <!-- Cozy Full Screen Lightbox Modal -->
+  <div id="cozy-lightbox" class="fixed inset-0 z-50 bg-espresso-dark/95 backdrop-blur-md hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300" onclick="closeLightbox()">
+    <div class="max-w-3xl w-full text-center relative pointer-events-auto" onclick="event.stopPropagation()">
+      
+      <!-- Close button -->
+      <button onclick="closeLightbox()" class="absolute -top-12 right-2 text-white/70 hover:text-white font-serif text-lg flex items-center gap-1 uppercase tracking-widest text-xs">
+        Close <span>&times;</span>
+      </button>
+
+      <!-- Polaroid-like Lightbox frame -->
+      <div class="bg-white p-3 rounded-md shadow-2xl relative">
+        <div id="lightbox-spinner" class="absolute inset-0 flex items-center justify-center bg-white z-10">
+          <svg class="animate-spin text-terracotta-500 h-8 w-8" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <img id="lightbox-image" src="" alt="Zoom Photo" class="max-w-full max-h-[68vh] object-contain mx-auto rounded">
+      </div>
+
+      <div class="mt-4 text-white space-y-1">
+        <h4 id="lightbox-title" class="font-serif italic text-lg text-terracotta-500">Photo Title</h4>
+        <p id="lightbox-desc" class="text-xs text-white/50 uppercase tracking-wider font-semibold">Tuscany Villa Wedding</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Cozy JavaScript Interactions -->
+  <script>
+    // Bilingual Dictionaries
+    const TRANSLATIONS = {
+      EN: {
+        navConcept: "Our Heart",
+        navProcess: "The Journey",
+        navDemo: "Find Your Face",
+        navStories: "Happy Guests",
+        navBtn: "Share the Love",
+        heroBadge: "Every smile, reunited instantly",
+        heroTitleMain: "Reunite with Your",
+        heroTitleSub: "Precious Moments.",
+        heroDesc: "สัมผัสความอบอุ่นใจในทุกภาพถ่ายของคุณจากงานเลี้ยงแสนสำคัญ ด้วย AI ค้นหาใบหน้าที่เข้าใจทุกอารมณ์ของคุณ เพียงแค่อัปโหลดรูปเซลฟี่สั้น ๆ รูปแห่งความสุขทั้งหมดของคุณจะถูกคัดแยกส่งตรงถึงหน้าจอใน 3 วินาทีทันที",
+        stat1: "Smiling Guests",
+        stat2: "Cozy Weddings",
+        stat3: "Search Time",
+        heroBtnPrimary: "Try Living Search",
+        heroBtnSecondary: "See the Vibe",
+        aboutBadge: "The Vibe & Spirit",
+        aboutTitle: "Because photos hold love... and we bring the warmth back to you",
+        aboutDesc: "FaceFind Cozy is not just a cold face-search tool; it is a heartwarming bridge that connects the smiles of your guests directly with professional event photography. We custom designed warm visual palettes and gentle user experiences to deliver pure joy instantly without the fuss of shared folders.",
+        feat1Title: "Warm Friendly Biometrics",
+        feat1Desc: "Secure search that fully respects privacy. Coordinates are mapped instantly and immediately destroyed after guest leaves, guaranteeing full Biometrics Privacy compliance.",
+        feat2Title: "Warm Sun-kissed Palette",
+        feat2Desc: "A highly premium, hand-curated warm color system designed for deep emotional warmth, utilizing soft terracotta and light cozy apricot lines.",
+        feat3Title: "Share the Love Instantly",
+        feat3Desc: "Empower photographers and couples to send happiness directly to guests' screens, bypassing old-school cloud files that get lost over time.",
+        journeyBadge: "The 3-Step Smile Journey",
+        journeyTitle: "Experience Pure Joy in 3 Simple Steps",
+        journeyDesc: "Carefully calibrated steps to allow elderly relatives and younger guests alike to find their moments with a single tap.",
+        step1Title: "1. Take a Selfie",
+        step1Desc: "Guests scan the welcome QR code at the event entrance and snap a quick, secure portrait selfie on their own phones.",
+        step2Title: "2. Cozy AI Rekognition",
+        step2Desc: "Our warmth-optimized neural scanning compares facial coordinates with the primary event gallery in less than 3 seconds.",
+        step3Title: "3. Receive Warm Memories",
+        step3Desc: "Instant personalized gallery folder appears with all their beautiful high-res solo and group photos ready for download.",
+        demoBadge: "Live Interactive Preview",
+        demoTitle: "Simulate Face Searching Live",
+        demoDesc: "Upload or drag your selfie in the box below, or click 'Simulate Face Scan' to see how FaceFind instantly highlights matched files.",
+        zoneTitle: "Find Your Photo Live",
+        zoneDesc: "Drop your selfie here or click the button below to start simulating the face search matching cascade.",
+        zoneBtn: "Simulate Face Scan",
+        scanningStateTitle: "Mapping facial coordinates...",
+        successStateTitle: "Search Complete!",
+        galleryTip: "*Clicking 'Simulate Face Scan' will instantly filter out matching wedding photos in the right gallery grid, labeling them as 'Matched Photo'.",
+        storyBadge: "Heartwarming Success Stories",
+        storyTitle: "Smiles that Span Across Oceans",
+        storyDesc: "Hear from couples and guests who experienced the profound ease of finding their beautiful frames instantly.",
+        story1Name: "Worawan & Nontawat",
+        story1Sub: "Tuscany Wedding Couple",
+        story1Text: "\"My mother actually teared up. She opened the face finder and found the ring-exchange photo in less than 3 seconds. No tedious scrolling through thousands of photos. Our guests were thrilled and shared their snaps that very evening. An absolute blessing of a product!\"",
+        story2Sub: "Honored UK Wedding Guest",
+        story2Text: "\"Travelled all the way from London for this wedding. Within 2 seconds of running the scan after the cocktail hour, my solo and group photos with groom's friends popped up beautifully. Saved full-res memories immediately before boarding my flight back home!\"",
+        partnerTitle: "TRUSTED BY PREMIUM BOUTIQUE WEDDING PLANNERS & DOCUMENTARY STUDIOS",
+        ctaBadge: "Bring FaceFind to Your Special Event",
+        ctaTitle: "Deliver Precious Smiles & Warmth to Every Single Guest",
+        ctaDesc: "Allow your wedding and gala guests to secure their beautiful memories instantly without texting planners or waiting for drives. Gentle, fast, and profoundly memorable.",
+        formName: "Full Name *",
+        formEmail: "Email Address *",
+        formDate: "Event Date",
+        formBtn: "Adopt FaceFind for My Event",
+        footerCopy: "© 2026 FACEFIND. ALL RIGHTS RESERVED. (COZY SPECIMEN LAB)",
+        footerPrivacy: "Privacy Policy",
+        footerTerms: "Terms of Service"
+      },
+      TH: {
+        navConcept: "แนวคิดหัวใจ",
+        navProcess: "การเดินทาง",
+        navDemo: "ทดลองสแกนหน้า",
+        navStories: "แขกแสนอบอุ่น",
+        navBtn: "แบ่งปันความสุข",
+        heroBadge: "ค้นหารอยยิ้มแสนล้ำค่าของคุณในทันที",
+        heroTitleMain: "ทุกความทรงจำรอยยิ้ม",
+        heroTitleSub: "พบเจอได้ในพริบตาเดียว",
+        heroDesc: "สัมผัสความอบอุ่นใจในทุกภาพถ่ายของคุณจากงานเลี้ยงแสนสำคัญ ด้วย AI ค้นหาใบหน้าที่เข้าใจทุกอารมณ์ของคุณ เพียงแค่อัปโหลดรูปเซลฟี่สั้น ๆ รูปแห่งความสุขทั้งหมดของคุณจะถูกคัดแยกส่งตรงถึงหน้าจอใน 3 วินาทีทันที",
+        stat1: "แขกผู้รับบริการ",
+        stat2: "งานเลี้ยงแสนอบอุ่น",
+        stat3: "เวลาการค้นหาเฉลี่ย",
+        heroBtnPrimary: "ลองใช้งานระบบจำลอง",
+        heroBtnSecondary: "ดูสุนทรียภาพดีไซน์",
+        aboutBadge: "วิญญาณและหัวใจดีไซน์",
+        aboutTitle: "เพราะภาพถ่ายเก็บความรัก... และเราคืนความอบอุ่นให้คุณ",
+        aboutDesc: "FaceFind Cozy ไม่ใช่แค่แอปพลิเคชันคัดรูปด้วยหน้าตาที่เย็นชา แต่คือสะพานเชื่อมรอยยิ้มและเสียงหัวเราะของแขกในงานของคุณเข้ากับช่างภาพมืออาชีพ เราออกแบบโทนดีไซน์และพฤติกรรมการใช้งานที่อ่อนโยน อบอุ่น เพื่อเพิ่มความสุขให้แขกทุกคนในงานของคุณได้เก็บความทรงจำที่ล้ำค่าโดยไม่ต้องทวงถาม",
+        feat1Title: "Warm Friendly Biometrics",
+        feat1Desc: "AI ค้นหาที่ปลอดภัยสูงสุด ละเอียดอ่อน แต่ยังคงความรู้สึกอบอุ่น ไม่เก็บประวัติส่วนตัว สแกนใบหน้าและทำลายข้อมูลเพื่อความเป็นส่วนตัวสูงสุด (Biometric Privacy)",
+        feat2Title: "Warm Sun-kissed Palette",
+        feat2Desc: "สุนทรียศาสตร์ของดีไซน์ที่คัดสรรมาเฉพาะเพื่อความรู้สึกสบายตา สีครีมอุ่นและส้มแมนดารินอ่อน ๆ ทำให้การเลือกรูปเต็มไปด้วยอรรถรสแห่งความอบอุ่น",
+        feat3Title: "Share the Love Instantly",
+        feat3Desc: "ช่วยช่างภาพและผู้จัดงานส่งตรงความสุขถึงใจแขกได้ทันทีโดยไม่ต้องรอแชร์ไดรฟ์รวมยาวนาน ลดความยุ่งยากให้แขกสูงวัยใช้งานได้ง่ายด้วยคลิกเดียว",
+        journeyBadge: "การเดินทางรอยยิ้ม 3 ขั้นตอน",
+        journeyTitle: "สัมผัสประสบการณ์ง่าย ๆ ใน 3 ขั้นตอน",
+        journeyDesc: "ความสุขที่ออกแบบมาอย่างพิถีพิถันเพื่อให้ทุกคนในงานเลี้ยง ไม่ว่าจะเด็กหรือผู้ใหญ่ สามารถค้นพบภาพของตัวเองได้ง่ายที่สุด",
+        step1Title: "1. เซลฟี่ผ่านมือถือ",
+        step1Desc: "สแกน QR Code หน้างานแต่งหรืออีเวนต์ แล้วถ่ายรูปเซลฟี่ใบหน้าของคุณด้วยโทรศัพท์มือถือส่วนตัวอย่างปลอดภัย",
+        step2Title: "2. สแกนอัจฉริยะ",
+        step2Desc: "ระบบ AI Rekognition เปรียบเทียบใบหน้ากับแกลเลอรีภาพถ่ายหลักทั้งหมดในงานเลี้ยง ประมวลผลรวดเร็วใน 3 วินาที",
+        step3Title: "3. รับความอบอุ่นใจ",
+        step3Desc: "รับรูปเดี่ยวและรูปคู่ของคุณครบถ้วนทันที สามารถดาวน์โหลดหรือแชร์เข้า Social Media สไตล์คุณได้ทันใจ",
+        demoBadge: "สาธิตการใช้งานจำลอง",
+        demoTitle: "ทดลองค้นหาด้วยใบหน้าแบบเรียลไทม์",
+        demoDesc: "ลองคลิกปุ่ม 'Simulate Face Scan' ด้านล่างเพื่อสัมผัสความเร็วในการสแกนและการกรองผลลัพธ์ของ FaceFind แสนอบอุ่น",
+        zoneTitle: "ค้นหารูปของคุณในงานนี้",
+        zoneDesc: "วางรูปเซลฟี่ของคุณที่นี่ หรือคลิกปุ่มด้านล่างเพื่ออัปโหลดทดลองใช้ระบบสแกน",
+        zoneBtn: "Simulate Face Scan",
+        scanningStateTitle: "กำลังวิเคราะห์ใบหน้า...",
+        successStateTitle: "ค้นหาเสร็จสิ้น!",
+        galleryTip: "*การกด 'Simulate Face Scan' ด้านบนจะสาธิตการจับคู่รูปของคุณในงานแต่ง โดยภาพที่แมตช์จะได้รับป้าย 'Matched Photo' โดดเด่นขึ้นมาในตารางด้านขวาครับ",
+        storyBadge: "ความประทับใจส่งตรงจากใจ",
+        storyTitle: "ความประทับใจแสนอบอุ่นจากทุกครอบครัว",
+        storyDesc: "อ่านเรื่องราวความตื้นตันใจของคู่แต่งงานและแขกที่ได้รูปใบสำคัญของตนเองทันใจแบบเรียลไทม์",
+        story1Name: "คุณวรวรรณ & นนทวัฒน์",
+        story1Sub: "คู่บ่าวสาว ณ วิลล่า ทัสคานี",
+        story1Text: "\"คุณแม่น้ำตาซึมเลยค่ะ... ท่านเปิดสแกนหน้าและได้เห็นรูปขณะสวมแหวนแต่งงานที่ประทับใจที่สุดใน 3 วินาทีแรก ไม่ต้องนั่งเลื่อนหากว่าพันรูปให้เหนื่อย แขกคนอื่นในงานแต่งก็ประทับใจและได้รูปแชร์คืนนั้นเลย ขอบคุณดีไซน์แอปที่น่ารักและอบอุ่นนี้มาก ๆ ค่ะ\"",
+        story2Sub: "เพื่อนเจ้าบ่าวผู้เกียรติชาวต่างประเทศ",
+        story2Text: "\"ผมเดินทางมาไกลจากลอนดอนเพื่อมาร่วมงานแต่งนี้ ประทับใจมากที่พอจบพิธีการตอนเย็นปุ๊บ สแกนใบหน้าเพียง 2 วินาที รูปเซลฟี่ของผมก็นำทางไปเจอรูปเดี่ยวของตัวเองและรูปคู่กับเพื่อนเจ้าบ่าวทุกคนอย่างรวดเร็ว ได้ดาวน์โหลดรูปภาพคมชัดเต็มขนาดเก็บไว้ทันทีก่อนขึ้นเครื่องบินกลับเลยครับ\"",
+        partnerTitle: "ได้รับความไว้วางใจจากผู้จัดงานเวดดิ้งพรีเมียม สตูดิโอช่างภาพถ่ายสารคดี และสตูดิโอชั้นนำระดับโลก",
+        ctaBadge: "นำความอบอุ่นของ FaceFind สู่งานสำคัญของคุณ",
+        ctaTitle: "ส่งมอบความอบอุ่นใจ และรอยยิ้มแสนล้ำค่าให้แขกทุกคนในงาน",
+        ctaDesc: "ให้แขกได้ดาวน์โหลดความทรงจำที่สวยงาม คมชัด โดยไม่ต้องทวงถามช่างภาพ สะดวกสบาย รวดเร็ว และเปี่ยมล้นด้วยความประทับใจที่ไม่รู้ลืม",
+        formName: "ชื่อ-นามสกุล *",
+        formEmail: "ที่อยู่อีเมล *",
+        formDate: "วันจัดงานเลี้ยง",
+        formBtn: "Adopt FaceFind for My Event",
+        footerCopy: "© 2026 FACEFIND. สงวนลิขสิทธิ์ทั้งหมด. (COZY SPECIMEN LAB)",
+        footerPrivacy: "นโยบายความเป็นส่วนตัว",
+        footerTerms: "เงื่อนไขการให้บริการ"
+      }
+    };
+
+    let CURRENT_LANG = "TH"; // Default language is Thai as per bilingual instruction
+
+    // Render Language Copy
+    function updateLanguage() {
+      const dict = TRANSLATIONS[CURRENT_LANG];
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        if (dict[key]) {
+          if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+            el.placeholder = dict[key];
+          } else {
+            el.innerHTML = dict[key];
+          }
+        }
+      });
+      document.documentElement.setAttribute("lang", CURRENT_LANG.toLowerCase());
+      document.getElementById("lang-toggle").innerText = CURRENT_LANG === "TH" ? "EN" : "TH";
+    }
+
+    // Initialize Language Toggle Event
+    document.getElementById("lang-toggle").addEventListener("click", () => {
+      CURRENT_LANG = CURRENT_LANG === "TH" ? "EN" : "TH";
+      updateLanguage();
+      triggerToast(CURRENT_LANG === "TH" ? "สลับภาษาเป็นภาษาไทยแล้วครับ" : "Language switched to English successfully");
+    });
+
+    // Theme Toggle
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const isDark = document.documentElement.classList.toggle("dark");
+      localStorage.setItem("fc-theme", isDark ? "dark" : "light");
+      triggerToast(isDark ? "สลับเป็นธีม Espresso Dark (มืดอบอุ่น) แล้วครับ" : "Switched to Linen Light (ครีมอบอุ่น) successfully");
+    });
+
+    // Cozy Filter Gallery logic
+    let currentCategory = 'all';
+    let isSearchMatchedActive = false;
+
+    function filterCozyGallery(category) {
+      currentCategory = category;
+      const items = document.querySelectorAll(".cozy-gallery-item");
+      let visibleCount = 0;
+      
+      items.forEach(item => {
+        const itemCat = item.getAttribute("data-category");
+        const isMatched = item.getAttribute("data-matched") === "true";
+        
+        // Logical filter checks
+        const matchesCategory = (category === 'all' || itemCat === category);
+        const matchesSearch = (!isSearchMatchedActive || isMatched);
+
+        if (matchesCategory && matchesSearch) {
+          item.style.display = "block";
+          setTimeout(() => { item.style.opacity = "1"; item.style.transform = "scale(1)"; }, 50);
+          visibleCount++;
+        } else {
+          item.style.opacity = "0";
+          item.style.transform = "scale(0.95)";
+          setTimeout(() => { item.style.display = "none"; }, 400);
+        }
+      });
+
+      // Update active filter button styling
+      document.querySelectorAll(".cozy-filter-btn").forEach(btn => {
+        btn.classList.remove("border-terracotta-500", "text-white", "bg-terracotta-500");
+        btn.classList.add("border-espresso-500/10", "text-espresso/70", "dark:text-linen/70");
+      });
+      
+      const activeBtn = document.getElementById("filter-" + category);
+      if (activeBtn) {
+        activeBtn.classList.remove("border-espresso-500/10", "text-espresso/70", "dark:text-linen/70");
+        activeBtn.classList.add("border-terracotta-500", "text-white", "bg-terracotta-500");
+      }
+    }
+
+    // Simulate Face Scan Cascade Matcher
+    function simulateScan() {
+      const dropDefault = document.getElementById("drop-default");
+      const dropScanning = document.getElementById("drop-scanning");
+      const dropSuccess = document.getElementById("drop-success");
+      const glowBeam = document.getElementById("glow-beam");
+
+      dropDefault.classList.add("hidden");
+      dropScanning.classList.remove("hidden");
+      
+      // Glow scanner line animation trigger
+      glowBeam.style.opacity = "0.7";
+      glowBeam.style.animation = "cozy-scan 2.5s infinite";
+
+      triggerToast(CURRENT_LANG === "TH" ? "กำลังจำลองอัปโหลดภาพใบหน้า..." : "Simulating face image upload...");
+
+      setTimeout(() => {
+        // Stop scanning, enter success state
+        dropScanning.classList.add("hidden");
+        dropSuccess.classList.remove("hidden");
+        
+        glowBeam.style.opacity = "0";
+        glowBeam.style.animation = "none";
+
+        // Mark specific cards as matched
+        document.getElementById("cozy-photo-1").setAttribute("data-matched", "true");
+        document.getElementById("cozy-photo-2").setAttribute("data-matched", "true");
+        document.getElementById("cozy-photo-4").setAttribute("data-matched", "true");
+        document.getElementById("cozy-photo-6").setAttribute("data-matched", "true");
+
+        // Reveal badges
+        document.querySelectorAll(".cozy-match-badge").forEach(badge => {
+          badge.classList.remove("hidden");
+        });
+
+        isSearchMatchedActive = true;
+        filterCozyGallery(currentCategory); // refresh filters with matches prioritized
+
+        triggerToast(CURRENT_LANG === "TH" ? "จับคู่ใบหน้าสำเร็จ! พบรูปของคุณ 4 รูปครับ" : "Matching success! Found 4 photos for you");
+        document.getElementById("match-status-msg").innerText = CURRENT_LANG === "TH" ? "พบคลิปจับคู่ภาพของคุณ 4 รูปสำเร็จ!" : "Found 4 matched photos successfully!";
+      }, 2500);
+    }
+
+    // Reset drop zone state
+    function resetDropZone() {
+      document.getElementById("drop-success").classList.add("hidden");
+      document.getElementById("drop-default").classList.remove("hidden");
+      
+      // Reset matched indicators
+      document.querySelectorAll(".cozy-match-badge").forEach(badge => {
+        badge.classList.add("hidden");
+      });
+      
+      document.querySelectorAll(".cozy-gallery-item").forEach(item => {
+        item.setAttribute("data-matched", "false");
+      });
+
+      isSearchMatchedActive = false;
+      filterCozyGallery(currentCategory);
+      triggerToast(CURRENT_LANG === "TH" ? "ล้างผลการค้นหาใบหน้าแล้ว" : "Face search matches cleared");
+    }
+
+    // Cozy Toast notifications
+    function triggerToast(message) {
+      const container = document.getElementById("cozy-toast-box");
+      const toast = document.createElement("div");
+      toast.className = "pointer-events-auto bg-white dark:bg-espresso border-2 border-terracotta-500/20 px-5 py-3 rounded-full text-xs font-semibold text-espresso dark:text-linen shadow-cozy flex items-center gap-2 transform translate-y-10 opacity-0 transition-all duration-500";
+      
+      // Simple Heart SVG
+      toast.innerHTML = `
+        <svg class="h-4 w-4 text-terracotta-500 fill-current animate-pulse glow-heart" viewBox="0 0 20 20">
+          <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+        </svg>
+        <span>${message}</span>
+      `;
+      
+      container.appendChild(toast);
+      
+      // Trigger entrance
+      setTimeout(() => {
+        toast.classList.remove("translate-y-10", "opacity-0");
+      }, 50);
+
+      // Trigger exit
+      setTimeout(() => {
+        toast.classList.add("translate-y-[-10px]", "opacity-0");
+        setTimeout(() => {
+          toast.remove();
+        }, 500);
+      }, 3500);
+    }
+
+    // Cozy Lightbox modal handlers
+    function openLightbox(imgUrl, title, category) {
+      const lightbox = document.getElementById("cozy-lightbox");
+      const spinner = document.getElementById("lightbox-spinner");
+      const img = document.getElementById("lightbox-image");
+      
+      document.getElementById("lightbox-title").innerText = title;
+      document.getElementById("lightbox-desc").innerText = category;
+      
+      spinner.classList.remove("hidden");
+      img.src = "";
+      
+      lightbox.classList.remove("hidden");
+      setTimeout(() => {
+        lightbox.classList.remove("opacity-0");
+        lightbox.classList.add("flex");
+      }, 50);
+
+      img.onload = () => {
+        spinner.classList.add("hidden");
+      };
+      img.src = imgUrl;
+    }
+
+    function closeLightbox() {
+      const lightbox = document.getElementById("cozy-lightbox");
+      lightbox.classList.add("opacity-0");
+      setTimeout(() => {
+        lightbox.classList.add("hidden");
+        lightbox.classList.remove("flex");
+      }, 300);
+    }
+
+    // Form Submissions
+    function triggerInquirySuccess() {
+      const name = document.getElementById("c-name").value;
+      triggerToast(CURRENT_LANG === "TH" ? `ขอบพระคุณคุณ ${name} ที่สนใจ FaceFind! เราจะติดต่อกลับโดยด่วนที่สุดครับ` : `Thank you ${name}! We will reach out to you very soon.`);
+      document.getElementById("c-name").value = "";
+      document.getElementById("c-email").value = "";
+      document.getElementById("c-date").value = "";
+    }
+
+    // Page Load Init
+    window.addEventListener("DOMContentLoaded", () => {
+      updateLanguage();
+    });
+  </script>
+</body>
+</html>
