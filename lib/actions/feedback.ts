@@ -1,6 +1,5 @@
 "use server";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getCurrentTenant } from "@/lib/auth/current-tenant";
@@ -8,15 +7,6 @@ import { validateFeedback, type FeedbackSubmission } from "@/lib/feedback";
 import { FEEDBACK_QUESTIONS_VERSION } from "@/lib/feedback-questions";
 
 export type FeedbackResult = { ok: true } | { ok: false; error: string };
-
-// `feedback_responses` enters the generated DB types only after its migration is
-// applied (currently blocked by pre-existing migration drift on 20260530030000 —
-// the abandoned Dropbox migration; see the feedback spec / wake-up notes). Until
-// then, reach the table through an untyped client view. Remove this helper and
-// use the typed client once `npm run db:types` includes the table.
-function feedbackTable(client: unknown) {
-  return (client as SupabaseClient).from("feedback_responses");
-}
 
 export async function submitGuestFeedback(
   input: { eventId: string; shareToken: string } & FeedbackSubmission,
@@ -36,7 +26,7 @@ export async function submitGuestFeedback(
     .maybeSingle();
   if (!event) return { ok: false, error: "ลิงก์ไม่ถูกต้อง" };
 
-  const { error } = await feedbackTable(admin).insert({
+  const { error } = await admin.from("feedback_responses").insert({
     source: "guest",
     event_id: event.id,
     rating: v.value.rating,
@@ -59,7 +49,7 @@ export async function submitOrganizerFeedback(
 
   // Session client → the RLS policy enforces tenant_id = current_tenant_id().
   const supabase = await createClient();
-  const { error } = await feedbackTable(supabase).insert({
+  const { error } = await supabase.from("feedback_responses").insert({
     source: "organizer",
     tenant_id: ctx.tenant.id,
     rating: v.value.rating,

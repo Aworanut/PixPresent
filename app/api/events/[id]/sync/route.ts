@@ -410,7 +410,6 @@ async function backfillR2Url({
       photographer_name: exif.artist || null,
       copyright: exif.copyright || null,
       event_storage_folder_id: folderDbId,
-      // @ts-expect-error -- storage_bytes added in migration 20260530010000; regenerate with `npm run db:types`
       storage_bytes: web.length + full.length,
     })
     .eq("id", existingPhotoId);
@@ -537,7 +536,6 @@ async function processOnePhoto({
     photographer_name: exif.artist || null,
     copyright: exif.copyright || null,
     event_storage_folder_id: folderDbId,
-    // @ts-expect-error -- storage_bytes added in migration 20260530010000; regenerate with `npm run db:types`
     storage_bytes: storageBytes,
   });
 

@@ -243,6 +243,70 @@ export type Database = {
           },
         ]
       }
+      feedback_responses: {
+        Row: {
+          answers: Json
+          comment: string | null
+          created_at: string
+          event_id: string | null
+          guest_session_id: string | null
+          id: string
+          meta: Json
+          questions_version: number
+          rating: number | null
+          source: string
+          tenant_id: string | null
+        }
+        Insert: {
+          answers?: Json
+          comment?: string | null
+          created_at?: string
+          event_id?: string | null
+          guest_session_id?: string | null
+          id?: string
+          meta?: Json
+          questions_version?: number
+          rating?: number | null
+          source: string
+          tenant_id?: string | null
+        }
+        Update: {
+          answers?: Json
+          comment?: string | null
+          created_at?: string
+          event_id?: string | null
+          guest_session_id?: string | null
+          id?: string
+          meta?: Json
+          questions_version?: number
+          rating?: number | null
+          source?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_responses_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_responses_guest_session_id_fkey"
+            columns: ["guest_session_id"]
+            isOneToOne: false
+            referencedRelation: "guest_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_responses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guest_sessions: {
         Row: {
           consent_at: string | null
@@ -305,6 +369,7 @@ export type Database = {
           r2_full_url: string | null
           r2_web_url: string | null
           rekognition_face_ids: string[]
+          storage_bytes: number
           storage_file_id: string
           taken_at: string | null
           visibility: string
@@ -324,6 +389,7 @@ export type Database = {
           r2_full_url?: string | null
           r2_web_url?: string | null
           rekognition_face_ids?: string[]
+          storage_bytes?: number
           storage_file_id: string
           taken_at?: string | null
           visibility?: string
@@ -343,6 +409,7 @@ export type Database = {
           r2_full_url?: string | null
           r2_web_url?: string | null
           rekognition_face_ids?: string[]
+          storage_bytes?: number
           storage_file_id?: string
           taken_at?: string | null
           visibility?: string

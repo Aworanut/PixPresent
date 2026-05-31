@@ -1,4 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { StatCard } from "../_stat-card";
 
@@ -44,9 +43,7 @@ function answersSummary(answers: Record<string, string> | null): string {
 export default async function AdminFeedbackPage() {
   const admin = createServiceRoleClient();
 
-  // `feedback_responses` is not in the generated types until its migration
-  // applies (blocked by migration drift on 20260530030000). Untyped view for now.
-  const { data } = await (admin as unknown as SupabaseClient)
+  const { data } = await admin
     .from("feedback_responses")
     .select(
       "id, source, rating, comment, answers, created_at, tenants(name), events(name)",
@@ -54,7 +51,9 @@ export default async function AdminFeedbackPage() {
     .order("created_at", { ascending: false })
     .limit(100);
 
-  const rows = (data ?? []) as FeedbackRow[];
+  // Query is fully typed; reshape the row (Json `answers`, embedded relations)
+  // to the view type used below.
+  const rows = (data ?? []) as unknown as FeedbackRow[];
   const guest = rows.filter((r) => r.source === "guest");
   const organizer = rows.filter((r) => r.source === "organizer");
   const ratings = (list: FeedbackRow[]) =>
