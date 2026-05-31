@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { FaceSearch } from "./_face-search";
 import { InAppBrowserNotice } from "./_inapp-browser-notice";
+import { GuestFeedback } from "./_guest-feedback";
 
 type Props = { params: Promise<{ token: string }> };
 
@@ -112,6 +113,9 @@ export default async function GuestEventPage({ params }: Props) {
 
           {/* Face search widget */}
           <FaceSearch eventId={event.id} shareToken={token} />
+
+          {/* Feedback (page-level; self-reports the find-rate signal) */}
+          <GuestFeedback eventId={event.id} shareToken={token} />
         </div>
 
         {/* Studio Business Card & Footer */}

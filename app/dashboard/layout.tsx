@@ -7,6 +7,7 @@ import { needsOnboarding } from "@/lib/auth/onboarding";
 import { isSuperAdminEmail } from "@/lib/auth/super-admin";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
+import { FeedbackWidget } from "./_feedback-widget";
 
 export default async function DashboardLayout({
   children,
@@ -110,6 +111,8 @@ export default async function DashboardLayout({
       <main className="flex-1 mx-auto w-full max-w-5xl px-4 sm:px-6 py-8 sm:py-12">
         {children}
       </main>
+
+      <FeedbackWidget />
     </div>
   );
 }
