@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { createEvent } from "@/lib/actions/events";
+import { loadEventTierList } from "@/lib/pricing";
 import { EventForm } from "../_components/event-form";
 
-export default function NewEventPage() {
+export default async function NewEventPage() {
+  const tiers = await loadEventTierList();
+
   return (
     <div className="w-full flex items-center justify-center py-4 sm:py-8">
       <div className="w-full max-w-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 rounded-none shadow-sm p-6 sm:p-8 space-y-6">
@@ -29,6 +32,7 @@ export default function NewEventPage() {
           submitLabel="สร้าง Event"
           pendingLabel="กำลังสร้าง..."
           showTierSelector={true}
+          tiers={tiers}
           cancelHref="/dashboard"
         />
       </div>

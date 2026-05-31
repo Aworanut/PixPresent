@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentTenant } from "@/lib/auth/current-tenant";
+import { loadTopupPackages, loadCustomTopupRange } from "@/lib/pricing";
 import { TopupFlow } from "./_topup-flow";
 
 export default async function TopupPage() {
   const ctx = await getCurrentTenant();
   if (!ctx) redirect("/login");
+
+  const packages = await loadTopupPackages();
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
@@ -32,7 +35,7 @@ export default async function TopupPage() {
         </div>
       </div>
 
-      <TopupFlow />
+      <TopupFlow packages={packages} custom={loadCustomTopupRange()} />
     </div>
   );
 }

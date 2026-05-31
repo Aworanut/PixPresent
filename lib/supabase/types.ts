@@ -110,6 +110,45 @@ export type Database = {
           },
         ]
       }
+      event_tiers: {
+        Row: {
+          active: boolean
+          credit_cost: number
+          data_retention_days: number
+          description: string
+          id: string
+          label: string
+          link_active_days: number
+          sort: number
+          storage_limit_gb: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          credit_cost: number
+          data_retention_days: number
+          description?: string
+          id: string
+          label: string
+          link_active_days: number
+          sort?: number
+          storage_limit_gb: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          credit_cost?: number
+          data_retention_days?: number
+          description?: string
+          id?: string
+          label?: string
+          link_active_days?: number
+          sort?: number
+          storage_limit_gb?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           activated_at: string | null
@@ -556,6 +595,39 @@ export type Database = {
           plan?: string
           storage_provider?: string
           tiktok_username?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      topup_packages: {
+        Row: {
+          active: boolean
+          credits: number
+          highlight: boolean
+          id: string
+          label: string
+          price_thb: number
+          sort: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          credits: number
+          highlight?: boolean
+          id: string
+          label: string
+          price_thb: number
+          sort?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          credits?: number
+          highlight?: boolean
+          id?: string
+          label?: string
+          price_thb?: number
+          sort?: number
           updated_at?: string
         }
         Relationships: []

@@ -7,6 +7,7 @@ import {
   ReceiptText,
   Building2,
   TrendingUp,
+  Tags,
   MessageSquare,
 } from "lucide-react";
 
@@ -15,6 +16,7 @@ const NAV = [
   { href: "/admin/slips", label: "Slips", icon: ReceiptText },
   { href: "/admin/tenants", label: "Tenants", icon: Building2 },
   { href: "/admin/finances", label: "Finances", icon: TrendingUp },
+  { href: "/admin/pricing", label: "Pricing", icon: Tags },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
 ];
 
