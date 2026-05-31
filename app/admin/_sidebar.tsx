@@ -8,6 +8,7 @@ import {
   Building2,
   TrendingUp,
   Tags,
+  Ticket,
   MessageSquare,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ const NAV = [
   { href: "/admin/tenants", label: "Tenants", icon: Building2 },
   { href: "/admin/finances", label: "Finances", icon: TrendingUp },
   { href: "/admin/pricing", label: "Pricing", icon: Tags },
+  { href: "/admin/promotions", label: "Promotions", icon: Ticket },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
 ];
 

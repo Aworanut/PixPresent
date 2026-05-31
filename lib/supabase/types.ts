@@ -471,6 +471,103 @@ export type Database = {
           },
         ]
       }
+      promo_redemptions: {
+        Row: {
+          bonus_credits: number
+          created_at: string
+          id: string
+          promo_id: string
+          slip_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          bonus_credits: number
+          created_at?: string
+          id?: string
+          promo_id: string
+          slip_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          bonus_credits?: number
+          created_at?: string
+          id?: string
+          promo_id?: string
+          slip_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_redemptions_promo_id_fkey"
+            columns: ["promo_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_redemptions_slip_id_fkey"
+            columns: ["slip_id"]
+            isOneToOne: false
+            referencedRelation: "slip_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_redemptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          description: string
+          ends_at: string | null
+          id: string
+          kind: string
+          max_redemptions: number | null
+          min_topup_thb: number
+          per_tenant_limit: number
+          redeemed_count: number
+          starts_at: string | null
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          description?: string
+          ends_at?: string | null
+          id?: string
+          kind: string
+          max_redemptions?: number | null
+          min_topup_thb?: number
+          per_tenant_limit?: number
+          redeemed_count?: number
+          starts_at?: string | null
+          value: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          description?: string
+          ends_at?: string | null
+          id?: string
+          kind?: string
+          max_redemptions?: number | null
+          min_topup_thb?: number
+          per_tenant_limit?: number
+          redeemed_count?: number
+          starts_at?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
       slip_uploads: {
         Row: {
           amount_thb: number
