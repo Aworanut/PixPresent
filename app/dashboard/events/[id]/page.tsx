@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { EventToolbar } from "./_event-toolbar";
 import { EventTitleEditor } from "./_event-title-editor";
 import { PhotoGallery, type GalleryPhoto } from "./_photo-gallery";
+import { LivenessToggle } from "./_liveness-toggle";
 
 export default async function EventDetailPage({
   params,
@@ -22,7 +23,7 @@ export default async function EventDetailPage({
       supabase
         .from("events")
         .select(
-          "id, name, event_date, is_indexed, share_link_expires_days, rekognition_collection_id, share_token, share_token_expires_at, sync_started_at, sync_completed_at, sync_photo_count, tenant_id, credits_used",
+          "id, name, event_date, is_indexed, share_link_expires_days, rekognition_collection_id, share_token, share_token_expires_at, sync_started_at, sync_completed_at, sync_photo_count, tenant_id, credits_used, liveness_required",
         )
         .eq("id", id)
         .is("deleted_at", null)
@@ -139,6 +140,8 @@ export default async function EventDetailPage({
           hasFolders={folderList.length > 0}
         />
       )}
+
+      <LivenessToggle eventId={event.id} initial={event.liveness_required ?? false} />
     </div>
   );
 }

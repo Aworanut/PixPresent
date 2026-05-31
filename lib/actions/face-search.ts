@@ -1,6 +1,7 @@
 "use server";
 
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { matchedVisibilities } from "@/lib/face-search-visibility";
 
 type MatchedPhoto = { id: string; webUrl: string; fullUrl: string };
 
@@ -8,7 +9,12 @@ export type SearchResult =
   | { ok: true; sessionId: string; photos: MatchedPhoto[] }
   | {
       ok: false;
-      reason: "token_expired" | "not_indexed" | "no_face" | "error";
+      reason:
+        | "token_expired"
+        | "not_indexed"
+        | "no_face"
+        | "liveness_required"
+        | "error";
       message: string;
     };
 
@@ -42,7 +48,7 @@ export async function searchFaces(formData: FormData): Promise<SearchResult> {
   // 1. Re-validate token (always re-check on the server — client state is stale)
   const { data: event } = await supabase
     .from("events")
-    .select("id, share_token_expires_at, rekognition_collection_id")
+    .select("id, share_token_expires_at, rekognition_collection_id, liveness_required")
     .eq("id", eventId)
     .eq("share_token", token)
     .is("deleted_at", null)
@@ -69,6 +75,20 @@ export async function searchFaces(formData: FormData): Promise<SearchResult> {
     };
   }
 
+  // 2b. Liveness-required events must NOT be served by this ordinary (file-upload) path.
+  // A dedicated liveness action — which verifies a live scan, then searches with the
+  // session's reference image across public + match_only + `hidden` (the restricted
+  // subset) — is the only door for them (ADR 0002). Until that ships, fail closed:
+  // never let the upload path serve a liveness event, or flipping the flag would leak
+  // the restricted pool with no liveness gate at all.
+  if (event.liveness_required) {
+    return {
+      ok: false,
+      reason: "liveness_required",
+      message: "งานนี้ต้องยืนยันตัวตนด้วยการสแกนใบหน้าสด (ฟีเจอร์อยู่ระหว่างพัฒนา)",
+    };
+  }
+
   // 3. Rekognition face search
   const matchResult = await runFaceSearch(
     selfieFile,
@@ -85,7 +105,9 @@ export async function searchFaces(formData: FormData): Promise<SearchResult> {
     };
   }
 
-  // 4. Fetch matched photos + all public photos for this event
+  // 4. Fetch matched photos + all public photos for this event.
+  // Ordinary search only ever reads match_only + public; `hidden` (the restricted
+  // subset) is reachable solely through the future liveness path (ADR 0002).
   const photos: MatchedPhoto[] = [];
 
   const [matchedRows, publicRows] = await Promise.all([
@@ -94,7 +116,7 @@ export async function searchFaces(formData: FormData): Promise<SearchResult> {
           .from("photos")
           .select("id, r2_web_url, r2_full_url")
           .eq("event_id", eventId)
-          .eq("visibility", "match_only")
+          .in("visibility", matchedVisibilities("ordinary"))
           .in("id", matchResult)
       : Promise.resolve({ data: [] }),
     supabase

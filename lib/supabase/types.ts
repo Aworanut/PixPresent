@@ -126,6 +126,7 @@ export type Database = {
           id: string
           is_indexed: boolean
           link_active_days: number
+          liveness_required: boolean
           name: string
           reel_quota: number | null
           rekognition_collection_id: string | null
@@ -155,6 +156,7 @@ export type Database = {
           id?: string
           is_indexed?: boolean
           link_active_days?: number
+          liveness_required?: boolean
           name: string
           reel_quota?: number | null
           rekognition_collection_id?: string | null
@@ -184,6 +186,7 @@ export type Database = {
           id?: string
           is_indexed?: boolean
           link_active_days?: number
+          liveness_required?: boolean
           name?: string
           reel_quota?: number | null
           rekognition_collection_id?: string | null

@@ -342,3 +342,24 @@ export async function updateEventName(
   revalidatePath(`/dashboard/events/${id}`);
   return {};
 }
+
+/**
+ * เปิด/ปิด การยืนยันตัวตนด้วยการสแกนใบหน้าสด (liveness) สำหรับงานนี้.
+ * เปิดเมื่อใด guest จะค้นรูปด้วยการอัปโหลดไฟล์ไม่ได้ — ต้องผ่านการสแกนหน้าสด
+ * (ดู docs/adr/0002). RLS บน events จำกัดให้เฉพาะ tenant เจ้าของแก้ได้.
+ */
+export async function setLivenessRequired(
+  id: string,
+  value: boolean,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ liveness_required: value })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/events/${id}`);
+  return {};
+}
