@@ -21,7 +21,7 @@ const LINEN = "#FDFBF7";
 const ESPRESSO = "#271A12";
 
 export const metadata = {
-  title: "FaceFind · แจกรูปงานอีเวนต์ด้วยใบหน้า",
+  title: "PixPresent · แจกรูปงานอีเวนต์ด้วยใบหน้า",
   description:
     "ให้แขกในงานค้นเจอรูปตัวเองด้วยการเซลฟี่เพียงครั้งเดียว — แจกรูปอีเวนต์ด้วยใบหน้า ง่าย อบอุ่น และเป็นส่วนตัว",
 };
@@ -57,7 +57,7 @@ function SiteNav() {
             <ScanFace className="h-4 w-4" strokeWidth={2} />
           </span>
           <span className="font-heading text-xl font-semibold tracking-tight text-[#271A12]">
-            FaceFind
+            PixPresent
           </span>
         </Link>
 
@@ -120,7 +120,7 @@ function Hero() {
           </h1>
 
           <p className="max-w-xl text-base leading-relaxed text-[#5C4A3A] sm:text-lg">
-            FaceFind ช่วยให้แขกในงานของคุณค้นเจอรูปตัวเองด้วยการเซลฟี่เพียงครั้งเดียว
+            PixPresent ช่วยให้แขกในงานของคุณค้นเจอรูปตัวเองด้วยการเซลฟี่เพียงครั้งเดียว
             — แจกรูปงานอีเวนต์ด้วยใบหน้า ง่าย อบอุ่น และเป็นส่วนตัว
             ไม่ต้องไล่หาในอัลบั้มรวมพันรูปอีกต่อไป
           </p>
@@ -213,7 +213,7 @@ function Vibe() {
     <section id="concept" className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
       <SectionHead
         badge="The Vibe & Spirit"
-        title="หัวใจของ FaceFind"
+        title="หัวใจของ PixPresent"
         sub="เทคโนโลยีที่ทรงพลัง ห่อหุ้มด้วยความรู้สึกอบอุ่นและเป็นมิตร"
       />
       <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -370,7 +370,7 @@ function Stories() {
         <SectionHead
           badge="Heartwarming Success Stories"
           title="ความประทับใจแสนอบอุ่นจากทุกครอบครัว"
-          sub="เสียงจริงจากเจ้าของงานและแขกที่ได้สัมผัส FaceFind"
+          sub="เสียงจริงจากเจ้าของงานและแขกที่ได้สัมผัส PixPresent"
         />
         <div className="mt-12 grid gap-6 md:grid-cols-2">
           {stories.map((s) => (
@@ -403,7 +403,7 @@ function FinalCta() {
         <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
         <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">
           <Sparkles className="h-3.5 w-3.5" />
-          Bring FaceFind to Your Special Event
+          Bring PixPresent to Your Special Event
         </span>
         <h2 className="mx-auto mt-5 max-w-2xl font-heading text-4xl font-light leading-tight text-white sm:text-5xl">
           ให้ทุกคนในงานได้เจอรูปของตัวเอง
@@ -443,12 +443,12 @@ function SiteFooter() {
             <ScanFace className="h-3.5 w-3.5" />
           </span>
           <span className="font-heading text-lg font-semibold text-[#271A12]">
-            FaceFind
+            PixPresent
           </span>
         </div>
 
         <p className="order-last text-xs tracking-wide text-[#9C8B79] sm:order-none">
-          © 2026 FACEFIND · PixPresent. All rights reserved.
+          © 2026 PixPresent. All rights reserved.
         </p>
 
         <div className="flex items-center gap-5 text-sm text-[#5C4A3A]">

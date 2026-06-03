@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**PixPresent / FaceFind** — a multi-tenant SaaS that distributes event photos by face. A guest opens a public share link, uploads a selfie, and AWS Rekognition matches their face against the event's indexed photos so they can view and download just their own shots. Organizers (each a "tenant") create events, sync source photos from Google Drive, and spend prepaid **credits** to activate events; credits are bought by bank transfer and verified through the SlipOK API.
+**PixPresent** — a multi-tenant SaaS that distributes event photos by face. A guest opens a public share link, uploads a selfie, and AWS Rekognition matches their face against the event's indexed photos so they can view and download just their own shots. Organizers (each a "tenant") create events, sync source photos from Google Drive, and spend prepaid **credits** to activate events; credits are bought by bank transfer and verified through the SlipOK API.
 
 The root also holds static design/PRD artifacts — `facefind_spec.html` (interactive PRD), `facefind_landing.html`, `facefind_design_lab.html`, `competitor_analysis.html`, `font_comparison.html`. These are reference docs, **not** part of the app build.
+
+> **Naming.** The product is **PixPresent** (the local repo directory is `Pixture`). "FaceFind" is the **former** name — it now survives only in legacy artifact filenames (`facefind_*.html`) and historical references. Do **not** use "FaceFind" in new code, UI copy, comments, commit messages, or docs; write **PixPresent** everywhere.
 
 ## Tech stack
 
