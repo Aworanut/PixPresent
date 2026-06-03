@@ -24,7 +24,21 @@
 import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { processImage } from "@/lib/image-processing";
+import { uploadToR2, r2Paths } from "@/lib/r2";
 import type { SourceType, SourceFile, StorageProvider } from "@/lib/storage";
+import type { RekognitionClient } from "@aws-sdk/client-rekognition";
+
+// Hobby plan caps serverless functions at 60s. Each invocation syncs as many
+// photos as fit in the window; the client re-runs to resume (already-done files
+// are skipped via doneSet) until the folder is fully indexed.
+export const maxDuration = 60;
+
+// Photos processed concurrently within a folder. Each photo is mostly network
+// wait (download → R2 → Rekognition), so a small pool gives a near-linear
+// speedup without exhausting memory or tripping provider rate limits.
+// Override via SYNC_CONCURRENCY.
+const SYNC_CONCURRENCY = Math.max(1, Number(process.env.SYNC_CONCURRENCY) || 5);
 
 export async function POST(
   request: NextRequest,
@@ -222,6 +236,30 @@ async function runSync({
   let totalProcessed = 0;
   let storageExceeded = false;
 
+  // Hoist the Rekognition client + command out of the per-photo loop so a single
+  // TLS/connection pool is reused across every photo (and every worker), instead
+  // of constructing a fresh client per image as the old serial loop did.
+  let rekognition: RekognitionClient | null = null;
+  let IndexFacesCommand:
+    | typeof import("@aws-sdk/client-rekognition").IndexFacesCommand
+    | null = null;
+  if (hasAWS && collectionId && !collectionId.startsWith("stub-")) {
+    const mod = await import("@aws-sdk/client-rekognition");
+    IndexFacesCommand = mod.IndexFacesCommand;
+    rekognition = new mod.RekognitionClient({
+      region: process.env.AWS_REGION!,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+  }
+
+  // Per-step timing accumulators — one per folder (logged after each folder)
+  // plus a running total for the whole sync. Gives a baseline measurement of
+  // where the wall-clock actually goes (download vs sharp vs Rekognition).
+  const perfTotal = newPerf();
+
   for (const folder of folders) {
     if (storageExceeded) break;
     const folderLabel = folder.label ?? folder.folder_id;
@@ -276,10 +314,22 @@ async function runSync({
     );
 
     let doneFolderCount = 0;
+    const perf = newPerf();
 
-    for (const file of sourceFiles) {
-      // Check if client cancelled — stop immediately
+    // Atomically reserve storage against the event quota. The check + increment
+    // runs in a single synchronous tick (no await between read and write), so
+    // two concurrent workers can never both slip past the limit.
+    const reserveStorage = (bytes: number): boolean => {
+      if (currentStorageBytes + bytes > storageLimitBytes) return false;
+      currentStorageBytes += bytes;
+      return true;
+    };
+
+    // Process one source file: skip / backfill / full index. Shared across the
+    // worker pool — every shared counter is mutated only in synchronous tails.
+    const handleFile = async (file: SourceFile): Promise<void> => {
       signal.throwIfAborted();
+      if (storageExceeded) return;
 
       if (doneSet.has(file.id)) {
         doneFolderCount++;
@@ -290,7 +340,7 @@ async function runSync({
           total: sourceFiles.length,
           skipped: true,
         });
-        continue;
+        return;
       }
 
       try {
@@ -316,17 +366,17 @@ async function runSync({
             provider,
             admin,
             hasR2,
-            hasAWS,
+            rekognition,
+            IndexFacesCommand,
             folderDbId: folder.id,
             folderLabel,
-            storageLimitBytes,
-            currentStorageBytes,
+            reserveStorage,
+            perf,
           });
           if (result.exceeded) {
-            storageExceeded = true;
-            break; // stop this folder; outer loop will also break
+            storageExceeded = true; // stop spawning new work in this + outer loop
+            return;
           }
-          currentStorageBytes += result.storageBytes;
           totalProcessed++; // นับเฉพาะรูปใหม่จริงๆ
         }
 
@@ -338,6 +388,8 @@ async function runSync({
           total: sourceFiles.length,
         });
       } catch (err) {
+        // Abort propagates out of the pool so the route can exit cleanly.
+        if ((err as Error).name === "AbortError") throw err;
         // Log but don't abort the whole sync on single-file error
         console.error(`[sync] Failed to process file ${file.id}:`, err);
         send({
@@ -348,8 +400,15 @@ async function runSync({
         });
         doneFolderCount++;
       }
-    }
+    };
+
+    await runPool(sourceFiles, SYNC_CONCURRENCY, handleFile, () => storageExceeded);
+
+    logPerf(folderLabel, perf);
+    mergePerf(perfTotal, perf);
   }
+
+  logPerf("ALL", perfTotal);
 
   if (storageExceeded) {
     const usedGb = Math.round((currentStorageBytes / 1024 / 1024 / 1024) * 100) / 100;
@@ -364,6 +423,68 @@ async function runSync({
   }
 
   return { exceeded: false, totalPhotos: totalProcessed };
+}
+
+// ─── Concurrency + timing helpers ──────────────────────────────────────────────
+
+type Perf = {
+  count: number;
+  downloadMs: number;
+  processMs: number;
+  uploadMs: number;
+  rekognitionMs: number;
+  insertMs: number;
+};
+
+function newPerf(): Perf {
+  return { count: 0, downloadMs: 0, processMs: 0, uploadMs: 0, rekognitionMs: 0, insertMs: 0 };
+}
+
+function mergePerf(into: Perf, from: Perf): void {
+  into.count += from.count;
+  into.downloadMs += from.downloadMs;
+  into.processMs += from.processMs;
+  into.uploadMs += from.uploadMs;
+  into.rekognitionMs += from.rekognitionMs;
+  into.insertMs += from.insertMs;
+}
+
+/** Log average + total wall-clock per pipeline step. Skips empty accumulators. */
+function logPerf(label: string, p: Perf): void {
+  if (p.count === 0) return;
+  const avg = (ms: number) => (ms / p.count).toFixed(0);
+  const tot = (ms: number) => (ms / 1000).toFixed(1);
+  console.log(
+    `[sync-perf] ${label}: ${p.count} new photos | ` +
+      `avg/photo download=${avg(p.downloadMs)}ms process=${avg(p.processMs)}ms ` +
+      `upload=${avg(p.uploadMs)}ms rekognition=${avg(p.rekognitionMs)}ms insert=${avg(p.insertMs)}ms | ` +
+      `totals download=${tot(p.downloadMs)}s process=${tot(p.processMs)}s ` +
+      `upload=${tot(p.uploadMs)}s rekognition=${tot(p.rekognitionMs)}s insert=${tot(p.insertMs)}s`,
+  );
+}
+
+/**
+ * Run `fn` over `items` with at most `limit` concurrent executions. A sliding
+ * worker pool (not fixed batches), so one slow photo never stalls the rest.
+ * `shouldStop` is polled before each task to bail out early (quota exceeded).
+ * If `fn` rejects (e.g. AbortError) the rejection propagates and the pool stops.
+ */
+async function runPool<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>,
+  shouldStop: () => boolean,
+): Promise<void> {
+  let i = 0;
+  const worker = async (): Promise<void> => {
+    while (i < items.length) {
+      if (shouldStop()) return;
+      await fn(items[i++]);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => worker()),
+  );
 }
 
 /** Backfill R2 URLs for photos that were indexed but never uploaded to R2. */
@@ -389,11 +510,9 @@ async function backfillR2Url({
 
   const original = await provider.downloadFile(file.id);
 
-  const { processImage } = await import("@/lib/image-processing");
   const exif = await processImage(original);
   const { web, full } = exif;
 
-  const { uploadToR2, r2Paths } = await import("@/lib/r2");
   const webKey = r2Paths.photoWeb(eventId, existingPhotoId);
   const fullKey = r2Paths.photoFull(eventId, existingPhotoId);
 
@@ -424,10 +543,11 @@ async function processOnePhoto({
   provider,
   admin,
   hasR2,
-  hasAWS,
+  rekognition,
+  IndexFacesCommand,
   folderDbId,
-  storageLimitBytes,
-  currentStorageBytes,
+  reserveStorage,
+  perf,
 }: {
   file: SourceFile;
   eventId: string;
@@ -435,36 +555,40 @@ async function processOnePhoto({
   provider: StorageProvider;
   admin: ReturnType<typeof createServiceRoleClient>;
   hasR2: boolean;
-  hasAWS: boolean;
+  rekognition: RekognitionClient | null;
+  IndexFacesCommand:
+    | typeof import("@aws-sdk/client-rekognition").IndexFacesCommand
+    | null;
   folderDbId: string;
   folderLabel: string;
-  storageLimitBytes: number;
-  currentStorageBytes: number;
+  reserveStorage: (bytes: number) => boolean;
+  perf: Perf;
 }): Promise<{ exceeded: false; storageBytes: number } | { exceeded: true }> {
   // 1. Download original from the source provider (provider handles its own retry)
+  const tDl = performance.now();
   const original = await provider.downloadFile(file.id);
+  perf.downloadMs += performance.now() - tDl;
 
   // 2. Resize into web + full variants
-  const { processImage } = await import("@/lib/image-processing");
+  const tProc = performance.now();
   const exif = await processImage(original);
+  perf.processMs += performance.now() - tProc;
   const { web, full } = exif;
 
-  // 3. Quota check — after processing (sizes known), before uploading
+  // 3. Quota — atomically reserve before any upload (over-limit → stop)
   const storageBytes = web.length + full.length;
-  if (currentStorageBytes + storageBytes > storageLimitBytes) {
+  if (!reserveStorage(storageBytes)) {
     return { exceeded: true };
   }
 
-  // 3. Generate a photo ID
   const photoId = crypto.randomUUID();
 
-  // 4. Upload to R2
+  // 4. Upload to R2 (web + full in parallel)
   let webUrl: string | null = null;
   let fullUrl: string | null = null;
 
   if (hasR2) {
-    const { uploadToR2, r2Paths } = await import("@/lib/r2");
-
+    const tUp = performance.now();
     const webKey = r2Paths.photoWeb(eventId, photoId);
     const fullKey = r2Paths.photoFull(eventId, photoId);
 
@@ -472,30 +596,20 @@ async function processOnePhoto({
       uploadToR2(webKey, web, "image/jpeg"),
       uploadToR2(fullKey, full, "image/jpeg"),
     ]);
+    perf.uploadMs += performance.now() - tUp;
 
     webUrl = webUpload.ok ? webUpload.url : null;
     fullUrl = fullUpload.ok ? fullUpload.url : null;
   }
 
-  // 5. Rekognition IndexFaces
+  // 5. Rekognition IndexFaces (shared client, hoisted out of the loop)
   const faceIds: string[] = [];
   type FaceDetail = { face_id: string; bbox: { left: number; top: number; width: number; height: number } };
   const faceDetails: FaceDetail[] = [];
 
-  if (hasAWS && collectionId) {
-    const { RekognitionClient, IndexFacesCommand } = await import(
-      "@aws-sdk/client-rekognition"
-    );
-
-    const client = new RekognitionClient({
-      region: process.env.AWS_REGION!,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-      },
-    });
-
-    const indexResult = await client.send(
+  if (rekognition && IndexFacesCommand && collectionId) {
+    const tRek = performance.now();
+    const indexResult = await rekognition.send(
       new IndexFacesCommand({
         CollectionId: collectionId,
         Image: { Bytes: new Uint8Array(web) },
@@ -505,6 +619,7 @@ async function processOnePhoto({
         DetectionAttributes: ["DEFAULT"],
       }),
     );
+    perf.rekognitionMs += performance.now() - tRek;
 
     for (const fr of indexResult.FaceRecords ?? []) {
       const faceId = fr.Face?.FaceId;
@@ -522,6 +637,7 @@ async function processOnePhoto({
   }
 
   // 6. Insert photo row
+  const tIns = performance.now();
   await admin.from("photos").insert({
     id: photoId,
     event_id: eventId,
@@ -538,6 +654,8 @@ async function processOnePhoto({
     event_storage_folder_id: folderDbId,
     storage_bytes: storageBytes,
   });
+  perf.insertMs += performance.now() - tIns;
+  perf.count++;
 
   return { exceeded: false, storageBytes };
 }
