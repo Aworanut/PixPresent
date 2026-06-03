@@ -151,8 +151,8 @@ function EventCard({ event }: { event: EventRow }) {
             alt=""
             className="absolute inset-0 h-full w-full object-cover pointer-events-none transition-transform duration-500 group-hover:scale-105"
           />
-          {/* fade: เข้มเฉพาะฝั่งซ้าย แล้วจางหมดก่อนถึงขวา ไม่ทับรูปทั้งหมด */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 via-35% to-transparent to-70%" />
+          {/* รูปโผล่แค่ ~30% ฝั่งขวา ที่เหลือเป็นพื้นขาว เฟดซ้าย→ขวา */}
+          <div className="absolute inset-0 bg-gradient-to-r from-white from-70% to-transparent dark:from-zinc-900" />
         </>
       ) : (
         <div className="absolute inset-0 bg-white dark:bg-zinc-900" />
@@ -160,26 +160,14 @@ function EventCard({ event }: { event: EventRow }) {
 
       <div className="relative z-10 flex h-full items-center justify-between gap-4 pl-7 sm:pl-9 pr-5 sm:pr-6">
         <div className="min-w-0 space-y-1.5">
-          <h3
-            className={`text-base font-medium truncate font-sans ${
-              cover ? "text-white" : "text-zinc-900 dark:text-zinc-50"
-            }`}
-          >
+          <h3 className="text-base font-medium truncate font-sans text-zinc-900 dark:text-zinc-50">
             {event.name}
           </h3>
-          <p
-            className={`text-xs tracking-wide font-sans ${
-              cover ? "text-white/70" : "text-zinc-400 dark:text-zinc-500"
-            }`}
-          >
+          <p className="text-xs tracking-wide font-sans text-zinc-400 dark:text-zinc-500">
             {formattedDate}
           </p>
         </div>
-        <ArrowRightIcon
-          className={`h-4 w-4 stroke-[1.5] flex-shrink-0 transition-all duration-300 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 ${
-            cover ? "text-white/80" : "text-zinc-400 dark:text-zinc-600"
-          }`}
-        />
+        <ArrowRightIcon className="h-4 w-4 stroke-[1.5] flex-shrink-0 transition-all duration-300 text-zinc-400 dark:text-zinc-600 group-hover:text-[#D4AF37] group-hover:translate-x-0.5" />
       </div>
     </Link>
   );
