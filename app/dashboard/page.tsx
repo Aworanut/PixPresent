@@ -10,7 +10,7 @@ export default async function DashboardPage() {
 
   const { data: events } = await supabase
     .from("events")
-    .select("id, name, event_date, is_indexed, created_at")
+    .select("id, name, event_date, created_at")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
@@ -78,7 +78,6 @@ type EventRow = {
   id: string;
   name: string;
   event_date: string | null;
-  is_indexed: boolean;
   created_at: string;
 };
 
@@ -102,7 +101,6 @@ function EventCard({ event }: { event: EventRow }) {
             <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-50 truncate font-sans">
               {event.name}
             </h3>
-            <StatusPill isIndexed={event.is_indexed} />
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 tracking-wide font-sans">
             {formattedDate}
@@ -111,21 +109,6 @@ function EventCard({ event }: { event: EventRow }) {
         <ArrowRightIcon className="h-4 w-4 text-zinc-400 dark:text-zinc-600 stroke-[1.5] flex-shrink-0 transition-all duration-300 group-hover:text-[#D4AF37] group-hover:translate-x-0.5" />
       </div>
     </Link>
-  );
-}
-
-function StatusPill({ isIndexed }: { isIndexed: boolean }) {
-  if (isIndexed) {
-    return (
-      <span className="inline-flex items-center rounded-none bg-emerald-50/40 dark:bg-emerald-950/20 px-2 py-0.5 text-[10px] font-semibold font-mono tracking-wider uppercase text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-        Synced
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-none bg-zinc-100/40 dark:bg-zinc-800/40 px-2 py-0.5 text-[10px] font-semibold font-mono tracking-wider uppercase text-zinc-500 dark:text-zinc-400 border border-zinc-500/20">
-      Not synced
-    </span>
   );
 }
 

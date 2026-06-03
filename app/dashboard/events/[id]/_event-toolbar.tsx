@@ -11,6 +11,7 @@ import { setShareLink, revokeShareLink } from "@/lib/actions/share-link";
 import { updateEventFolders } from "@/lib/actions/events";
 import { testDriveFolder, type TestResult } from "@/lib/actions/test-drive-folder";
 import { testDropboxFolder } from "@/lib/actions/test-dropbox-folder";
+import { getFolderSyncStatus, type FolderSyncStatus } from "@/lib/actions/folder-sync-status";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,10 +23,6 @@ type ToolbarProps = {
   driveConnected: boolean;
   dropboxConnected: boolean;
   folders: Folder[];
-  // Sync state
-  isIndexed: boolean;
-  lastSyncAt: string | null;
-  lastSyncCount: number;
   // Share state
   shareToken: string | null;
   shareExpiresAt: string | null;
@@ -337,9 +334,40 @@ function DriveModal({
   );
   // per-row fetch status: undefined=ยังไม่ตรวจ, "fetching"=กำลังตรวจ, TestResult=ผลลัพธ์
   const [fetchStatuses, setFetchStatuses] = useState<Record<number, FetchStatus>>({});
+  // per-folder sync status (not_synced / partial / synced), keyed by folder_id
+  const [syncStatuses, setSyncStatuses] = useState<Record<string, FolderSyncStatus>>({});
+  const [syncStatusLoading, setSyncStatusLoading] = useState(folders.length > 0);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Load per-folder sync status when the modal opens. Maps the action's
+  // result (keyed by DB folder id) back onto folder_id for row lookup.
+  useEffect(() => {
+    if (folders.length === 0) {
+      setSyncStatusLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSyncStatusLoading(true);
+    const idToFolderId = new Map(folders.map((f) => [f.id, f.folder_id]));
+    getFolderSyncStatus(eventId)
+      .then((results) => {
+        if (cancelled) return;
+        const byFolderId: Record<string, FolderSyncStatus> = {};
+        for (const r of results) {
+          const fid = idToFolderId.get(r.folderId);
+          if (fid) byFolderId[fid] = r;
+        }
+        setSyncStatuses(byFolderId);
+      })
+      .finally(() => {
+        if (!cancelled) setSyncStatusLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId, folders]);
 
   const update = (idx: number, key: keyof FolderRow, val: string) => {
     if (key === "folder_id") {
@@ -491,6 +519,15 @@ function DriveModal({
                   </button>
                 </div>
 
+                {/* per-folder sync status */}
+                {Boolean(syncStatuses[row.folder_id] || (syncStatusLoading && row.folder_id)) && (
+                  <div className="pl-[4.5rem]">
+                    <FolderSyncBadge
+                      status={syncStatuses[row.folder_id]}
+                      loading={syncStatusLoading}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
@@ -515,6 +552,51 @@ function DriveModal({
         </div>
       </div>
     </Modal>
+  );
+}
+
+// ─── Folder Sync Badge ────────────────────────────────────────────────────────
+
+function FolderSyncBadge({
+  status,
+  loading,
+}: {
+  status?: FolderSyncStatus;
+  loading: boolean;
+}) {
+  if (!status) {
+    if (loading) {
+      return (
+        <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 animate-pulse">
+          กำลังตรวจสถานะ…
+        </span>
+      );
+    }
+    return null;
+  }
+
+  const { state, synced, total } = status;
+  const config = {
+    not_synced: {
+      label: "ยังไม่ sync",
+      cls: "bg-zinc-100/60 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 border-zinc-400/30",
+    },
+    partial: {
+      label: total != null ? `sync บางส่วน · ${synced}/${total}` : "sync บางส่วน",
+      cls: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    },
+    synced: {
+      label: "sync แล้ว",
+      cls: "bg-emerald-50/60 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/25",
+    },
+  }[state];
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-mono tracking-wide ${config.cls}`}
+    >
+      {config.label}
+    </span>
   );
 }
 
