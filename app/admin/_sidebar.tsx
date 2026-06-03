@@ -10,6 +10,7 @@ import {
   Tags,
   Ticket,
   MessageSquare,
+  ArrowLeft,
 } from "lucide-react";
 
 const NAV = [
@@ -51,6 +52,14 @@ export function AdminSidebar({ email }: { email: string }) {
           );
         })}
       </nav>
+      <div className="border-t border-zinc-100 px-3 py-3 dark:border-zinc-800">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        >
+          <ArrowLeft className="size-4" /> กลับหน้า Dashboard
+        </Link>
+      </div>
     </aside>
   );
 }
