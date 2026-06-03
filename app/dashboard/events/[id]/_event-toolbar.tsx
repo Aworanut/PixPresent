@@ -511,6 +511,16 @@ function DriveModal({
                     )}
                   </div>
 
+                  {/* per-folder sync status — ท้ายบรรทัด */}
+                  {Boolean(syncStatuses[row.folder_id] || (syncStatusLoading && row.folder_id)) && (
+                    <div className="flex-shrink-0">
+                      <FolderSyncBadge
+                        status={syncStatuses[row.folder_id]}
+                        loading={syncStatusLoading}
+                      />
+                    </div>
+                  )}
+
                   {/* ลบ row */}
                   <button
                     type="button"
@@ -522,16 +532,6 @@ function DriveModal({
                     ×
                   </button>
                 </div>
-
-                {/* per-folder sync status */}
-                {Boolean(syncStatuses[row.folder_id] || (syncStatusLoading && row.folder_id)) && (
-                  <div className="pl-[4.5rem]">
-                    <FolderSyncBadge
-                      status={syncStatuses[row.folder_id]}
-                      loading={syncStatusLoading}
-                    />
-                  </div>
-                )}
               </div>
             );
           })}
@@ -571,8 +571,8 @@ function FolderSyncBadge({
   if (!status) {
     if (loading) {
       return (
-        <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 animate-pulse">
-          กำลังตรวจสถานะ…
+        <span className="whitespace-nowrap text-[10px] font-mono text-zinc-400 dark:text-zinc-500 animate-pulse">
+          ตรวจสถานะ…
         </span>
       );
     }
@@ -597,7 +597,7 @@ function FolderSyncBadge({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-mono tracking-wide ${config.cls}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-mono tracking-wide ${config.cls}`}
     >
       {config.label}
     </span>
