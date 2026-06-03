@@ -10,7 +10,7 @@ export default async function DashboardPage() {
 
   const { data: events } = await supabase
     .from("events")
-    .select("id, name, event_date, created_at")
+    .select("id, name, event_date, created_at, cover_image_url")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
@@ -124,6 +124,7 @@ type EventRow = {
   name: string;
   event_date: string | null;
   created_at: string;
+  cover_image_url: string | null;
 };
 
 function EventCard({ event }: { event: EventRow }) {
@@ -135,23 +136,50 @@ function EventCard({ event }: { event: EventRow }) {
       })
     : "ไม่ได้ระบุวันที่";
 
+  const cover = event.cover_image_url;
+
   return (
     <Link
       href={`` + `/dashboard/events/${event.id}`}
-      className="group block rounded-none border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-[#D4AF37] dark:hover:border-[#D4AF37] hover:shadow-sm transition-all duration-300 px-5 py-5 sm:px-6"
+      className="group relative block h-28 sm:h-32 overflow-hidden rounded-none border border-zinc-200 dark:border-zinc-800 hover:border-[#D4AF37] dark:hover:border-[#D4AF37] hover:shadow-sm transition-all duration-300"
     >
-      <div className="flex items-center justify-between gap-4">
+      {cover ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={cover}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover pointer-events-none transition-transform duration-500 group-hover:scale-105"
+          />
+          {/* fade: เข้มจากซ้าย → อ่อนไปทางขวา เพื่อให้ข้อความฝั่งซ้ายอ่านง่ายและเผยรูปฝั่งขวา */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
+        </>
+      ) : (
+        <div className="absolute inset-0 bg-white dark:bg-zinc-900" />
+      )}
+
+      <div className="relative z-10 flex h-full items-center justify-between gap-4 px-5 sm:px-6">
         <div className="min-w-0 space-y-1.5">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-50 truncate font-sans">
-              {event.name}
-            </h3>
-          </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 tracking-wide font-sans">
+          <h3
+            className={`text-base font-medium truncate font-sans ${
+              cover ? "text-white" : "text-zinc-900 dark:text-zinc-50"
+            }`}
+          >
+            {event.name}
+          </h3>
+          <p
+            className={`text-xs tracking-wide font-sans ${
+              cover ? "text-white/70" : "text-zinc-400 dark:text-zinc-500"
+            }`}
+          >
             {formattedDate}
           </p>
         </div>
-        <ArrowRightIcon className="h-4 w-4 text-zinc-400 dark:text-zinc-600 stroke-[1.5] flex-shrink-0 transition-all duration-300 group-hover:text-[#D4AF37] group-hover:translate-x-0.5" />
+        <ArrowRightIcon
+          className={`h-4 w-4 stroke-[1.5] flex-shrink-0 transition-all duration-300 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 ${
+            cover ? "text-white/80" : "text-zinc-400 dark:text-zinc-600"
+          }`}
+        />
       </div>
     </Link>
   );
