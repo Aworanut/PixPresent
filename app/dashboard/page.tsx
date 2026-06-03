@@ -16,6 +16,15 @@ export default async function DashboardPage() {
 
   const list = events ?? [];
 
+  // Split by event_date relative to today (Asia/Bangkok). Events with no date
+  // or a date that hasn't passed yet are "Ongoing"; dates before today are "Past".
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Bangkok",
+  });
+  const isPast = (d: string | null) => !!d && d.slice(0, 10) < today;
+  const ongoing = list.filter((e) => !isPast(e.event_date));
+  const past = list.filter((e) => isPast(e.event_date));
+
   return (
     <div className="space-y-8">
       <header className="flex items-end justify-between gap-4">
@@ -38,15 +47,51 @@ export default async function DashboardPage() {
       {list.length === 0 ? (
         <EmptyState />
       ) : (
-        <ul className="space-y-3">
-          {list.map((event) => (
-            <li key={event.id}>
-              <EventCard event={event} />
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-10">
+          {ongoing.length > 0 && (
+            <EventSection title="Ongoing" subtitle="กำลังดำเนินอยู่" events={ongoing} />
+          )}
+          {past.length > 0 && (
+            <EventSection title="Past" subtitle="ผ่านไปแล้ว" events={past} muted />
+          )}
+        </div>
       )}
     </div>
+  );
+}
+
+function EventSection({
+  title,
+  subtitle,
+  events,
+  muted = false,
+}: {
+  title: string;
+  subtitle: string;
+  events: EventRow[];
+  muted?: boolean;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-baseline gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-mono">
+          {title}
+        </h2>
+        <span className="text-xs text-zinc-400 dark:text-zinc-500 font-sans tracking-tight">
+          {subtitle}
+        </span>
+        <span className="text-xs text-zinc-300 dark:text-zinc-600 font-mono">
+          {events.length}
+        </span>
+      </div>
+      <ul className={`space-y-3${muted ? " opacity-75" : ""}`}>
+        {events.map((event) => (
+          <li key={event.id}>
+            <EventCard event={event} />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
