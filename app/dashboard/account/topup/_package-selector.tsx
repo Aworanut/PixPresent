@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { TOPUP_PACKAGES, CUSTOM_TOPUP, type TopupPackage } from "@/lib/payment-config";
+import type { TopupPackage } from "@/lib/payment-config";
 
 type SelectedPackage = { id: string; priceThb: number; credits: number };
 
 type Props = {
+  packages: TopupPackage[];
+  custom: { minThb: number; maxThb: number };
   onSelect: (pkg: SelectedPackage | null) => void;
 };
 
-export function PackageSelector({ onSelect }: Props) {
+export function PackageSelector({ packages, custom, onSelect }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [customValue, setCustomValue] = useState<string>("");
   const [customError, setCustomError] = useState<string | null>(null);
@@ -24,11 +26,7 @@ export function PackageSelector({ onSelect }: Props) {
     setSelected("custom");
     // If there's already a valid custom value, emit it; otherwise emit null
     const num = parseInt(customValue, 10);
-    if (
-      !isNaN(num) &&
-      num >= CUSTOM_TOPUP.minThb &&
-      num <= CUSTOM_TOPUP.maxThb
-    ) {
+    if (!isNaN(num) && num >= custom.minThb && num <= custom.maxThb) {
       onSelect({ id: "custom", priceThb: num, credits: num });
     } else {
       onSelect(null);
@@ -42,8 +40,8 @@ export function PackageSelector({ onSelect }: Props) {
       onSelect(null);
       return;
     }
-    if (isNaN(num) || num < CUSTOM_TOPUP.minThb || num > CUSTOM_TOPUP.maxThb) {
-      setCustomError(`กรุณากรอก ${CUSTOM_TOPUP.minThb.toLocaleString()} – ${CUSTOM_TOPUP.maxThb.toLocaleString()} THB`);
+    if (isNaN(num) || num < custom.minThb || num > custom.maxThb) {
+      setCustomError(`กรุณากรอก ${custom.minThb.toLocaleString()} – ${custom.maxThb.toLocaleString()} THB`);
       onSelect(null);
     } else {
       setCustomError(null);
@@ -56,11 +54,7 @@ export function PackageSelector({ onSelect }: Props) {
     setCustomValue(val);
     setCustomError(null);
     const num = parseInt(val, 10);
-    if (
-      !isNaN(num) &&
-      num >= CUSTOM_TOPUP.minThb &&
-      num <= CUSTOM_TOPUP.maxThb
-    ) {
+    if (!isNaN(num) && num >= custom.minThb && num <= custom.maxThb) {
       onSelect({ id: "custom", priceThb: num, credits: num });
     } else {
       onSelect(null);
@@ -76,7 +70,7 @@ export function PackageSelector({ onSelect }: Props) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {TOPUP_PACKAGES.map((pkg) => (
+      {packages.map((pkg) => (
         <button
           key={pkg.id}
           type="button"
@@ -115,13 +109,13 @@ export function PackageSelector({ onSelect }: Props) {
               aria-label="จำนวนเงิน (THB)"
               aria-invalid={!!customError}
               aria-describedby={customError ? "custom-amount-error" : undefined}
-              min={CUSTOM_TOPUP.minThb}
-              max={CUSTOM_TOPUP.maxThb}
+              min={custom.minThb}
+              max={custom.maxThb}
               step={1}
               value={customValue}
               onChange={handleCustomChange}
               onBlur={handleCustomBlur}
-              placeholder={`${CUSTOM_TOPUP.minThb.toLocaleString()} – ${CUSTOM_TOPUP.maxThb.toLocaleString()} THB`}
+              placeholder={`${custom.minThb.toLocaleString()} – ${custom.maxThb.toLocaleString()} THB`}
               className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-2.5 py-1.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               autoFocus
             />

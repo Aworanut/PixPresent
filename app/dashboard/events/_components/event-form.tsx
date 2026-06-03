@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ImageCropField } from "@/components/image-crop-field";
 import type { EventActionState } from "@/lib/actions/events";
-import { TIER_CONFIG, EVENT_TIERS, type EventTier } from "@/lib/credit-packages";
+import { type EventTier } from "@/lib/credit-packages";
+import type { EventTierOption } from "@/lib/pricing";
 
 type FormAction = (
   prev: EventActionState,
@@ -23,6 +24,7 @@ type EventFormProps = {
   submitLabel: string;
   pendingLabel: string;
   showTierSelector?: boolean;
+  tiers?: EventTierOption[];
   defaults?: {
     name?: string | null;
     event_date?: string | null;
@@ -38,11 +40,12 @@ export function EventForm({
   submitLabel,
   pendingLabel,
   showTierSelector = false,
+  tiers = [],
   defaults,
 }: EventFormProps) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [selectedTier, setSelectedTier] = useState<EventTier>(
-    defaults?.tier ?? "starter",
+    defaults?.tier ?? tiers[0]?.id ?? "starter",
   );
   const formId = useId();
 
@@ -89,8 +92,8 @@ export function EventForm({
           </legend>
           <input type="hidden" name="tier" value={selectedTier} />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {EVENT_TIERS.map((tier) => {
-              const cfg = TIER_CONFIG[tier];
+            {tiers.map((cfg) => {
+              const tier = cfg.id;
               const isSelected = selectedTier === tier;
               return (
                 <button

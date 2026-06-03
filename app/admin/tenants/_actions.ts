@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { isValidTenantPlan } from "@/lib/tenant-plans";
 
 export type LedgerEntry = {
   id: string;
@@ -46,6 +47,29 @@ export async function adjustCredit(
     p_note: note.trim(),
     p_actor: user.id,
   });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/tenants");
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function setTenantPlan(
+  tenantId: string,
+  plan: string,
+): Promise<{ error?: string }> {
+  if (!isValidTenantPlan(plan)) return { error: "plan ไม่ถูกต้อง" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthorized" };
+
+  const admin = createServiceRoleClient();
+  const { error } = await admin
+    .from("tenants")
+    .update({ plan })
+    .eq("id", tenantId);
   if (error) return { error: error.message };
   revalidatePath("/admin/tenants");
   revalidatePath("/admin");

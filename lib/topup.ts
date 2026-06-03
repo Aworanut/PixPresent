@@ -4,21 +4,31 @@
  * No Next.js imports — fully testable in isolation.
  */
 
-import { TOPUP_PACKAGES, CUSTOM_TOPUP } from '@/lib/payment-config'
+import { TOPUP_PACKAGES, CUSTOM_TOPUP, type TopupPackage } from '@/lib/payment-config'
 
 // ---------------------------------------------------------------------------
 // validateTopupRequest
 // ---------------------------------------------------------------------------
 
-const VALID_PACKAGE_IDS = ['pack_199', 'pack_499', 'pack_999', 'custom'] as const
+export type TopupValidationOpts = {
+  /** Active packages to validate against. Defaults to the code constants so
+   *  existing callers/tests are unchanged; the slip route injects DB packages. */
+  packages?: TopupPackage[]
+  custom?: { minThb: number; maxThb: number }
+}
 
 export function validateTopupRequest(
   packageId: string,
   amountThb: number,
   credits: number,
+  opts: TopupValidationOpts = {},
 ): { valid: boolean; error?: string } {
-  // Check packageId is in the allowed list
-  if (!VALID_PACKAGE_IDS.includes(packageId as (typeof VALID_PACKAGE_IDS)[number])) {
+  const packages = opts.packages ?? TOPUP_PACKAGES
+  const custom = opts.custom ?? CUSTOM_TOPUP
+
+  // packageId must be 'custom' or one of the (DB-or-constant) package ids
+  const isCustom = packageId === 'custom'
+  if (!isCustom && !packages.some((p) => p.id === packageId)) {
     return { valid: false, error: 'Invalid package ID' }
   }
 
@@ -30,12 +40,12 @@ export function validateTopupRequest(
     return { valid: false, error: 'credits must be a positive integer' }
   }
 
-  if (packageId === 'custom') {
+  if (isCustom) {
     // Custom: amount must be within min/max range
-    if (amountThb < CUSTOM_TOPUP.minThb || amountThb > CUSTOM_TOPUP.maxThb) {
+    if (amountThb < custom.minThb || amountThb > custom.maxThb) {
       return {
         valid: false,
-        error: `Custom amount must be between ${CUSTOM_TOPUP.minThb} and ${CUSTOM_TOPUP.maxThb} THB`,
+        error: `Custom amount must be between ${custom.minThb} and ${custom.maxThb} THB`,
       }
     }
     // 1 credit = 1 THB for custom
@@ -46,9 +56,8 @@ export function validateTopupRequest(
   }
 
   // Preset package — verify amount and credits match exactly
-  const pkg = TOPUP_PACKAGES.find((p) => p.id === packageId)
+  const pkg = packages.find((p) => p.id === packageId)
   if (!pkg) {
-    // Shouldn't happen since we already checked VALID_PACKAGE_IDS, but be safe
     return { valid: false, error: 'Invalid package ID' }
   }
 

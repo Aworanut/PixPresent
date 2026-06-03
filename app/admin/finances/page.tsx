@@ -53,11 +53,8 @@ export default async function FinancesPage() {
       .gte("created_at", sixMonthsAgo),
   ]);
 
-  // storage_bytes added in migration 20260530010000; regenerate with npm run db:types
   const allPhotosRes = await admin.from("photos").select("storage_bytes");
-  const allPhotos = (allPhotosRes.data ?? []) as unknown as {
-    storage_bytes: number | null;
-  }[];
+  const allPhotos = allPhotosRes.data ?? [];
 
   const slips = slipsRes.data ?? [];
   const photos = photosRes.data ?? [];

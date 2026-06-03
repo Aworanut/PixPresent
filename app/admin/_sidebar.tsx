@@ -2,13 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ReceiptText, Building2, TrendingUp } from "lucide-react";
+import {
+  LayoutDashboard,
+  ReceiptText,
+  Building2,
+  TrendingUp,
+  Tags,
+  Ticket,
+  MessageSquare,
+} from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/slips", label: "Slips", icon: ReceiptText },
   { href: "/admin/tenants", label: "Tenants", icon: Building2 },
   { href: "/admin/finances", label: "Finances", icon: TrendingUp },
+  { href: "/admin/pricing", label: "Pricing", icon: Tags },
+  { href: "/admin/promotions", label: "Promotions", icon: Ticket },
+  { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
 ];
 
 export function AdminSidebar({ email }: { email: string }) {

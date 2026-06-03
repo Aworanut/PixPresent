@@ -113,6 +113,45 @@ export type Database = {
           },
         ]
       }
+      event_tiers: {
+        Row: {
+          active: boolean
+          credit_cost: number
+          data_retention_days: number
+          description: string
+          id: string
+          label: string
+          link_active_days: number
+          sort: number
+          storage_limit_gb: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          credit_cost: number
+          data_retention_days: number
+          description?: string
+          id: string
+          label: string
+          link_active_days: number
+          sort?: number
+          storage_limit_gb: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          credit_cost?: number
+          data_retention_days?: number
+          description?: string
+          id?: string
+          label?: string
+          link_active_days?: number
+          sort?: number
+          storage_limit_gb?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           activated_at: string | null
@@ -246,6 +285,70 @@ export type Database = {
           },
         ]
       }
+      feedback_responses: {
+        Row: {
+          answers: Json
+          comment: string | null
+          created_at: string
+          event_id: string | null
+          guest_session_id: string | null
+          id: string
+          meta: Json
+          questions_version: number
+          rating: number | null
+          source: string
+          tenant_id: string | null
+        }
+        Insert: {
+          answers?: Json
+          comment?: string | null
+          created_at?: string
+          event_id?: string | null
+          guest_session_id?: string | null
+          id?: string
+          meta?: Json
+          questions_version?: number
+          rating?: number | null
+          source: string
+          tenant_id?: string | null
+        }
+        Update: {
+          answers?: Json
+          comment?: string | null
+          created_at?: string
+          event_id?: string | null
+          guest_session_id?: string | null
+          id?: string
+          meta?: Json
+          questions_version?: number
+          rating?: number | null
+          source?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_responses_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_responses_guest_session_id_fkey"
+            columns: ["guest_session_id"]
+            isOneToOne: false
+            referencedRelation: "guest_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_responses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guest_sessions: {
         Row: {
           consent_at: string | null
@@ -370,6 +473,103 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      promo_redemptions: {
+        Row: {
+          bonus_credits: number
+          created_at: string
+          id: string
+          promo_id: string
+          slip_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          bonus_credits: number
+          created_at?: string
+          id?: string
+          promo_id: string
+          slip_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          bonus_credits?: number
+          created_at?: string
+          id?: string
+          promo_id?: string
+          slip_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_redemptions_promo_id_fkey"
+            columns: ["promo_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_redemptions_slip_id_fkey"
+            columns: ["slip_id"]
+            isOneToOne: false
+            referencedRelation: "slip_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_redemptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          description: string
+          ends_at: string | null
+          id: string
+          kind: string
+          max_redemptions: number | null
+          min_topup_thb: number
+          per_tenant_limit: number
+          redeemed_count: number
+          starts_at: string | null
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          description?: string
+          ends_at?: string | null
+          id?: string
+          kind: string
+          max_redemptions?: number | null
+          min_topup_thb?: number
+          per_tenant_limit?: number
+          redeemed_count?: number
+          starts_at?: string | null
+          value: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          description?: string
+          ends_at?: string | null
+          id?: string
+          kind?: string
+          max_redemptions?: number | null
+          min_topup_thb?: number
+          per_tenant_limit?: number
+          redeemed_count?: number
+          starts_at?: string | null
+          value?: number
+        }
+        Relationships: []
       }
       slip_uploads: {
         Row: {
@@ -501,6 +701,39 @@ export type Database = {
           plan?: string
           storage_provider?: string
           tiktok_username?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      topup_packages: {
+        Row: {
+          active: boolean
+          credits: number
+          highlight: boolean
+          id: string
+          label: string
+          price_thb: number
+          sort: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          credits: number
+          highlight?: boolean
+          id: string
+          label: string
+          price_thb: number
+          sort?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          credits?: number
+          highlight?: boolean
+          id?: string
+          label?: string
+          price_thb?: number
+          sort?: number
           updated_at?: string
         }
         Relationships: []

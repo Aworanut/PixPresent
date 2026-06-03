@@ -20,6 +20,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { uploadToR2, r2Paths } from '@/lib/r2'
 import { sendAdminSlipPending, sendOrganizerTopupApproved } from '@/lib/email/notifications'
 import { validateTopupRequest, verifySlipWithSlipOK } from '@/lib/topup'
+import { loadTopupPackages, loadCustomTopupRange } from '@/lib/pricing'
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -69,8 +70,12 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    // 4. Validate package/amount/credits
-    const validation = validateTopupRequest(packageId, amountThb, creditsClaimed)
+    // 4. Validate package/amount/credits against DB-configured pricing
+    //    (falls back to code constants if the tables are empty/unreachable)
+    const validation = validateTopupRequest(packageId, amountThb, creditsClaimed, {
+      packages: await loadTopupPackages(),
+      custom: loadCustomTopupRange(),
+    })
     if (!validation.valid) {
       return Response.json({ error: validation.error }, { status: 400 })
     }

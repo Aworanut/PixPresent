@@ -8,7 +8,8 @@ import { deleteRekognitionCollection } from "@/lib/aws/rekognition";
 import { extractDriveFolderId } from "@/lib/google-drive";
 import { normalizeDropboxFolderPath } from "@/lib/dropbox";
 import type { SourceType } from "@/lib/storage";
-import { isValidTier, TIER_CONFIG, type EventTier } from "@/lib/credit-packages";
+import { isValidTier, type EventTier } from "@/lib/credit-packages";
+import { loadTierConfig } from "@/lib/pricing";
 import { uploadEventCover, parseCoverCrop } from "@/lib/cover-upload";
 
 export type EventActionState = { error: string } | undefined;
@@ -136,7 +137,7 @@ export async function createEvent(
     return { error: "ไม่พบ tenant ของคุณ (อาจ session หมดอายุ)" };
   }
 
-  const tierCfg = TIER_CONFIG[input.tier];
+  const tierCfg = await loadTierConfig(input.tier);
 
   // Optimistic UX pre-check; the RPC's FOR UPDATE row-lock is the authoritative double-spend guard.
   if (tenant.credit_balance < tierCfg.creditCost) {

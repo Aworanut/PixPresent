@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { deleteRekognitionCollection } from "@/lib/aws/rekognition";
 import { sendCleanupFailureAlert } from "@/lib/email/notifications";
+import { UNLIMITED_RETENTION_PLANS } from "@/lib/tenant-plans";
 
 export const runtime = "nodejs";
 
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
   // activated (i.e., organizer has paid and synced at least once).
   const { data: events, error } = await admin
     .from("events")
-    .select("id, name, rekognition_collection_id, activated_at, data_retention_days")
+    .select("id, name, rekognition_collection_id, activated_at, data_retention_days, tenant_id")
     .not("rekognition_collection_id", "is", null)
     .not("activated_at", "is", null)
     .is("deleted_at", null);
@@ -30,11 +31,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Special-tier tenants (unlimited-retention plan) keep their event data
+  // forever — their events are never cleaned up. See lib/tenant-plans.ts.
+  const { data: unlimitedTenants } = await admin
+    .from("tenants")
+    .select("id")
+    .in("plan", [...UNLIMITED_RETENTION_PLANS]);
+  const unlimitedTenantIds = new Set(
+    (unlimitedTenants ?? []).map((t) => t.id),
+  );
+
   const now = new Date();
 
-  // Filter to events whose retention window + 7-day grace period has elapsed.
+  // Filter to events whose retention window + 7-day grace period has elapsed,
+  // excluding tenants on an unlimited-retention plan.
   // Trigger: activated_at + data_retention_days + 7 days < now
   const toClean = (events ?? []).filter((e) => {
+    if (unlimitedTenantIds.has(e.tenant_id)) return false;
     const cutoff = new Date(e.activated_at!);
     cutoff.setDate(cutoff.getDate() + e.data_retention_days + 7);
     return cutoff < now;
