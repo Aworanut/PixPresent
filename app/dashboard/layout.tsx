@@ -87,6 +87,7 @@ export default async function DashboardLayout({
             >
               <span>{displayName}</span>
               {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- 24px external avatar; next/image not worth per-domain remotePatterns config
                 <img
                   src={avatarUrl}
                   alt={displayName}

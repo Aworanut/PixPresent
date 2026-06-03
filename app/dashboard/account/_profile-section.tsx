@@ -77,8 +77,6 @@ function StudioNameField({ value, onChange, fallbackName }: StudioNameProps) {
     setEditing(false);
   }
 
-  const studioNameDisplay = value.trim() || fallbackName;
-
   return (
     <div className="w-full border-t border-zinc-150 dark:border-zinc-800/60 pt-4">
       <div className="group relative flex justify-center min-w-0 px-1">

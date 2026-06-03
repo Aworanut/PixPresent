@@ -660,7 +660,8 @@ async function compressImage(
       canvas.toBlob(
         (blob) => {
           URL.revokeObjectURL(img.src);
-          blob ? resolve(blob) : reject(new Error("Compression failed"));
+          if (blob) resolve(blob);
+          else reject(new Error("Compression failed"));
         },
         "image/jpeg",
         quality,

@@ -405,12 +405,11 @@ function DriveModal({
   // Load per-folder sync status when the modal opens. Maps the action's
   // result (keyed by DB folder id) back onto folder_id for row lookup.
   useEffect(() => {
-    if (folders.length === 0) {
-      setSyncStatusLoading(false);
-      return;
-    }
+    // syncStatusLoading's initial value already mirrors folders.length>0, so
+    // the loading flag comes from initial state (not a synchronous setState in
+    // this effect); the fetch's .finally clears it. Empty folders → nothing to load.
+    if (folders.length === 0) return;
     let cancelled = false;
-    setSyncStatusLoading(true);
     const idToFolderId = new Map(folders.map((f) => [f.id, f.folder_id]));
     getFolderSyncStatus(eventId)
       .then((results) => {

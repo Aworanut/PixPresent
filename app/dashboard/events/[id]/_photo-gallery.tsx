@@ -82,11 +82,15 @@ export function PhotoGallery({ eventId, photos }: Props) {
     return true;
   });
 
-  // Clear selection and close lightbox on tab/filter change
-  useEffect(() => {
+  // Clear selection and close lightbox when the tab/filter changes — adjust
+  // state during render (React's recommended alternative to a reset effect).
+  const tabFilterKey = `${tab}|${faceFilter}`;
+  const [prevTabFilterKey, setPrevTabFilterKey] = useState(tabFilterKey);
+  if (prevTabFilterKey !== tabFilterKey) {
+    setPrevTabFilterKey(tabFilterKey);
     setSelectedIds(new Set());
     setActivePhotoIdx(null);
-  }, [tab, faceFilter]);
+  }
 
   const handleClose = () => setActivePhotoIdx(null);
 
@@ -815,9 +819,15 @@ function Lightbox({
   const [direction, setDirection] = useState<"left" | "right" | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Reset image loading state when photo changes
-  useEffect(() => {
+  // Reset image loading state when the photo changes — adjust during render.
+  const [prevPhotoId, setPrevPhotoId] = useState(photo.id);
+  if (prevPhotoId !== photo.id) {
+    setPrevPhotoId(photo.id);
     setIsImgLoading(true);
+  }
+
+  // Clear any pending image-load timeout when the photo changes or on unmount.
+  useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
@@ -1042,7 +1052,7 @@ function formatThaiDate(isoString: string | null): string {
       hour12: false,
     });
     return `${datePart} ${timePart}`;
-  } catch (e) {
+  } catch {
     return "";
   }
 }

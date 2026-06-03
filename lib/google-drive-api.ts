@@ -95,7 +95,6 @@ export async function listImagesInFolder(
   let pageToken: string | undefined;
 
   do {
-    // eslint-disable-next-line no-await-in-loop
     const res = await drive.files.list({
       q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
       fields: "nextPageToken, files(id, name, mimeType, size, modifiedTime, imageMediaMetadata)",
