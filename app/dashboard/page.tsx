@@ -151,14 +151,14 @@ function EventCard({ event }: { event: EventRow }) {
             alt=""
             className="absolute inset-0 h-full w-full object-cover pointer-events-none transition-transform duration-500 group-hover:scale-105"
           />
-          {/* fade: เข้มจากซ้าย → อ่อนไปทางขวา เพื่อให้ข้อความฝั่งซ้ายอ่านง่ายและเผยรูปฝั่งขวา */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
+          {/* fade: เข้มเฉพาะฝั่งซ้าย แล้วจางหมดก่อนถึงขวา ไม่ทับรูปทั้งหมด */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 via-35% to-transparent to-70%" />
         </>
       ) : (
         <div className="absolute inset-0 bg-white dark:bg-zinc-900" />
       )}
 
-      <div className="relative z-10 flex h-full items-center justify-between gap-4 px-5 sm:px-6">
+      <div className="relative z-10 flex h-full items-center justify-between gap-4 pl-7 sm:pl-9 pr-5 sm:pr-6">
         <div className="min-w-0 space-y-1.5">
           <h3
             className={`text-base font-medium truncate font-sans ${
