@@ -78,7 +78,7 @@ export function getDropboxAuthUrl(state: string): string {
     client_id: DROPBOX_APP_KEY,
     response_type: "code",
     token_access_type: "offline",
-    scope: "files.metadata.read files.content.read",
+    scope: "files.metadata.read files.content.read sharing.read",
     state,
   });
   if (DROPBOX_REDIRECT_URI) params.set("redirect_uri", DROPBOX_REDIRECT_URI);
@@ -146,6 +146,41 @@ export async function dropboxGetFolderMeta(
   const json = (await res.json()) as DropboxEntry;
   if (json[".tag"] !== "folder") return { ok: false, status: 409 };
   return { ok: true, name: json.name };
+}
+
+/**
+ * Resolve a Dropbox share link (https://www.dropbox.com/scl/fo/...) to an
+ * account-relative folder path via sharing/get_shared_link_metadata.
+ * Requires the `sharing.read` scope. `path_lower` is only returned when the
+ * linked folder lives in the connected account's own Dropbox; links to folders
+ * owned by someone else resolve to reason "not_owned".
+ */
+export async function dropboxResolveSharedLink(
+  accessToken: string,
+  url: string,
+): Promise<
+  | { ok: true; path: string; name: string }
+  | { ok: false; reason: "not_folder" | "not_owned" | "not_found" | "auth" | "error"; status?: number }
+> {
+  const res = await fetch(`${RPC_BASE}/sharing/get_shared_link_metadata`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url: url.trim() }),
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    console.error(`[dropbox] get_shared_link_metadata failed: ${res.status} ${detail.slice(0, 200)}`);
+    if (res.status === 401) return { ok: false, reason: "auth", status: 401 };
+    if (res.status === 409) return { ok: false, reason: "not_found", status: 409 };
+    return { ok: false, reason: "error", status: res.status };
+  }
+  const json = (await res.json()) as { ".tag"?: string; name?: string; path_lower?: string };
+  if (json[".tag"] !== "folder") return { ok: false, reason: "not_folder" };
+  if (!json.path_lower) return { ok: false, reason: "not_owned" };
+  return { ok: true, path: json.path_lower, name: json.name ?? "Dropbox" };
 }
 
 /** List image files in a folder (non-recursive), following pagination. */
