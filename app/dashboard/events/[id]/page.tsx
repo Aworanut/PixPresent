@@ -7,7 +7,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { EventToolbar } from "./_event-toolbar";
 import { EventTitleEditor } from "./_event-title-editor";
 import { PhotoGallery, type GalleryPhoto } from "./_photo-gallery";
-import { LivenessToggle } from "./_liveness-toggle";
 
 export default async function EventDetailPage({
   params,
@@ -23,7 +22,7 @@ export default async function EventDetailPage({
       supabase
         .from("events")
         .select(
-          "id, name, event_date, is_indexed, share_link_expires_days, rekognition_collection_id, share_token, share_token_expires_at, sync_started_at, sync_completed_at, sync_photo_count, tenant_id, credits_used, liveness_required",
+          "id, name, event_date, share_link_expires_days, rekognition_collection_id, share_token, share_token_expires_at, sync_started_at, tenant_id, credits_used",
         )
         .eq("id", id)
         .is("deleted_at", null)
@@ -100,7 +99,6 @@ export default async function EventDetailPage({
                 {formattedDate}
               </span>
             )}
-            <StatusBadge isIndexed={event.is_indexed} />
           </div>
         </div>
 
@@ -112,9 +110,6 @@ export default async function EventDetailPage({
             driveConnected={driveConnected}
             dropboxConnected={dropboxConnected}
             folders={folderList as { id: string; label: string | null; folder_id: string; source_type: "gdrive" | "dropbox" }[]}
-            isIndexed={event.is_indexed}
-            lastSyncAt={event.sync_completed_at ?? null}
-            lastSyncCount={event.sync_photo_count ?? 0}
             shareToken={event.share_token}
             shareExpiresAt={event.share_token_expires_at}
             defaultDays={event.share_link_expires_days}
@@ -143,8 +138,6 @@ export default async function EventDetailPage({
           hasFolders={folderList.length > 0}
         />
       )}
-
-      <LivenessToggle eventId={event.id} initial={event.liveness_required ?? false} />
     </div>
   );
 }
@@ -223,22 +216,5 @@ function EmptyShell({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 py-20 gap-2 text-center px-6">
       {children}
     </div>
-  );
-}
-
-// ─── Status badge ─────────────────────────────────────────────────────────────
-
-function StatusBadge({ isIndexed }: { isIndexed: boolean }) {
-  if (isIndexed) {
-    return (
-      <span className="inline-flex items-center rounded-none bg-emerald-50/40 dark:bg-emerald-950/20 px-2 py-0.5 text-[10px] font-semibold font-mono tracking-wider uppercase text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 relative top-[0.5px]">
-        Synced
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-none bg-zinc-100/40 dark:bg-zinc-800/40 px-2 py-0.5 text-[10px] font-semibold font-mono tracking-wider uppercase text-zinc-500 dark:text-zinc-400 border border-zinc-500/20 relative top-[0.5px]">
-      Not synced
-    </span>
   );
 }
