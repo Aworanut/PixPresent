@@ -12,6 +12,7 @@ import { updateEventFolders } from "@/lib/actions/events";
 import { testDriveFolder, type TestResult } from "@/lib/actions/test-drive-folder";
 import { testDropboxFolder } from "@/lib/actions/test-dropbox-folder";
 import { getFolderSyncStatus, type FolderSyncStatus } from "@/lib/actions/folder-sync-status";
+import { disconnectDropbox } from "@/lib/actions/dropbox";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -441,9 +442,12 @@ function DriveModal({
         {!driveConnected && rows.some((r) => r.source_type === "gdrive") && (
           <ConnectBanner label="Google" href={`/api/auth/google?redirect=/dashboard/events/${eventId}`} />
         )}
-        {!dropboxConnected && rows.some((r) => r.source_type === "dropbox") && (
-          <ConnectBanner label="Dropbox" href={`/api/auth/dropbox?redirect=/dashboard/events/${eventId}`} />
-        )}
+        {rows.some((r) => r.source_type === "dropbox") &&
+          (dropboxConnected ? (
+            <DropboxStatus eventId={eventId} />
+          ) : (
+            <ConnectBanner label="Dropbox" href={`/api/auth/dropbox?redirect=/dashboard/events/${eventId}`} />
+          ))}
 
         {/* Editable folder table */}
         <div className="space-y-3">
@@ -482,7 +486,7 @@ function DriveModal({
                       value={row.folder_id}
                       onChange={(e) => update(idx, "folder_id", e.target.value)}
                       onBlur={() => onFolderBlur(idx)}
-                      placeholder={row.source_type === "dropbox" ? "Dropbox path เช่น /Events/Wedding" : "URL หรือ Folder ID"}
+                      placeholder={row.source_type === "dropbox" ? "Dropbox path หรือลิงก์แชร์" : "URL หรือ Folder ID"}
                       className={[
                         "w-full h-8 text-sm font-mono pr-7",
                         isOk ? "border-emerald-400 dark:border-emerald-600" : "",
@@ -609,6 +613,40 @@ function ConnectBanner({ label, href }: { label: string; href: string }) {
       <a href={href} className="font-semibold underline underline-offset-2 whitespace-nowrap">
         Connect {label} →
       </a>
+    </div>
+  );
+}
+
+// ─── Dropbox Connection Status (reconnect / disconnect) ─────────────────────────
+
+function DropboxStatus({ eventId }: { eventId: string }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const reconnectHref = `/api/auth/dropbox?redirect=/dashboard/events/${eventId}`;
+
+  const disconnect = () => {
+    startTransition(async () => {
+      await disconnectDropbox(eventId);
+      router.refresh();
+    });
+  };
+
+  return (
+    <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400 flex items-center justify-between gap-3">
+      <span>Dropbox เชื่อมต่อแล้ว ✓</span>
+      <span className="flex items-center gap-3 whitespace-nowrap">
+        <a href={reconnectHref} className="font-semibold underline underline-offset-2">
+          Reconnect
+        </a>
+        <button
+          type="button"
+          onClick={disconnect}
+          disabled={pending}
+          className="font-semibold underline underline-offset-2 disabled:opacity-50"
+        >
+          {pending ? "..." : "Disconnect"}
+        </button>
+      </span>
     </div>
   );
 }

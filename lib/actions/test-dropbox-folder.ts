@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { normalizeDropboxFolderPath } from "@/lib/dropbox";
+import { normalizeDropboxFolderPath, isDropboxShareLink } from "@/lib/dropbox";
 import type { TestResult } from "@/lib/actions/test-drive-folder";
 
 /** ทดสอบว่า Dropbox folder path เข้าถึงได้ด้วย account ที่ connect ไว้ */
@@ -10,9 +10,11 @@ export async function testDropboxFolder(
   eventId: string,
   rawInput: string,
 ): Promise<TestResult> {
-  const path = normalizeDropboxFolderPath(rawInput);
-  if (!path && rawInput.trim()) {
-    return { ok: false, message: "วาง path เช่น /Events/Wedding (ไม่ใช่ลิงก์)" };
+  const raw = rawInput.trim();
+  const isLink = isDropboxShareLink(raw);
+  const path = isLink ? "" : normalizeDropboxFolderPath(raw);
+  if (!isLink && !path && raw) {
+    return { ok: false, message: "วาง path เช่น /Events/Wedding หรือ ลิงก์แชร์ Dropbox" };
   }
 
   const supabase = await createClient();
@@ -40,8 +42,21 @@ export async function testDropboxFolder(
   }
 
   try {
-    const { refreshDropboxToken, dropboxGetFolderMeta } = await import("@/lib/dropbox-api");
+    const { refreshDropboxToken, dropboxGetFolderMeta, dropboxResolveSharedLink } = await import("@/lib/dropbox-api");
     const accessToken = await refreshDropboxToken(tenant.dropbox_refresh_token);
+
+    if (isLink) {
+      const r = await dropboxResolveSharedLink(accessToken, raw);
+      if (!r.ok) {
+        if (r.reason === "not_folder") return { ok: false, message: "ลิงก์นี้ไม่ใช่ folder" };
+        if (r.reason === "not_owned") return { ok: false, message: "ลิงก์นี้ไม่ใช่ folder ในบัญชีที่เชื่อมต่อ — ใช้ folder ของคุณเอง" };
+        if (r.reason === "auth") return { ok: false, message: "การเชื่อมต่อ Dropbox หมดอายุ — connect ใหม่" };
+        if (r.reason === "not_found") return { ok: false, message: "เปิดลิงก์ไม่ได้ — ก๊อปทั้งลิงก์ (รวม ?rlkey=...)" };
+        return { ok: false, message: "เชื่อมต่อไม่ได้ — ลองอีกครั้ง" };
+      }
+      return { ok: true, name: r.name };
+    }
+
     const meta = await dropboxGetFolderMeta(accessToken, path);
     if (!meta.ok) {
       if (meta.status === 409) return { ok: false, message: "ไม่พบ folder หรือนี่ไม่ใช่ folder" };

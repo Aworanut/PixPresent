@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { deleteRekognitionCollection } from "@/lib/aws/rekognition";
 import { extractDriveFolderId } from "@/lib/google-drive";
-import { normalizeDropboxFolderPath } from "@/lib/dropbox";
+import { normalizeDropboxFolderPath, isDropboxShareLink } from "@/lib/dropbox";
 import type { SourceType } from "@/lib/storage";
 import { isValidTier, type EventTier } from "@/lib/credit-packages";
 import { loadTierConfig } from "@/lib/pricing";
@@ -21,24 +21,84 @@ export async function updateEventFolders(
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
 
-  // Dedup + normalize per source
-  const seen = new Set<string>();
-  const clean = folders
-    .map((f) => {
-      const source_type: SourceType = f.source_type === "dropbox" ? "dropbox" : "gdrive";
-      const folder_id =
-        source_type === "dropbox"
-          ? normalizeDropboxFolderPath(f.folder_id)
-          : extractDriveFolderId(f.folder_id.trim());
-      return { label: f.label.trim(), folder_id, source_type };
-    })
-    .filter((f) => {
-      const key = `${f.source_type}:${f.folder_id}`;
-      if (!f.folder_id || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+  // 1) Classify each row. Dropbox share links need server-side resolution.
+  type Row = { label: string; source_type: SourceType; folder_id: string; link?: string };
+  const rows: Row[] = folders.map((f) => {
+    const source_type: SourceType = f.source_type === "dropbox" ? "dropbox" : "gdrive";
+    const raw = f.folder_id.trim();
+    if (source_type === "dropbox" && isDropboxShareLink(raw)) {
+      return { label: f.label.trim(), source_type, folder_id: "", link: raw };
+    }
+    const folder_id =
+      source_type === "dropbox" ? normalizeDropboxFolderPath(raw) : extractDriveFolderId(raw);
+    return { label: f.label.trim(), source_type, folder_id };
+  });
 
+  // 2) Resolve Dropbox share links → account path (only when some are present).
+  //    Done BEFORE any DB write so a failure never wipes existing folders.
+  if (rows.some((r) => r.link)) {
+    const admin = createServiceRoleClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "ยังไม่ได้ login" };
+
+    const { data: event } = await admin
+      .from("events")
+      .select("tenant_id")
+      .eq("id", eventId)
+      .single();
+    if (!event) return { error: "ไม่พบ event" };
+
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("dropbox_refresh_token, owner_user_id")
+      .eq("id", event.tenant_id)
+      .single();
+    if (tenant?.owner_user_id !== user.id) return { error: "ไม่มีสิทธิ์" };
+    if (!tenant?.dropbox_refresh_token) {
+      return { error: "ยังไม่ได้เชื่อมต่อ Dropbox — กดปุ่ม Connect Dropbox ก่อน" };
+    }
+
+    const { refreshDropboxToken, dropboxResolveSharedLink } = await import("@/lib/dropbox-api");
+    let accessToken: string;
+    try {
+      accessToken = await refreshDropboxToken(tenant.dropbox_refresh_token);
+    } catch {
+      return { error: "การเชื่อมต่อ Dropbox หมดอายุ — connect ใหม่อีกครั้ง" };
+    }
+
+    for (const r of rows) {
+      if (!r.link) continue;
+      const resolved = await dropboxResolveSharedLink(accessToken, r.link);
+      if (!resolved.ok) {
+        switch (resolved.reason) {
+          case "not_folder":
+            return { error: "ลิงก์นี้ไม่ใช่ folder — ใช้ลิงก์ของ folder (ไม่ใช่ไฟล์)" };
+          case "not_owned":
+            return { error: "ลิงก์นี้ไม่ใช่ folder ในบัญชี Dropbox ที่เชื่อมต่อ — ใช้ folder ของคุณเอง หรือวาง path แทน" };
+          case "auth":
+            return { error: "การเชื่อมต่อ Dropbox หมดอายุ — connect ใหม่อีกครั้ง" };
+          case "not_found":
+            return { error: "เปิดลิงก์ไม่ได้ — ตรวจว่าก๊อปทั้งลิงก์ (รวม ?rlkey=...)" };
+          default:
+            return { error: "เชื่อมต่อ Dropbox ไม่ได้ — ลองอีกครั้ง" };
+        }
+      }
+      r.folder_id = resolved.path;
+      if (!r.label) r.label = resolved.name;
+    }
+  }
+
+  // 3) Dedup + drop empty rows.
+  const seen = new Set<string>();
+  const clean = rows.filter((r) => {
+    if (!r.folder_id) return false;
+    const key = `${r.source_type}:${r.folder_id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // 4) Replace-all (resolution already done → delete is safe).
   const { error: delErr } = await supabase
     .from("event_storage_folders")
     .delete()
