@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { updateEvent } from "@/lib/actions/events";
 import { EventForm } from "../../_components/event-form";
 import { DeleteEventButton } from "../_delete-button";
+import { LivenessToggle } from "../_liveness-toggle";
 
 export default async function EditEventPage({
   params,
@@ -16,7 +17,7 @@ export default async function EditEventPage({
   const [{ data: event, error }, { data: folders }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, name, event_date, sync_started_at, credits_used, cover_image_url")
+      .select("id, name, event_date, sync_started_at, credits_used, cover_image_url, liveness_required")
       .eq("id", id)
       .is("deleted_at", null)
       .single(),
@@ -67,6 +68,8 @@ export default async function EditEventPage({
           }}
           cancelHref={`/dashboard/events/${event.id}`}
         />
+
+        <LivenessToggle eventId={event.id} initial={event.liveness_required ?? false} />
 
         {/* Danger Zone */}
         <div className="pt-6 border-t border-zinc-150 dark:border-zinc-800/80 space-y-4">
