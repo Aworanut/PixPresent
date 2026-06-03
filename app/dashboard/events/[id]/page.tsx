@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { CameraIcon, FolderIcon, LinkSlashIcon, ArrowPathIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { buttonVariants } from "@/components/ui/button";
 import { EventToolbar } from "./_event-toolbar";
 import { EventTitleEditor } from "./_event-title-editor";
 import { PhotoGallery, type GalleryPhoto } from "./_photo-gallery";
@@ -163,12 +162,12 @@ function EmptyGallery({
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           เชื่อมต่อ Drive เพื่อเริ่ม sync รูปภาพ
         </p>
-        <a
-          href={`/api/auth/google?redirect=/dashboard/events/${eventId}`}
+        <Link
+          href="/dashboard/account/connections"
           className="mt-2 inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
         >
           เชื่อมต่อ Google Drive
-        </a>
+        </Link>
       </EmptyShell>
     );
   }

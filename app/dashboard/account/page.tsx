@@ -9,6 +9,7 @@ type Tab = "profile" | "security";
 const TABS = [
   { id: "profile", label: "Profile" },
   { id: "security", label: "Security" },
+  { id: "connections", label: "Connections", href: "/dashboard/account/connections" },
   { id: "credits", label: "Credits", href: "/dashboard/account/credits" },
   { id: "topup", label: "Top-up", href: "/dashboard/account/topup" },
 ] as const;

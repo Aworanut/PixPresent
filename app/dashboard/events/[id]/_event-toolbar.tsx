@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { FolderIcon, ArrowPathIcon, ArrowUpOnSquareIcon } from "@heroicons/react/24/outline";
@@ -12,7 +13,6 @@ import { updateEventFolders } from "@/lib/actions/events";
 import { testDriveFolder, type TestResult } from "@/lib/actions/test-drive-folder";
 import { testDropboxFolder } from "@/lib/actions/test-dropbox-folder";
 import { getFolderSyncStatus, type FolderSyncStatus } from "@/lib/actions/folder-sync-status";
-import { disconnectDropbox } from "@/lib/actions/dropbox";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -440,14 +440,11 @@ function DriveModal({
     <Modal title="Photo Sources" onClose={onClose} className="sm:max-w-xl md:max-w-2xl">
       <div className="space-y-4">
         {!driveConnected && rows.some((r) => r.source_type === "gdrive") && (
-          <ConnectBanner label="Google" href={`/api/auth/google?redirect=/dashboard/events/${eventId}`} />
+          <ConnectHint label="Google Drive" />
         )}
-        {rows.some((r) => r.source_type === "dropbox") &&
-          (dropboxConnected ? (
-            <DropboxStatus eventId={eventId} />
-          ) : (
-            <ConnectBanner label="Dropbox" href={`/api/auth/dropbox?redirect=/dashboard/events/${eventId}`} />
-          ))}
+        {!dropboxConnected && rows.some((r) => r.source_type === "dropbox") && (
+          <ConnectHint label="Dropbox" />
+        )}
 
         {/* Editable folder table */}
         <div className="space-y-3">
@@ -604,49 +601,15 @@ function FolderSyncBadge({
   );
 }
 
-// ─── Connect Banner ───────────────────────────────────────────────────────────
+// ─── Connect Hint (points to the account Connections page) ──────────────────────
 
-function ConnectBanner({ label, href }: { label: string; href: string }) {
+function ConnectHint({ label }: { label: string }) {
   return (
     <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-400 flex items-center justify-between gap-3">
-      <span>ต้องเชื่อมต่อ {label} ก่อนจึงจะตรวจสอบ folder ได้</span>
-      <a href={href} className="font-semibold underline underline-offset-2 whitespace-nowrap">
-        Connect {label} →
-      </a>
-    </div>
-  );
-}
-
-// ─── Dropbox Connection Status (reconnect / disconnect) ─────────────────────────
-
-function DropboxStatus({ eventId }: { eventId: string }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const reconnectHref = `/api/auth/dropbox?redirect=/dashboard/events/${eventId}`;
-
-  const disconnect = () => {
-    startTransition(async () => {
-      await disconnectDropbox(eventId);
-      router.refresh();
-    });
-  };
-
-  return (
-    <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400 flex items-center justify-between gap-3">
-      <span>Dropbox เชื่อมต่อแล้ว ✓</span>
-      <span className="flex items-center gap-3 whitespace-nowrap">
-        <a href={reconnectHref} className="font-semibold underline underline-offset-2">
-          Reconnect
-        </a>
-        <button
-          type="button"
-          onClick={disconnect}
-          disabled={pending}
-          className="font-semibold underline underline-offset-2 disabled:opacity-50"
-        >
-          {pending ? "..." : "Disconnect"}
-        </button>
-      </span>
+      <span>ยังไม่ได้เชื่อมต่อ {label}</span>
+      <Link href="/dashboard/account/connections" className="font-semibold underline underline-offset-2 whitespace-nowrap">
+        ไปที่ Connections →
+      </Link>
     </div>
   );
 }
