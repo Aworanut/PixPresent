@@ -95,13 +95,14 @@ export function EventToolbar(props: ToolbarProps) {
 
   // ─── Sync handlers ────────────────────────────────────────────────────────
 
-  const handleSync = async () => {
-    if (isRunning || !anyConnected) return;
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setSyncStatus({ phase: "listing", folder: "…" });
-
+  // One sync invocation: POST /sync and consume the SSE stream until it ends.
+  // Returns how the pass ended + how many *new* photos it processed this round.
+  // "interrupted" = the stream closed without a terminal event, which on Hobby
+  // means the 60s function timed out mid-sync → the caller resumes.
+  type PassKind = "done" | "exceeded" | "error" | "interrupted";
+  const runSyncPass = async (
+    controller: AbortController,
+  ): Promise<{ kind: PassKind; processed: number }> => {
     let res: Response;
     try {
       res = await fetch(`/api/events/${props.eventId}/sync`, {
@@ -109,20 +110,24 @@ export function EventToolbar(props: ToolbarProps) {
         signal: controller.signal,
       });
     } catch (err: unknown) {
-      if ((err as Error).name === "AbortError") return;
+      if ((err as Error).name === "AbortError") return { kind: "interrupted", processed: 0 };
       setSyncStatus({ phase: "error", message: (err as Error).message });
-      return;
+      return { kind: "error", processed: 0 };
     }
 
     if (!res.ok || !res.body) {
       setSyncStatus({ phase: "error", message: `HTTP ${res.status}` });
-      return;
+      return { kind: "error", processed: 0 };
     }
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    controller.signal.addEventListener("abort", () => reader.cancel());
+    const onAbort = () => reader.cancel();
+    controller.signal.addEventListener("abort", onAbort);
+
+    let processed = 0;
+    let terminal: PassKind | null = null;
 
     try {
       while (true) {
@@ -141,6 +146,7 @@ export function EventToolbar(props: ToolbarProps) {
                 if (ev.phase === "listing") {
                   setSyncStatus({ phase: "listing", folder: String(ev.folder ?? "…") });
                 } else {
+                  if (!ev.skipped) processed++;
                   const evDone = Number(ev.done ?? 0);
                   const evTotal = Number(ev.total ?? 0);
                   setSyncStatus({ phase: "syncing", folder: String(ev.folder ?? "…"), done: evDone, total: evTotal });
@@ -148,13 +154,24 @@ export function EventToolbar(props: ToolbarProps) {
                 }
                 break;
               case "done":
-                setSyncStatus({ phase: "done", photoCount: Number(ev.photoCount ?? 0) });
+                terminal = "done";
+                break;
+              case "storage_exceeded": {
+                terminal = "exceeded";
+                const used = ev.usedGb ?? "?";
+                const limit = ev.limitGb ?? "?";
+                const next = ev.nextTier?.label
+                  ? ` — อัปเกรดเป็น ${ev.nextTier.label} เพื่อ sync ต่อ`
+                  : "";
+                setSyncStatus({ phase: "error", message: `พื้นที่เต็ม ${used}/${limit} GB${next}` });
                 router.refresh();
                 break;
+              }
               case "warn":
                 setSyncStatus({ phase: "warned", message: String(ev.message ?? "stub mode") });
                 break;
               case "error":
+                terminal = "error";
                 setSyncStatus({ phase: "error", message: String(ev.message ?? "Unknown error") });
                 break;
             }
@@ -162,8 +179,51 @@ export function EventToolbar(props: ToolbarProps) {
         }
       }
     } catch (err: unknown) {
-      if ((err as Error).name !== "AbortError") {
-        setSyncStatus({ phase: "error", message: (err as Error).message });
+      controller.signal.removeEventListener("abort", onAbort);
+      if ((err as Error).name === "AbortError") return { kind: "interrupted", processed };
+      setSyncStatus({ phase: "error", message: (err as Error).message });
+      return { kind: "error", processed };
+    }
+    controller.signal.removeEventListener("abort", onAbort);
+
+    return { kind: terminal ?? "interrupted", processed };
+  };
+
+  const handleSync = async () => {
+    if (isRunning || !anyConnected) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setSyncStatus({ phase: "listing", folder: "…" });
+
+    // Hobby caps each function at 60s, so a large sync gets cut mid-stream.
+    // Resume by re-POSTing (already-done photos are skipped server-side) until
+    // the server emits a terminal event. Guard against a non-progressing loop:
+    // two passes in a row that process zero new photos → stop and let the user
+    // retry, rather than spinning forever.
+    let totalNew = 0;
+    let stuckRounds = 0;
+    while (true) {
+      const outcome = await runSyncPass(controller);
+      if (controller.signal.aborted) return; // user hit Stop (handleStop set the phase)
+      totalNew += outcome.processed;
+
+      if (outcome.kind === "done") {
+        setSyncStatus({ phase: "done", photoCount: totalNew });
+        router.refresh();
+        return;
+      }
+      if (outcome.kind === "exceeded" || outcome.kind === "error") return; // UI already set
+
+      // interrupted → resume unless we've stalled
+      if (outcome.processed === 0) {
+        if (++stuckRounds >= 2) {
+          setSyncStatus({ phase: "error", message: "Sync หยุดกลางคัน — กด Sync อีกครั้งเพื่อทำต่อ" });
+          return;
+        }
+      } else {
+        stuckRounds = 0;
+        router.refresh(); // surface the photos this pass landed before resuming
       }
     }
   };
