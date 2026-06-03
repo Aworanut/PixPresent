@@ -30,7 +30,7 @@ export default async function EventDetailPage({
         .single(),
       supabase
         .from("event_storage_folders")
-        .select("id, label, folder_id")
+        .select("id, label, folder_id, source_type")
         .eq("event_id", id)
         .order("created_at", { ascending: true }),
       supabase
@@ -43,16 +43,18 @@ export default async function EventDetailPage({
 
   if (error || !event) notFound();
 
-  // Check Drive connection
+  // Check provider connections
   let driveConnected = false;
+  let dropboxConnected = false;
   const currentUser = authResult.data?.user ?? null;
   if (currentUser && event.tenant_id) {
     const { data: tenant } = await admin
       .from("tenants")
-      .select("google_refresh_token")
+      .select("google_refresh_token, dropbox_refresh_token")
       .eq("id", event.tenant_id)
       .single();
     driveConnected = !!tenant?.google_refresh_token;
+    dropboxConnected = !!tenant?.dropbox_refresh_token;
   }
 
   const photoList: GalleryPhoto[] = (photos ?? []).map((p) => ({
@@ -108,7 +110,8 @@ export default async function EventDetailPage({
             eventId={event.id}
             eventName={event.name}
             driveConnected={driveConnected}
-            folders={folderList}
+            dropboxConnected={dropboxConnected}
+            folders={folderList as { id: string; label: string | null; folder_id: string; source_type: "gdrive" | "dropbox" }[]}
             isIndexed={event.is_indexed}
             lastSyncAt={event.sync_completed_at ?? null}
             lastSyncCount={event.sync_photo_count ?? 0}

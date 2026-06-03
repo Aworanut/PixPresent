@@ -10,15 +10,17 @@ import { Label } from "@/components/ui/label";
 import { setShareLink, revokeShareLink } from "@/lib/actions/share-link";
 import { updateEventFolders } from "@/lib/actions/events";
 import { testDriveFolder, type TestResult } from "@/lib/actions/test-drive-folder";
+import { testDropboxFolder } from "@/lib/actions/test-dropbox-folder";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Folder = { id: string; label: string | null; folder_id: string };
+type Folder = { id: string; label: string | null; folder_id: string; source_type: "gdrive" | "dropbox" };
 
 type ToolbarProps = {
   eventId: string;
   eventName: string;
   driveConnected: boolean;
+  dropboxConnected: boolean;
   folders: Folder[];
   // Sync state
   isIndexed: boolean;
@@ -59,6 +61,7 @@ export function EventToolbar(props: ToolbarProps) {
   const [syncStatus, setSyncStatus] = useState<SyncPhase>({ phase: "idle" });
   const abortRef = useRef<AbortController | null>(null);
   const isRunning = syncStatus.phase === "listing" || syncStatus.phase === "syncing";
+  const anyConnected = props.driveConnected || props.dropboxConnected;
 
   // Auto-dismiss toast 4s after done
   useEffect(() => {
@@ -95,7 +98,7 @@ export function EventToolbar(props: ToolbarProps) {
   // ─── Sync handlers ────────────────────────────────────────────────────────
 
   const handleSync = async () => {
-    if (isRunning || !props.driveConnected) return;
+    if (isRunning || !anyConnected) return;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -192,7 +195,7 @@ export function EventToolbar(props: ToolbarProps) {
           icon={ArrowPathIcon}
           text="Sync"
           animate={isRunning}
-          disabled={!props.driveConnected}
+          disabled={!anyConnected}
         />
 
         {/* Share */}
@@ -209,6 +212,7 @@ export function EventToolbar(props: ToolbarProps) {
         <DriveModal
           eventId={props.eventId}
           driveConnected={props.driveConnected}
+          dropboxConnected={props.dropboxConnected}
           folders={props.folders}
           onClose={close}
         />
@@ -309,25 +313,27 @@ function Modal({
 
 // ─── Drive Modal ──────────────────────────────────────────────────────────────
 
-type FolderRow = { label: string; folder_id: string };
+type FolderRow = { label: string; folder_id: string; source_type: "gdrive" | "dropbox" };
 
 type FetchStatus = "fetching" | TestResult;
 
 function DriveModal({
   eventId,
   driveConnected,
+  dropboxConnected,
   folders,
   onClose,
 }: {
   eventId: string;
   driveConnected: boolean;
+  dropboxConnected: boolean;
   folders: Folder[];
   onClose: () => void;
 }) {
   const [rows, setRows] = useState<FolderRow[]>(
     folders.length > 0
-      ? folders.map((f) => ({ label: f.label ?? "", folder_id: f.folder_id }))
-      : [{ label: "", folder_id: "" }],
+      ? folders.map((f) => ({ label: f.label ?? "", folder_id: f.folder_id, source_type: f.source_type ?? "gdrive" }))
+      : [{ label: "", folder_id: "", source_type: "gdrive" as const }],
   );
   // per-row fetch status: undefined=ยังไม่ตรวจ, "fetching"=กำลังตรวจ, TestResult=ผลลัพธ์
   const [fetchStatuses, setFetchStatuses] = useState<Record<number, FetchStatus>>({});
@@ -355,25 +361,31 @@ function DriveModal({
     });
     setRows((prev) => {
       const next = prev.filter((_, i) => i !== idx);
-      return next.length === 0 ? [{ label: "", folder_id: "" }] : next;
+      return next.length === 0 ? [{ label: "", folder_id: "", source_type: "gdrive" as const }] : next;
     });
   };
 
-  const add = () => setRows((prev) => [...prev, { label: "", folder_id: "" }]);
+  const add = () => setRows((prev) => [...prev, { label: "", folder_id: "", source_type: "gdrive" as const }]);
 
   // Auto-fetch folder name เมื่อ user ออกจาก field
   const onFolderBlur = (idx: number) => {
-    const folderId = rows[idx].folder_id.trim();
-    const currentLabel = rows[idx].label.trim();
-    if (!folderId || !driveConnected) return;
-    // ถ้ามีผลลัพธ์อยู่แล้วจาก URL เดิม ไม่ต้อง fetch ซ้ำ
+    const row = rows[idx];
+    const folderId = row.folder_id.trim();
+    const currentLabel = row.label.trim();
+    const connected = row.source_type === "dropbox" ? dropboxConnected : driveConnected;
+    if (!folderId || !connected) return;
+    // ถ้ามีผลลัพธ์อยู่แล้วจาก input เดิม ไม่ต้อง fetch ซ้ำ
     const existing = fetchStatuses[idx];
     if (existing && existing !== "fetching") return;
 
     setFetchStatuses((prev) => ({ ...prev, [idx]: "fetching" }));
-    testDriveFolder(eventId, folderId).then((result) => {
+    const tester =
+      row.source_type === "dropbox"
+        ? testDropboxFolder(eventId, folderId)
+        : testDriveFolder(eventId, folderId);
+    tester.then((result) => {
       setFetchStatuses((prev) => ({ ...prev, [idx]: result }));
-      // Auto-fill label ด้วยชื่อ folder จาก Drive ถ้า label ว่างอยู่ตอนที่ blur
+      // Auto-fill label ด้วยชื่อ folder ถ้า label ว่างอยู่ตอนที่ blur
       if (result.ok && !currentLabel) {
         setRows((prev) =>
           prev.map((r, i) => (i === idx ? { ...r, label: result.name } : r)),
@@ -396,18 +408,13 @@ function DriveModal({
   };
 
   return (
-    <Modal title="Google Drive Folders" onClose={onClose} className="sm:max-w-xl md:max-w-2xl">
+    <Modal title="Photo Sources" onClose={onClose} className="sm:max-w-xl md:max-w-2xl">
       <div className="space-y-4">
-        {!driveConnected && (
-          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-400 flex items-center justify-between gap-3">
-            <span>ต้องเชื่อมต่อ Google account ก่อนจึงจะตรวจสอบ folder ได้</span>
-            <a
-              href={`/api/auth/google?redirect=/dashboard/events/${eventId}`}
-              className="font-semibold underline underline-offset-2 whitespace-nowrap"
-            >
-              Connect Google →
-            </a>
-          </div>
+        {!driveConnected && rows.some((r) => r.source_type === "gdrive") && (
+          <ConnectBanner label="Google" href={`/api/auth/google?redirect=/dashboard/events/${eventId}`} />
+        )}
+        {!dropboxConnected && rows.some((r) => r.source_type === "dropbox") && (
+          <ConnectBanner label="Dropbox" href={`/api/auth/dropbox?redirect=/dashboard/events/${eventId}`} />
         )}
 
         {/* Editable folder table */}
@@ -421,12 +428,24 @@ function DriveModal({
             return (
               <div key={idx} className="space-y-1">
                 <div className="flex items-center gap-2">
+                  <select
+                    value={row.source_type}
+                    onChange={(e) => {
+                      const source_type = e.target.value as "gdrive" | "dropbox";
+                      setFetchStatuses((prev) => { const n = { ...prev }; delete n[idx]; return n; });
+                      setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, source_type } : r)));
+                    }}
+                    className="h-8 flex-shrink-0 text-xs rounded border border-zinc-200 dark:border-zinc-700 bg-transparent px-1.5 cursor-pointer"
+                  >
+                    <option value="gdrive">Drive</option>
+                    <option value="dropbox">Dropbox</option>
+                  </select>
                   <Input
                     type="text"
                     value={row.label}
                     onChange={(e) => update(idx, "label", e.target.value)}
                     placeholder="Label"
-                    className="w-36 flex-shrink-0 h-8 text-sm"
+                    className="w-28 flex-shrink-0 h-8 text-sm"
                     maxLength={60}
                   />
                   <div className="relative flex-1 min-w-0">
@@ -435,7 +454,7 @@ function DriveModal({
                       value={row.folder_id}
                       onChange={(e) => update(idx, "folder_id", e.target.value)}
                       onBlur={() => onFolderBlur(idx)}
-                      placeholder="URL หรือ Folder ID"
+                      placeholder={row.source_type === "dropbox" ? "Dropbox path เช่น /Events/Wedding" : "URL หรือ Folder ID"}
                       className={[
                         "w-full h-8 text-sm font-mono pr-7",
                         isOk ? "border-emerald-400 dark:border-emerald-600" : "",
@@ -496,6 +515,19 @@ function DriveModal({
         </div>
       </div>
     </Modal>
+  );
+}
+
+// ─── Connect Banner ───────────────────────────────────────────────────────────
+
+function ConnectBanner({ label, href }: { label: string; href: string }) {
+  return (
+    <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-400 flex items-center justify-between gap-3">
+      <span>ต้องเชื่อมต่อ {label} ก่อนจึงจะตรวจสอบ folder ได้</span>
+      <a href={href} className="font-semibold underline underline-offset-2 whitespace-nowrap">
+        Connect {label} →
+      </a>
+    </div>
   );
 }
 

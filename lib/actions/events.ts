@@ -6,25 +6,35 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { deleteRekognitionCollection } from "@/lib/aws/rekognition";
 import { extractDriveFolderId } from "@/lib/google-drive";
+import { normalizeDropboxFolderPath } from "@/lib/dropbox";
+import type { SourceType } from "@/lib/storage";
 import { isValidTier, TIER_CONFIG, type EventTier } from "@/lib/credit-packages";
 import { uploadEventCover, parseCoverCrop } from "@/lib/cover-upload";
 
 export type EventActionState = { error: string } | undefined;
 
-/** อัปเดตเฉพาะ folder list — ใช้จาก Drive modal */
+/** อัปเดตเฉพาะ folder list — ใช้จาก Sources modal */
 export async function updateEventFolders(
   eventId: string,
-  folders: { label: string; folder_id: string }[],
+  folders: { label: string; folder_id: string; source_type: SourceType }[],
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
 
-  // Dedup + extract real folder IDs
+  // Dedup + normalize per source
   const seen = new Set<string>();
   const clean = folders
-    .map((f) => ({ label: f.label.trim(), folder_id: extractDriveFolderId(f.folder_id.trim()) }))
+    .map((f) => {
+      const source_type: SourceType = f.source_type === "dropbox" ? "dropbox" : "gdrive";
+      const folder_id =
+        source_type === "dropbox"
+          ? normalizeDropboxFolderPath(f.folder_id)
+          : extractDriveFolderId(f.folder_id.trim());
+      return { label: f.label.trim(), folder_id, source_type };
+    })
     .filter((f) => {
-      if (!f.folder_id || seen.has(f.folder_id)) return false;
-      seen.add(f.folder_id);
+      const key = `${f.source_type}:${f.folder_id}`;
+      if (!f.folder_id || seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
 
@@ -37,7 +47,14 @@ export async function updateEventFolders(
   if (clean.length > 0) {
     const { error: insErr } = await supabase
       .from("event_storage_folders")
-      .insert(clean.map((f) => ({ event_id: eventId, label: f.label, folder_id: f.folder_id })));
+      .insert(
+        clean.map((f) => ({
+          event_id: eventId,
+          label: f.label,
+          folder_id: f.folder_id,
+          source_type: f.source_type,
+        })),
+      );
     if (insErr) return { error: insErr.message };
   }
 
@@ -45,7 +62,7 @@ export async function updateEventFolders(
   return {};
 }
 
-type ParsedFolder = { label: string; folder_id: string };
+type ParsedFolder = { label: string; folder_id: string; source_type: SourceType };
 type ParsedForm = {
   name: string;
   event_date: string | null;
@@ -62,14 +79,20 @@ function parseForm(formData: FormData): ParsedForm {
 
   const labels = formData.getAll("folder_labels[]").map((v) => String(v).trim());
   const rawIds = formData.getAll("folder_ids[]").map((v) => String(v).trim());
+  const sources = formData.getAll("folder_sources[]").map((v) => String(v));
 
   const folders: ParsedFolder[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < rawIds.length; i++) {
-    const folder_id = extractDriveFolderId(rawIds[i]);
-    if (!folder_id || seen.has(folder_id)) continue;
-    seen.add(folder_id);
-    folders.push({ label: labels[i] ?? "", folder_id });
+    const source_type: SourceType = sources[i] === "dropbox" ? "dropbox" : "gdrive";
+    const folder_id =
+      source_type === "dropbox"
+        ? normalizeDropboxFolderPath(rawIds[i])
+        : extractDriveFolderId(rawIds[i]);
+    const key = `${source_type}:${folder_id}`;
+    if (!folder_id || seen.has(key)) continue;
+    seen.add(key);
+    folders.push({ label: labels[i] ?? "", folder_id, source_type });
   }
 
   const cover_photo = formData.get("cover_photo");
@@ -188,6 +211,7 @@ export async function createEvent(
           event_id: eventId,
           label: f.label,
           folder_id: f.folder_id,
+          source_type: f.source_type,
         })),
       );
     if (folderErr) {
@@ -273,6 +297,7 @@ export async function updateEvent(
           event_id: id,
           label: f.label,
           folder_id: f.folder_id,
+          source_type: f.source_type,
         })),
       );
     if (insErr) return { error: `เพิ่ม folder ไม่สำเร็จ: ${insErr.message}` };
