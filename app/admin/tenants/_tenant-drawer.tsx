@@ -3,8 +3,14 @@
 import { useEffect, useState } from "react";
 import { Drawer } from "@/components/ui/drawer";
 import { ConfirmButton } from "@/components/ui/confirm-button";
-import { adjustCredit, getTenantLedger, type LedgerEntry } from "./_actions";
+import {
+  adjustCredit,
+  setTenantPlan,
+  getTenantLedger,
+  type LedgerEntry,
+} from "./_actions";
 import { type TenantRow } from "./_tenants-table";
+import { TENANT_PLANS } from "@/lib/tenant-plans";
 
 const REASON_LABEL: Record<string, string> = {
   topup_slip: "เติมเงิน",
@@ -23,6 +29,7 @@ export function TenantDrawer({
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [plan, setPlan] = useState(tenant?.plan ?? "free");
   const [error, setError] = useState<string | null>(null);
   const [prevId, setPrevId] = useState(tenant?.id);
 
@@ -32,6 +39,7 @@ export function TenantDrawer({
     setPrevId(tenant?.id);
     setAmount("");
     setNote("");
+    setPlan(tenant?.plan ?? "free");
     setError(null);
     setLedger([]);
   }
@@ -106,6 +114,37 @@ export function TenantDrawer({
             {error && (
               <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p>
             )}
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              Plan (tier บัญชี)
+            </p>
+            <select
+              value={plan}
+              onChange={(e) => setPlan(e.target.value)}
+              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+            >
+              {TENANT_PLANS.map((p) => (
+                <option key={p} value={p}>
+                  {p === "business" ? "business — เก็บข้อมูลไม่จำกัดเวลา" : p}
+                </option>
+              ))}
+            </select>
+            <ConfirmButton
+              confirmLabel="ยืนยันเปลี่ยน plan"
+              pendingLabel="กำลังบันทึก…"
+              disabled={plan === tenant.plan}
+              className="w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+              onConfirm={async () => {
+                setError(null);
+                const r = await setTenantPlan(tenant.id, plan);
+                if (r.error) setError(r.error);
+                else onClose();
+              }}
+            >
+              เปลี่ยน plan
+            </ConfirmButton>
           </div>
 
           <div className="space-y-2">

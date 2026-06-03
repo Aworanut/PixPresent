@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>คลังภาพองค์กร — ข้อเสนอเพื่อทดลองใช้</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Kanit:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --cream: #FBF9F6;
+    --cream-2: #F4EFE8;
+    --obsidian: #111111;
+    --ink-60: rgba(17, 17, 17, 0.62);
+    --ink-40: rgba(17, 17, 17, 0.40);
+    --ink-12: rgba(17, 17, 17, 0.12);
+    --gold: #D4AF37;
+    --gold-soft: #C8A84B;
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --thai-head: 'Kanit', 'IBM Plex Sans Thai', sans-serif;
+    --thai-body: 'IBM Plex Sans Thai', 'Kanit', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--cream);
+    color: var(--obsidian);
+    font-family: var(--thai-body);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---------- Deck scroll-snap ---------- */
+  .deck {
+    height: 100vh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+  }
+  .deck::-webkit-scrollbar { width: 0; height: 0; }
+
+  .slide {
+    position: relative;
+    min-height: 100vh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 7vh 8vw;
+    overflow: hidden;
+  }
+
+  .slide::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 80% at 85% 10%, rgba(212,175,55,0.07), transparent 55%);
+    pointer-events: none;
+  }
+
+  .slide.dark {
+    background: var(--obsidian);
+    color: var(--cream);
+  }
+  .slide.dark::before {
+    background: radial-gradient(120% 80% at 15% 90%, rgba(212,175,55,0.16), transparent 55%);
+  }
+
+  /* ---------- Shared type ---------- */
+  .kicker {
+    font-family: var(--serif);
+    font-size: clamp(0.78rem, 1.1vw, 0.95rem);
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .kicker::before {
+    content: "";
+    width: 2.4rem;
+    height: 1px;
+    background: var(--gold);
+    display: inline-block;
+  }
+  .dark .kicker { color: var(--gold); }
+
+  h1.display {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(3rem, 9vw, 7.5rem);
+    line-height: 0.98;
+    letter-spacing: -0.01em;
+  }
+
+  .thai-head {
+    font-family: var(--thai-head);
+    font-weight: 500;
+    line-height: 1.22;
+    letter-spacing: -0.01em;
+  }
+  h2.thai-head { font-size: clamp(1.7rem, 4.4vw, 3.4rem); }
+  h3.thai-head { font-size: clamp(1.25rem, 2.4vw, 1.9rem); }
+
+  .lead {
+    font-family: var(--thai-body);
+    font-weight: 300;
+    font-size: clamp(1.05rem, 1.9vw, 1.5rem);
+    line-height: 1.7;
+    color: var(--ink-60);
+    max-width: 60ch;
+  }
+  .dark .lead { color: rgba(251,249,246,0.74); }
+
+  .stack > * + * { margin-top: 1.6rem; }
+  .stack-sm > * + * { margin-top: 1rem; }
+
+  /* ---------- Reveal animation ---------- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 0.7s cubic-bezier(.2,.7,.2,1), transform 0.7s cubic-bezier(.2,.7,.2,1);
+  }
+  .is-active .reveal { opacity: 1; transform: none; }
+  .is-active .reveal:nth-child(2) { transition-delay: .08s; }
+  .is-active .reveal:nth-child(3) { transition-delay: .16s; }
+  .is-active .reveal:nth-child(4) { transition-delay: .24s; }
+  .is-active .reveal:nth-child(5) { transition-delay: .32s; }
+  .is-active .reveal:nth-child(6) { transition-delay: .40s; }
+
+  /* ---------- Lists ---------- */
+  ul.points { list-style: none; max-width: 64ch; }
+  ul.points li {
+    position: relative;
+    padding-left: 2.2rem;
+    font-weight: 300;
+    font-size: clamp(1rem, 1.6vw, 1.32rem);
+    line-height: 1.62;
+    color: var(--ink-60);
+  }
+  ul.points li + li { margin-top: 1.15rem; }
+  ul.points li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0.62em;
+    width: 0.85rem; height: 1px;
+    background: var(--gold);
+  }
+  ul.points li b { color: var(--obsidian); font-weight: 500; }
+  .dark ul.points li { color: rgba(251,249,246,0.78); }
+  .dark ul.points li b { color: var(--cream); }
+
+  /* ---------- Three pillars ---------- */
+  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; margin-top: 1rem; }
+  .pillar { padding-top: 1.4rem; border-top: 1px solid var(--ink-12); }
+  .dark .pillar { border-top-color: rgba(251,249,246,0.18); }
+  .pillar .pnum { font-family: var(--serif); font-size: 2.4rem; color: var(--gold-soft); font-weight: 500; }
+  .pillar h3 { margin: 0.4rem 0 0.6rem; }
+  .pillar p { font-weight: 300; color: var(--ink-60); line-height: 1.6; font-size: 1.02rem; }
+  .dark .pillar p { color: rgba(251,249,246,0.7); }
+
+  /* ---------- Flow ---------- */
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4rem; margin-top: 1.4rem; }
+  .step { position: relative; padding: 1.6rem 1.3rem; background: var(--cream-2); border-radius: 14px; }
+  .dark .step { background: rgba(251,249,246,0.06); }
+  .step .snum {
+    font-family: var(--serif); font-weight: 600; font-size: 1.05rem;
+    color: var(--gold-soft); letter-spacing: 0.1em;
+  }
+  .step h4 { font-family: var(--thai-head); font-weight: 500; font-size: 1.12rem; margin: 0.5rem 0 0.4rem; line-height: 1.35; }
+  .step p { font-weight: 300; font-size: 0.95rem; line-height: 1.55; color: var(--ink-60); }
+  .dark .step p { color: rgba(251,249,246,0.7); }
+  .step .arrow { position: absolute; right: -1.05rem; top: 50%; transform: translateY(-50%); color: var(--gold); font-size: 1.2rem; z-index: 2; }
+  .step:last-child .arrow { display: none; }
+
+  /* ---------- Two columns ---------- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5rem; margin-top: 1rem; }
+  .col-label {
+    font-family: var(--serif); text-transform: uppercase; letter-spacing: 0.28em;
+    font-size: 0.82rem; color: var(--gold-soft); font-weight: 600; margin-bottom: 1.2rem;
+    display: flex; align-items: center; gap: 0.7rem;
+  }
+  .col-label::before { content: ""; width: 1.5rem; height: 1px; background: var(--gold); }
+
+  /* ---------- Highlight box ---------- */
+  .note {
+    margin-top: 1.8rem; padding: 1.1rem 1.5rem;
+    border-left: 2px solid var(--gold);
+    background: rgba(212,175,55,0.07);
+    font-weight: 300; color: var(--ink-60); line-height: 1.6;
+    max-width: 62ch; font-size: 1rem; border-radius: 0 8px 8px 0;
+  }
+  .dark .note { color: rgba(251,249,246,0.78); background: rgba(212,175,55,0.1); }
+
+  .big-line {
+    font-family: var(--thai-head); font-weight: 500;
+    font-size: clamp(1.8rem, 4.6vw, 3.6rem); line-height: 1.2; letter-spacing: -0.01em;
+  }
+  .big-line .gold { color: var(--gold); }
+
+  /* ---------- Chrome: counter, progress, dots ---------- */
+  .progress {
+    position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-soft));
+    z-index: 50; transition: width 0.4s ease;
+  }
+  .counter {
+    position: fixed; left: 8vw; bottom: 4.2vh; z-index: 40;
+    font-family: var(--serif); font-size: 1rem; letter-spacing: 0.18em;
+    color: var(--ink-40); pointer-events: none;
+  }
+  .counter b { color: var(--gold-soft); font-weight: 600; }
+  .slide.dark ~ .counter { color: rgba(251,249,246,0.5); }
+
+  .dots {
+    position: fixed; right: 2.6vw; top: 50%; transform: translateY(-50%);
+    z-index: 40; display: flex; flex-direction: column; gap: 0.85rem;
+  }
+  .dots button {
+    width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--ink-40);
+    background: transparent; cursor: pointer; padding: 0; transition: all 0.3s ease;
+  }
+  .dots button.active { background: var(--gold); border-color: var(--gold); transform: scale(1.25); }
+
+  .nav-arrows {
+    position: fixed; right: 2.4vw; bottom: 4vh; z-index: 40; display: flex; gap: 0.6rem;
+  }
+  .nav-arrows button {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--ink-12); background: rgba(251,249,246,0.7);
+    backdrop-filter: blur(6px); cursor: pointer; font-size: 1.1rem; color: var(--obsidian);
+    display: grid; place-items: center; transition: all 0.25s ease;
+  }
+  .nav-arrows button:hover { border-color: var(--gold); color: var(--gold); }
+
+  .hint {
+    position: absolute; left: 8vw; bottom: 8vh;
+    font-family: var(--thai-body); font-weight: 300; font-size: 0.92rem;
+    color: var(--ink-40); display: flex; align-items: center; gap: 0.6rem;
+    animation: floaty 2.4s ease-in-out infinite;
+  }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+  .meta-foot {
+    position: absolute; left: 8vw; bottom: 4.2vh;
+    font-family: var(--thai-body); font-weight: 300; font-size: 0.9rem; color: var(--ink-40);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 820px) {
+    .pillars { grid-template-columns: 1fr; gap: 1.6rem; }
+    .flow { grid-template-columns: 1fr 1fr; }
+    .step .arrow { display: none; }
+    .cols { grid-template-columns: 1fr; gap: 2rem; }
+    .dots { display: none; }
+    .slide { padding: 9vh 7vw; }
+  }
+  @media (max-width: 520px) {
+    .flow { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Print / PDF ---------- */
+  @media print {
+    .deck { height: auto; overflow: visible; }
+    .slide { min-height: 100vh; page-break-after: always; break-after: page; }
+    .progress, .counter, .dots, .nav-arrows, .hint { display: none !important; }
+    .reveal { opacity: 1 !important; transform: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 01 — TITLE -->
+  <section class="slide dark is-active">
+    <div class="stack">
+      <div class="kicker reveal">Internal Proposal · 2026</div>
+      <h1 class="display reveal">คลังภาพ<br/>องค์กร</h1>
+      <p class="lead reveal">ค้นหาภาพ “คน” ด้วยใบหน้า — ข้ามทุกงาน ทุกปี ในไม่กี่วินาที<br/>ไม่ต้องพึ่งความจำใครอีกต่อไป</p>
+    </div>
+    <div class="meta-foot reveal">เครื่องมือค้นหาด้วยใบหน้า · เสนอเพื่อขอทดลองใช้ภายในทีม</div>
+    <div class="hint">↓ เลื่อนลง หรือใช้ลูกศร → เพื่อไปต่อ</div>
+  </section>
+
+  <!-- 02 — PROBLEM -->
+  <section class="slide">
+    <div class="stack">
+      <div class="kicker reveal">The Problem</div>
+      <h2 class="thai-head reveal">ทุกวันนี้ “หาภาพคน” ในคลังของเรา<br/>= พึ่งความจำของคน</h2>
+      <ul class="points reveal">
+        <li>ภาพสะสมหลายปี หลายร้อยงาน กระจายอยู่ใน Dropbox</li>
+        <li>จะหาภาพของคนคนหนึ่ง ต้องไล่ถามว่า “<b>ใครถ่ายงานนั้น</b>” แล้วหวังว่าจะมีคนจำได้</li>
+        <li>ความรู้ว่าภาพอยู่ไหน อยู่ใน <b>หัวคน</b> ไม่ได้อยู่ในระบบ — คนลาออก ความรู้หายตามไปด้วย</li>
+        <li>Dropbox (จ่าย tier สูงสุดแล้ว) ใกล้เต็ม → ต้อง <b>ลบภาพเก่าทิ้ง</b> เพื่อเอาที่ว่าง</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 03 — COST -->
+  <section class="slide">
+    <div class="stack">
+      <div class="kicker reveal">The Cost</div>
+      <h2 class="thai-head reveal">ยิ่งปล่อยไว้ ยิ่งเสีย</h2>
+      <div class="pillars reveal">
+        <div class="pillar">
+          <div class="pnum">01</div>
+          <h3 class="thai-head">เสียเวลา</h3>
+          <p>ทุกครั้งที่ตามหาภาพ เสียเวลาทีมหลายคน บางครั้งก็หาไม่เจอเลย</p>
+        </div>
+        <div class="pillar">
+          <div class="pnum">02</div>
+          <h3 class="thai-head">ของหาย</h3>
+          <p>ภาพดีๆ ถูกลบทิ้งเพื่อเซฟพื้นที่ — เอากลับมาใช้ซ้ำหรือทำการตลาดไม่ได้อีก</p>
+        </div>
+        <div class="pillar">
+          <div class="pnum">03</div>
+          <h3 class="thai-head">ยิ่งโตยิ่งหนัก</h3>
+          <p>ภาพเพิ่มขึ้นทุกงาน ปัญหาทบไปเรื่อยๆ ไม่หายไปเอง</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 — SOLUTION -->
+  <section class="slide dark">
+    <div class="stack">
+      <div class="kicker reveal">The Solution</div>
+      <h2 class="thai-head reveal">ให้ “ใบหน้า” เป็นกุญแจค้นหา</h2>
+      <p class="lead reveal">อัปโหลดหรือซิงก์ภาพเข้าระบบครั้งเดียว ระบบจะอ่านใบหน้าทุกคนในภาพให้อัตโนมัติ จากนั้นใครในทีมก็ค้นได้ — เอารูปคนคนหนึ่งใส่เข้าไป ระบบคืนภาพ <b style="color:var(--gold);font-weight:500">ทั้งหมด</b> ของคนนั้น ข้ามทุกงาน ทุกปี ในไม่กี่วินาที</p>
+      <p class="big-line reveal">ไม่ต้องถามใคร<br/><span class="gold">ไม่ต้องพึ่งความจำอีกต่อไป</span></p>
+    </div>
+  </section>
+
+  <!-- 05 — HOW IT WORKS -->
+  <section class="slide">
+    <div class="stack">
+      <div class="kicker reveal">How It Works</div>
+      <h2 class="thai-head reveal">เบื้องหลังทำงานยังไง</h2>
+      <div class="flow reveal">
+        <div class="step">
+          <div class="snum">STEP 01</div>
+          <h4>ภาพเข้า</h4>
+          <p>Dropbox / Drive เป็นแค่ “ประตูรับเข้า” ไม่ใช่บ้านถาวร</p>
+          <span class="arrow">→</span>
+        </div>
+        <div class="step">
+          <div class="snum">STEP 02</div>
+          <h4>ระบบอ่านใบหน้า</h4>
+          <p>อ่านใบหน้าทุกคน + ทำสำเนาภาพย่อให้อัตโนมัติ</p>
+          <span class="arrow">→</span>
+        </div>
+        <div class="step">
+          <div class="snum">STEP 03</div>
+          <h4>เก็บตัวค้นหาไว้ถาวร</h4>
+          <p>“ลายนิ้วมือใบหน้า” + ภาพย่อ เล็กมาก ถูกมาก เก็บได้ตลอด</p>
+          <span class="arrow">→</span>
+        </div>
+        <div class="step">
+          <div class="snum">STEP 04</div>
+          <h4>ภาพเต็มไปคลังเย็น</h4>
+          <p>ย้ายไปที่เก็บราคาถูกกว่า Dropbox — ทีมค้น/โหลดได้ตลอด</p>
+        </div>
+      </div>
+      <div class="note reveal">หัวใจคือ <b>แยก “การค้นหา”</b> (ถูก เก็บตลอด) <b>ออกจาก “การเก็บไฟล์เต็ม”</b> (แพง ย้ายไปที่ถูก) — เราจึงค้นเจอได้เสมอ โดยไม่ต้องแบกค่าเก็บแพงๆ</div>
+    </div>
+  </section>
+
+  <!-- 06 — UNLIMITED RETENTION -->
+  <section class="slide">
+    <div class="stack">
+      <div class="kicker reveal">Unlimited Retention</div>
+      <h2 class="thai-head reveal">ไม่ต้องลบภาพเพื่อเซฟพื้นที่อีกต่อไป</h2>
+      <p class="lead reveal">ข้อมูลที่ใช้ค้นหา (ลายใบหน้า + ภาพย่อ) เล็กและถูกมาก จึงเก็บไว้ได้ตลอดไป แม้ภาพเต็มจะถูกย้ายไปคลังเย็น แต่เรายัง <b style="color:var(--obsidian);font-weight:500">ค้นเจอได้เสมอ</b></p>
+      <div class="note reveal">ระบบรองรับแล้ว — เราเพิ่งสร้าง tier บัญชีแบบ <b>“เก็บข้อมูลไม่จำกัดเวลา”</b> ขึ้นมาเพื่อสิ่งนี้โดยเฉพาะ (ตัวลบอัตโนมัติจะไม่แตะข้อมูลของคลังองค์กรเลย)</div>
+    </div>
+  </section>
+
+  <!-- 07 — LOW RISK (มุมองค์กรเป็นผู้รับความเสี่ยง) -->
+  <section class="slide dark">
+    <div class="stack">
+      <div class="kicker reveal">Low Risk</div>
+      <h2 class="thai-head reveal">ลองได้ — โดยองค์กรแทบไม่ต้องเสี่ยง</h2>
+      <ul class="points reveal">
+        <li>ไม่ต้องลงทุนก้อนใหญ่ล่วงหน้า — <b>จ่ายตามใช้จริง</b> ช่วงทดลองต่ำมาก</li>
+        <li>ของเดิมอยู่ครบ — Dropbox และคลังปัจจุบัน <b>ไม่ถูกแตะ</b> ไม่ต้องย้าย ไม่ต้องลบ เป็นแค่การเพิ่ม “ชั้นค้นหา” ทับของเดิม</li>
+        <li>เริ่มจากภาพชุดเล็ก ถ้าไม่เวิร์ก <b>เลิกได้ทันที</b> แทบไม่เสียอะไร</li>
+        <li>ข้อมูลภายในอยู่ในพื้นที่ <b>แยกเฉพาะองค์กร</b> ไม่ปนกับใคร</li>
+        <li>เครื่องมือ <b>พร้อมใช้แล้ว</b> ผมดูแลและปรับเองได้ ไม่ต้องรอพัฒนานานหลายเดือน</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 08 — PILOT -->
+  <section class="slide">
+    <div class="stack">
+      <div class="kicker reveal">The Pilot</div>
+      <h2 class="thai-head reveal">เริ่มเล็ก เร็ว ความเสี่ยงต่ำ</h2>
+      <ul class="points reveal">
+        <li>เลือกภาพจริงของเราชุดหนึ่ง (1–2 ปี หรืออีเวนต์ที่หน้าซ้ำเยอะ) เข้าระบบ</li>
+        <li>ช่วงทดลอง สร้าง <b>บัญชีกลาง 1 อัน</b> แจกรหัสให้ทีมเข้าใช้ร่วมกัน — ยังไม่ต้องทำระบบสมาชิกเต็มรูปแบบ</li>
+        <li>ทีม <b>2–3 คน</b> ลองค้นหาคนจริง วัดว่าเจอเร็วขึ้นแค่ไหน</li>
+        <li>ถ้าเวิร์ก → ค่อยขยาย แล้วทำระบบสมาชิก / สิทธิ์รายคนทีหลัง</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 09 — THE ASK + SCOPE -->
+  <section class="slide">
+    <div class="stack">
+      <div class="kicker reveal">The Ask</div>
+      <h2 class="thai-head reveal">สิ่งที่ขอจากองค์กร</h2>
+      <div class="cols reveal">
+        <div>
+          <div class="col-label">ขอจากองค์กร</div>
+          <ul class="points">
+            <li>อนุญาตให้นำ <b>ภาพชุดทดลอง</b> เข้าระบบ</li>
+            <li>คนในทีม <b>2–3 คน</b> ช่วยทดสอบและให้ฟีดแบ็ก</li>
+            <li>เวลาประเมินผลประมาณ <b>2–4 สัปดาห์</b></li>
+          </ul>
+        </div>
+        <div>
+          <div class="col-label">รอบนี้ยังไม่รวม (พูดตรงๆ)</div>
+          <ul class="points">
+            <li>โฟกัสค้นหา <b>“ภาพนิ่ง”</b> ด้วยใบหน้าก่อน</li>
+            <li>วิดีโอ: เก็บเฉพาะงาน <b>ตัดต่อเสร็จ</b> ไม่เก็บ footage ดิบ (ทีมตัดต่อเก็บเอง)</li>
+            <li>ยังไม่ทำระบบสมาชิก / สิทธิ์รายคนเต็มรูปแบบ (รอผลทดลองก่อน)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 — CLOSING -->
+  <section class="slide dark">
+    <div class="stack">
+      <div class="kicker reveal">Next Step</div>
+      <p class="big-line reveal">เปลี่ยน “คลังภาพที่หาไม่เจอ”<br/>ให้เป็น <span class="gold">คลังที่ค้นเจอทุกคน ทุกปี</span></p>
+      <p class="lead reveal">ถ้าโอเค ผมเตรียมให้ทีมเริ่มทดสอบได้เลย — ขอแค่ภาพชุดทดลอง กับคนช่วยเทส 2–3 คน</p>
+    </div>
+    <div class="meta-foot reveal">เครื่องมือค้นหาด้วยใบหน้า · ข้อเสนอภายในองค์กร</div>
+  </section>
+
+</div>
+
+<div class="counter" id="counter"><b>01</b> / 10</div>
+
+<div class="dots" id="dots"></div>
+
+<div class="nav-arrows">
+  <button id="prev" aria-label="ก่อนหน้า">↑</button>
+  <button id="next" aria-label="ถัดไป">↓</button>
+</div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const slides = Array.from(deck.querySelectorAll('.slide'));
+  const total = slides.length;
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  const dotsWrap = document.getElementById('dots');
+  let current = 0;
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-label', 'สไลด์ ' + (i + 1));
+    b.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(b);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function pad(n) { return String(n + 1).padStart(2, '0'); }
+
+  function setActive(i) {
+    if (i === current) {} // allow re-run on load
+    current = i;
+    slides.forEach((s, idx) => s.classList.toggle('is-active', idx === i));
+    dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+    counter.innerHTML = '<b>' + pad(i) + '</b> / ' + total;
+    progress.style.width = (total === 1 ? 100 : (i / (total - 1)) * 100) + '%';
+  }
+
+  function goTo(i) {
+    i = Math.max(0, Math.min(total - 1, i));
+    slides[i].scrollIntoView({ behavior: 'smooth' });
+    setActive(i);
+  }
+
+  // Sync active slide on manual scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting && e.intersectionRatio >= 0.55) {
+        setActive(slides.indexOf(e.target));
+      }
+    });
+  }, { threshold: [0.55, 0.75] });
+  slides.forEach((s) => io.observe(s));
+
+  // Controls
+  document.getElementById('next').addEventListener('click', () => goTo(current + 1));
+  document.getElementById('prev').addEventListener('click', () => goTo(current - 1));
+
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); goTo(current + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); goTo(current - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    else if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+  });
+
+  setActive(0);
+</script>
+
+</body>
+</html>

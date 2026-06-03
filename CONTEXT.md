@@ -18,6 +18,13 @@ _Avoid_: User (reserved for the auth-layer account), Client.
 The party who owns and pays for an event and hires the photographer. The ultimate bearer of an event's photo-distribution cost, but never a FaceFind account holder: the Host is reached only through the Organizer. Distinct from the Guest (an attendee) and from the Organizer (the account/billing identity).
 _Avoid_: conflating Host with Organizer; bare "owner" (too vague).
 
+**Flat-fee hire** (จ้างเหมา / บุฟเฟ่):
+A hiring arrangement where the Host pays the Organizer one agreed price for the whole job and receives every photo as the deliverable; the Organizer may not resell them. Such an event is marketing-only — no photo sales.
+
+**Commission hire** (ฐาน + คอมมิชชั่น):
+A hiring arrangement where the Host pays the Organizer a reduced base fee; in return the Organizer keeps the right to sell photos to Guests and takes a share of those sales. Such an event is sales-enabled, and FaceFind takes a platform fee on each sale.
+_Avoid_: treating "can these photos be sold?" as an event-time question — it is fixed by the hiring arrangement before the shoot.
+
 **Tenant**:
 The account row that owns an Organizer's identity, billing profile, events, photos, and credit balance. One Tenant per Organizer signup. Use "Tenant" for the data/billing entity, "Organizer" for the person.
 _Avoid_: using Tenant and Organizer interchangeably.

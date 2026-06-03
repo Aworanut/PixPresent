@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>คลังภาพองค์กร — ตัวอย่างการใช้งาน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Kanit:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --cream: #FBF9F6;
+    --cream-2: #F4EFE8;
+    --obsidian: #111111;
+    --ink-60: rgba(17,17,17,0.62);
+    --ink-40: rgba(17,17,17,0.40);
+    --ink-12: rgba(17,17,17,0.12);
+    --gold: #D4AF37;
+    --gold-soft: #C8A84B;
+    --zinc-50: #FAFAFA;
+    --zinc-100: #F4F4F5;
+    --zinc-200: #E4E4E7;
+    --zinc-300: #D4D4D8;
+    --zinc-400: #A1A1AA;
+    --zinc-500: #71717A;
+    --zinc-700: #3F3F46;
+    --zinc-900: #18181B;
+    --emerald-50: #ECFDF5;
+    --emerald-600: #059669;
+    --emerald-700: #047857;
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --thai-head: 'Kanit', 'IBM Plex Sans Thai', sans-serif;
+    --thai-body: 'IBM Plex Sans Thai', 'Kanit', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--cream);
+    color: var(--obsidian);
+    font-family: var(--thai-body);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---------- Deck ---------- */
+  .deck { height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory; }
+  .deck::-webkit-scrollbar { width: 0; height: 0; }
+  .slide {
+    position: relative; min-height: 100vh; scroll-snap-align: start; scroll-snap-stop: always;
+    display: flex; flex-direction: column; justify-content: center; padding: 6vh 7vw; overflow: hidden;
+  }
+  .slide::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(120% 80% at 90% 8%, rgba(212,175,55,0.07), transparent 55%);
+    pointer-events: none;
+  }
+  .slide.dark { background: var(--obsidian); color: var(--cream); }
+  .slide.dark::before { background: radial-gradient(120% 80% at 12% 92%, rgba(212,175,55,0.16), transparent 55%); }
+
+  /* ---------- Type ---------- */
+  .kicker {
+    font-family: var(--serif); font-size: clamp(0.78rem,1.1vw,0.95rem);
+    letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold-soft);
+    font-weight: 600; display: flex; align-items: center; gap: 1rem;
+  }
+  .kicker::before { content: ""; width: 2.2rem; height: 1px; background: var(--gold); }
+  .dark .kicker { color: var(--gold); }
+  .thai-head { font-family: var(--thai-head); font-weight: 500; line-height: 1.2; letter-spacing: -0.01em; }
+  h2.thai-head { font-size: clamp(1.6rem,3.6vw,2.9rem); }
+  .lead {
+    font-family: var(--thai-body); font-weight: 300; font-size: clamp(1rem,1.5vw,1.28rem);
+    line-height: 1.65; color: var(--ink-60); max-width: 42ch;
+  }
+  .dark .lead { color: rgba(251,249,246,0.74); }
+  .stack > * + * { margin-top: 1.3rem; }
+
+  .metric {
+    display: inline-flex; align-items: baseline; gap: 0.6rem; margin-top: 0.4rem;
+    font-family: var(--mono); font-size: 0.95rem; color: var(--ink-40);
+    border-top: 1px solid var(--ink-12); padding-top: 1rem;
+  }
+  .metric b { font-family: var(--serif); font-size: 1.7rem; color: var(--gold-soft); font-weight: 600; }
+
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+  .is-active .reveal { opacity: 1; transform: none; }
+  .is-active .reveal:nth-child(2){transition-delay:.08s}
+  .is-active .reveal:nth-child(3){transition-delay:.16s}
+  .is-active .reveal:nth-child(4){transition-delay:.24s}
+
+  /* ---------- Demo layout ---------- */
+  .demo-grid { display: grid; grid-template-columns: 0.82fr 1.18fr; gap: 4vw; align-items: center; width: 100%; }
+  .demo-stage { perspective: 1600px; }
+
+  /* ---------- App window mockup ---------- */
+  .appwin {
+    background: #fff; border: 1px solid var(--zinc-200); border-radius: 16px; overflow: hidden;
+    box-shadow: 0 40px 80px -30px rgba(17,17,17,0.34), 0 12px 28px -18px rgba(17,17,17,0.2);
+    transform: rotateY(-4deg) rotateX(1.5deg); transform-style: preserve-3d;
+    transition: transform .6s cubic-bezier(.2,.7,.2,1);
+  }
+  .is-active .appwin { transform: rotateY(-1deg); }
+  .appwin.flat { transform: none; }
+  .is-active .appwin.flat { transform: none; }
+  .appwin-bar {
+    height: 40px; background: var(--zinc-100); border-bottom: 1px solid var(--zinc-200);
+    display: flex; align-items: center; gap: 0.5rem; padding: 0 0.95rem;
+  }
+  .appwin-bar .d { width: 11px; height: 11px; border-radius: 50%; }
+  .d.r { background: #FF5F57; } .d.y { background: #FEBC2E; } .d.g { background: #28C840; }
+  .appwin-url {
+    margin-left: 0.7rem; flex: 1; max-width: 280px; height: 22px; background: #fff;
+    border: 1px solid var(--zinc-200); border-radius: 6px; display: flex; align-items: center;
+    justify-content: center; gap: 0.4rem; font-family: var(--mono); font-size: 0.7rem; color: var(--zinc-400);
+  }
+  .appwin-body { padding: 1.6rem 1.5rem; background: var(--cream); min-height: 360px; }
+  .appwin-body.dark { background: #0c0c0d; padding: 0; }
+
+  /* ---------- UI atoms (match real app) ---------- */
+  .pill-ai {
+    display: inline-flex; align-items: center; gap: 0.45rem; background: var(--emerald-50);
+    color: var(--emerald-700); border-radius: 999px; padding: 0.32rem 0.8rem;
+    font-size: 0.72rem; font-weight: 500;
+  }
+  .pill-ai .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald-600); animation: pulse 1.8s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  .ui-title { font-family: var(--thai-head); font-weight: 600; font-size: 1.28rem; margin: 0.75rem 0 1rem; }
+
+  .ui-card {
+    background: #fff; border: 1px solid var(--zinc-200); border-radius: 14px; padding: 1.2rem;
+  }
+  .ui-card h4 { font-family: var(--thai-head); font-weight: 500; font-size: 0.98rem; margin-bottom: 0.3rem; }
+  .ui-card .hint { font-size: 0.8rem; color: var(--zinc-500); line-height: 1.5; margin-bottom: 1rem; }
+
+  .dropzone {
+    border: 2px dashed var(--zinc-300); border-radius: 12px; background: var(--zinc-50);
+    padding: 1.5rem 1rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.7rem;
+  }
+  .dropzone .ico { font-size: 1.9rem; }
+  .dropzone p { font-size: 0.84rem; color: var(--zinc-500); }
+
+  .face-row { display: flex; align-items: center; gap: 1rem; }
+  .face-chip {
+    width: 76px; height: 76px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(160deg, #eef0f6, #dde2ee); position: relative; overflow: hidden;
+    box-shadow: inset 0 0 0 1px var(--zinc-200), 0 0 0 4px #fff, 0 0 0 5px var(--zinc-200);
+  }
+  .face-chip::after {
+    content: ""; position: absolute; inset: 0;
+    background: bottom center/100% no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M12 100c0-22 17-33 38-33s38 11 38 33Z' fill='%235b6b8c'/%3E%3Cpath d='M40 60h20v12a10 10 0 0 1-20 0Z' fill='%23eab693'/%3E%3Cellipse cx='50' cy='42' rx='19' ry='21' fill='%23f3c9a3'/%3E%3Cpath d='M30 41c0-14 9-23 20-23s20 9 20 23c-2-5-4-8-7-9-3 4-24 5-27-1-3 1-5 4-6 10Z' fill='%233b2f29'/%3E%3Ccircle cx='43.5' cy='43' r='2.1' fill='%233b2f29'/%3E%3Ccircle cx='56.5' cy='43' r='2.1' fill='%233b2f29'/%3E%3Cpath d='M45 50q5 4 10 0' stroke='%23c08561' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
+  .face-meta .nm { font-family: var(--thai-head); font-weight: 500; font-size: 0.98rem; }
+  .face-meta .sub { font-size: 0.78rem; color: var(--zinc-500); }
+  .change-link { font-size: 0.76rem; color: var(--zinc-500); text-decoration: underline; }
+
+  .btn-cta {
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%;
+    background: var(--obsidian); color: #fff; border-radius: 10px; padding: 0.75rem;
+    font-family: var(--thai-body); font-size: 0.9rem; font-weight: 500; margin-top: 1rem;
+  }
+  .btn-cta.gold { background: linear-gradient(135deg, var(--gold), var(--gold-soft)); color: #1a1407; }
+
+  /* ---------- Results header ---------- */
+  .res-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap; }
+  .res-head .cnt { font-size: 0.9rem; font-weight: 500; }
+  .res-head .cnt b { color: var(--obsidian); }
+  .res-head .actions { display: flex; align-items: center; gap: 0.8rem; }
+  .btn-dl {
+    display: inline-flex; align-items: center; gap: 0.4rem; background: var(--obsidian); color: #fff;
+    border-radius: 8px; padding: 0.45rem 0.8rem; font-size: 0.78rem; font-weight: 500;
+  }
+  .lnk { font-size: 0.78rem; color: var(--zinc-500); text-decoration: underline; }
+
+  .filter-row { display: flex; gap: 0.4rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--zinc-200); border-radius: 999px; padding: 0.25rem 0.7rem;
+    font-size: 0.72rem; font-weight: 500; color: var(--zinc-500); background: #fff;
+  }
+  .chip.on { background: var(--obsidian); color: #fff; border-color: var(--obsidian); }
+
+  /* ---------- Photo grid ---------- */
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+  .photo {
+    position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden;
+    background: var(--zinc-200);
+  }
+  .photo::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -4%; top: 20%;
+    background: center bottom/52% no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%23ffffff' fill-opacity='0.5'%3E%3Ccircle cx='50' cy='34' r='17'/%3E%3Cpath d='M18 92c0-17 14-30 32-30s32 13 32 30z'/%3E%3C/g%3E%3C/svg%3E");
+  }
+  .photo .ev {
+    position: absolute; left: 5px; bottom: 5px; z-index: 2; background: rgba(0,0,0,0.55);
+    color: #fff; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.02em;
+    padding: 0.12rem 0.4rem; border-radius: 5px; backdrop-filter: blur(2px);
+  }
+  .photo .mt {
+    position: absolute; right: 5px; top: 5px; z-index: 2; background: rgba(212,175,55,0.92);
+    color: #1a1407; font-family: var(--mono); font-size: 0.56rem; font-weight: 500;
+    padding: 0.1rem 0.34rem; border-radius: 5px;
+  }
+  .photo.p1{background:linear-gradient(150deg,#b9c6d6,#8aa0b8)}
+  .photo.p2{background:linear-gradient(150deg,#d9c3b0,#b7906f)}
+  .photo.p3{background:linear-gradient(150deg,#c8cdbb,#9aa67f)}
+  .photo.p4{background:linear-gradient(150deg,#d6b9c4,#ab7e92)}
+  .photo.p5{background:linear-gradient(150deg,#bfc0c9,#8d8e9c)}
+  .photo.p6{background:linear-gradient(150deg,#d3c6a2,#ab9866)}
+  .photo.p7{background:linear-gradient(150deg,#b3c9c4,#7fa39a)}
+  .photo.p8{background:linear-gradient(150deg,#cabdd4,#9580ab)}
+  .photo.p9{background:linear-gradient(150deg,#d8c0b3,#b58a73)}
+
+  /* ---------- Lightbox mockup ---------- */
+  .lb { position: relative; min-height: 360px; display: flex; flex-direction: column; color: #fff; }
+  .lb-top {
+    display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1.1rem;
+    font-family: var(--mono); font-size: 0.7rem; color: rgba(255,255,255,0.6);
+  }
+  .lb-top .meta { color: rgba(255,255,255,0.78); }
+  .lb-top .x { color: rgba(255,255,255,0.7); font-size: 1rem; }
+  .lb-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0.5rem 1.1rem; gap: 0.8rem; }
+  .lb-img {
+    width: min(62%, 300px); aspect-ratio: 4/3; border-radius: 8px; position: relative; overflow: hidden;
+    background: linear-gradient(150deg,#d9c3b0,#a8835f);
+  }
+  .lb-img::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -3%; top: 16%;
+    background: center bottom/40% no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%23ffffff' fill-opacity='0.62'%3E%3Ccircle cx='50' cy='34' r='17'/%3E%3Cpath d='M18 92c0-17 14-30 32-30s32 13 32 30z'/%3E%3C/g%3E%3C/svg%3E");
+  }
+  .lb-nav {
+    width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.25);
+    display: grid; place-items: center; color: rgba(255,255,255,0.8); font-size: 0.9rem; flex-shrink: 0;
+  }
+  .lb-bottom {
+    display: flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.9rem 1.1rem 1.2rem;
+  }
+  .lb-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.18); color: #fff; border-radius: 8px;
+    padding: 0.45rem 0.9rem; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.05em;
+  }
+  .lb-btn.gold { background: linear-gradient(135deg, var(--gold), var(--gold-soft)); color: #1a1407; border: none; }
+
+  /* ---------- Closing recap ---------- */
+  .recap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4rem; margin-top: 0.6rem; }
+  .rstep { border-top: 1px solid rgba(251,249,246,0.18); padding-top: 1.3rem; }
+  .rstep .n { font-family: var(--serif); font-size: 2.3rem; color: var(--gold); font-weight: 500; }
+  .rstep h3 { font-family: var(--thai-head); font-weight: 500; font-size: 1.25rem; margin: 0.3rem 0 0.5rem; }
+  .rstep p { font-weight: 300; font-size: 0.95rem; line-height: 1.55; color: rgba(251,249,246,0.7); }
+  .big-line { font-family: var(--thai-head); font-weight: 500; font-size: clamp(1.8rem,4.4vw,3.4rem); line-height: 1.2; letter-spacing: -0.01em; }
+  .big-line .gold { color: var(--gold); }
+
+  /* ---------- Chrome ---------- */
+  .progress { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: linear-gradient(90deg, var(--gold), var(--gold-soft)); z-index: 50; transition: width .4s ease; }
+  .counter { position: fixed; left: 7vw; bottom: 3.6vh; z-index: 40; font-family: var(--serif); font-size: 1rem; letter-spacing: 0.18em; color: var(--ink-40); pointer-events: none; }
+  .counter b { color: var(--gold-soft); font-weight: 600; }
+  .dots { position: fixed; right: 2.4vw; top: 50%; transform: translateY(-50%); z-index: 40; display: flex; flex-direction: column; gap: 0.8rem; }
+  .dots button { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--ink-40); background: transparent; cursor: pointer; padding: 0; transition: all .3s ease; }
+  .dots button.active { background: var(--gold); border-color: var(--gold); transform: scale(1.25); }
+  .nav-arrows { position: fixed; right: 2.2vw; bottom: 3.4vh; z-index: 40; display: flex; gap: 0.6rem; }
+  .nav-arrows button { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--ink-12); background: rgba(251,249,246,0.7); backdrop-filter: blur(6px); cursor: pointer; font-size: 1.05rem; color: var(--obsidian); display: grid; place-items: center; transition: all .25s ease; }
+  .nav-arrows button:hover { border-color: var(--gold); color: var(--gold); }
+
+  @media (max-width: 900px) {
+    .demo-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .appwin { transform: none !important; }
+    .recap { grid-template-columns: 1fr; gap: 1.4rem; }
+    .dots { display: none; }
+  }
+  /* ---------- Export mode (?export → flatten 4 slides for PDF capture) ---------- */
+  body.export { overflow: visible; }
+  body.export .deck { height: auto; overflow: visible; scroll-snap-type: none; }
+  body.export .slide { height: 720px; min-height: 0; scroll-snap-align: none; }
+  body.export .progress,
+  body.export .counter,
+  body.export .dots,
+  body.export .nav-arrows { display: none !important; }
+  body.export .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  body.export .appwin { transform: none !important; transition: none !important; }
+
+  @media print {
+    .deck { height: auto; overflow: visible; }
+    .slide { min-height: 100vh; page-break-after: always; break-after: page; }
+    .progress,.counter,.dots,.nav-arrows { display: none !important; }
+    .reveal { opacity: 1 !important; transform: none !important; }
+    .appwin { transform: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 01 — SEARCH -->
+  <section class="slide is-active">
+    <div class="demo-grid">
+      <div class="demo-text stack">
+        <div class="kicker reveal">How To Use · 01</div>
+        <h2 class="thai-head reveal">ใส่รูป “คน” ที่อยากหา</h2>
+        <p class="lead reveal">ลากรูปใบหน้าของคนที่ต้องการเข้าไป — จะเป็นแขก VIP พนักงาน หรือใครก็ได้ที่เคยอยู่ในงานของเรา แค่รู้ว่า “ใคร” ก็พอ ไม่ต้องรู้ว่าอยู่งานไหน</p>
+      </div>
+      <div class="demo-stage reveal">
+        <div class="appwin">
+          <div class="appwin-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><div class="appwin-url">🔒 archive · ค้นหาด้วยใบหน้า</div></div>
+          <div class="appwin-body">
+            <span class="pill-ai"><span class="dot"></span> ค้นหารูปด้วยใบหน้า</span>
+            <div class="ui-title">ค้นหาภาพของบุคคล</div>
+            <div class="ui-card">
+              <h4>เลือกรูปคนที่ต้องการหา</h4>
+              <p class="hint">ใช้รูปที่เห็นหน้าชัด — หลีกเลี่ยงแว่นกันแดด หมวก หรือหน้ากาก</p>
+              <div class="face-row">
+                <div class="face-chip"></div>
+                <div class="face-meta">
+                  <div class="nm">พร้อมค้นหา</div>
+                  <div class="sub">selfie_vip.jpg · เห็นหน้าชัด</div>
+                  <a class="change-link">เปลี่ยนรูป</a>
+                </div>
+              </div>
+              <div class="btn-cta gold">ค้นหารูปทั้งหมดของคนนี้</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 — RESULTS -->
+  <section class="slide">
+    <div class="demo-grid">
+      <div class="demo-text stack">
+        <div class="kicker reveal">How To Use · 02</div>
+        <h2 class="thai-head reveal">เจอภาพ “ทั้งหมด” ของคนนั้น</h2>
+        <p class="lead reveal">ระบบคืนภาพของคนคนนั้นทุกใบ ข้ามทุกงาน ทุกปี พร้อมบอกว่ามาจากงานไหน ปีไหน ในไม่กี่วินาที</p>
+        <div class="metric reveal"><b>38</b> รูป · 7 งาน · ตั้งแต่ปี 2021</div>
+      </div>
+      <div class="demo-stage reveal">
+        <div class="appwin">
+          <div class="appwin-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><div class="appwin-url">🔒 archive · ผลการค้นหา</div></div>
+          <div class="appwin-body">
+            <div class="res-head">
+              <div class="cnt">พบรูป <b>38 รูป</b> · จาก 7 งาน</div>
+              <div class="actions">
+                <span class="btn-dl">⬇ ดาวน์โหลดทั้งหมด</span>
+                <a class="lnk">ค้นหาใหม่</a>
+              </div>
+            </div>
+            <div class="filter-row">
+              <span class="chip on">ทุกปี</span><span class="chip">2025</span><span class="chip">2024</span><span class="chip">2023</span><span class="chip">2021</span>
+            </div>
+            <div class="photo-grid">
+              <div class="photo p1"><span class="mt">✓ 98%</span><span class="ev">Town Hall · 2025</span></div>
+              <div class="photo p2"><span class="mt">✓ 96%</span><span class="ev">สัมมนา · 2025</span></div>
+              <div class="photo p3"><span class="mt">✓ 97%</span><span class="ev">งานแต่ง · 2024</span></div>
+              <div class="photo p4"><span class="mt">✓ 94%</span><span class="ev">Gala · 2024</span></div>
+              <div class="photo p5"><span class="mt">✓ 95%</span><span class="ev">ปีใหม่บริษัท · 2023</span></div>
+              <div class="photo p6"><span class="mt">✓ 92%</span><span class="ev">Outing · 2023</span></div>
+              <div class="photo p7"><span class="mt">✓ 96%</span><span class="ev">สัมมนา · 2022</span></div>
+              <div class="photo p8"><span class="mt">✓ 93%</span><span class="ev">Run for Life · 2021</span></div>
+              <div class="photo p9"><span class="mt">✓ 90%</span><span class="ev">คอนเสิร์ต · 2021</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 — VIEW / DOWNLOAD -->
+  <section class="slide">
+    <div class="demo-grid">
+      <div class="demo-text stack">
+        <div class="kicker reveal">How To Use · 03</div>
+        <h2 class="thai-head reveal">เปิดดูเต็ม แล้วโหลดไปใช้</h2>
+        <p class="lead reveal">คลิกดูภาพเต็มความละเอียด เลื่อนดูทีละใบ ดาวน์โหลดทีละรูปหรือทั้งหมด — ภาพดึงจากคลังเก็บราคาถูก ไม่ใช่ Dropbox</p>
+      </div>
+      <div class="demo-stage reveal">
+        <div class="appwin">
+          <div class="appwin-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span><div class="appwin-url">🔒 archive · ดูภาพ</div></div>
+          <div class="appwin-body dark">
+            <div class="lb">
+              <div class="lb-top">
+                <span>IMAGE 3 OF 38</span>
+                <span class="meta">งานแต่ง · 2024 · ถ่ายโดย ทีม A</span>
+                <span class="x">✕</span>
+              </div>
+              <div class="lb-stage">
+                <span class="lb-nav">←</span>
+                <div class="lb-img"></div>
+                <span class="lb-nav">→</span>
+              </div>
+              <div class="lb-bottom">
+                <span class="lb-btn gold">⬇ ดาวน์โหลดรูปนี้</span>
+                <span class="lb-btn">ดาวน์โหลดทั้งหมด</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 — RECAP -->
+  <section class="slide dark">
+    <div class="stack">
+      <div class="kicker reveal">Three Steps</div>
+      <p class="big-line reveal">ค้นหา → เจอ → โหลด<br/><span class="gold">จบใน 3 ขั้น</span></p>
+      <div class="recap reveal">
+        <div class="rstep">
+          <div class="n">01</div>
+          <h3>ใส่รูปคน</h3>
+          <p>ลากรูปใบหน้าที่อยากหาเข้าไป รู้แค่ว่า “ใคร”</p>
+        </div>
+        <div class="rstep">
+          <div class="n">02</div>
+          <h3>เจอทุกภาพ</h3>
+          <p>ระบบคืนภาพของคนนั้นทุกใบ ข้ามทุกงาน ทุกปี ใน 5 วินาที</p>
+        </div>
+        <div class="rstep">
+          <div class="n">03</div>
+          <h3>โหลดไปใช้</h3>
+          <p>เปิดเต็ม ดาวน์โหลดทีละรูปหรือทั้งหมด จากคลังราคาถูก</p>
+        </div>
+      </div>
+      <p class="lead reveal" style="max-width:54ch">ไม่ต้องถามใครว่า “ใครถ่าย” ไม่ต้องไล่เปิดทีละโฟลเดอร์ — แค่รู้ว่า “ใคร” ก็เจอทุกภาพ</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="counter" id="counter"><b>01</b> / 4</div>
+<div class="dots" id="dots"></div>
+<div class="nav-arrows">
+  <button id="prev" aria-label="ก่อนหน้า">↑</button>
+  <button id="next" aria-label="ถัดไป">↓</button>
+</div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const slides = Array.from(deck.querySelectorAll('.slide'));
+  const total = slides.length;
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  const dotsWrap = document.getElementById('dots');
+  let current = 0;
+
+  slides.forEach((_, i) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-label', 'สไลด์ ' + (i + 1));
+    b.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(b);
+  });
+  const dots = Array.from(dotsWrap.children);
+  const pad = (n) => String(n + 1).padStart(2, '0');
+
+  function setActive(i) {
+    current = i;
+    slides.forEach((s, idx) => s.classList.toggle('is-active', idx === i));
+    dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+    counter.innerHTML = '<b>' + pad(i) + '</b> / ' + total;
+    progress.style.width = (total === 1 ? 100 : (i / (total - 1)) * 100) + '%';
+  }
+  function goTo(i) {
+    i = Math.max(0, Math.min(total - 1, i));
+    slides[i].scrollIntoView({ behavior: 'smooth' });
+    setActive(i);
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting && e.intersectionRatio >= 0.55) setActive(slides.indexOf(e.target));
+    });
+  }, { threshold: [0.55, 0.75] });
+  slides.forEach((s) => io.observe(s));
+
+  document.getElementById('next').addEventListener('click', () => goTo(current + 1));
+  document.getElementById('prev').addEventListener('click', () => goTo(current - 1));
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); goTo(current + 1); }
+    else if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); goTo(current - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    else if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+  });
+  if (/(?:[?&]|#)export/.test(location.search + location.hash)) document.body.classList.add('export');
+  setActive(0);
+</script>
+
+</body>
+</html>
