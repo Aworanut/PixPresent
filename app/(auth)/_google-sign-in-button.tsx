@@ -49,6 +49,7 @@ export function GoogleSignInButton({
         scopes: "https://www.googleapis.com/auth/drive.readonly",
         queryParams: {
           access_type: "offline",
+          prompt: "select_account",
         },
       },
     });
