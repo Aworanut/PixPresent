@@ -549,7 +549,7 @@ function SyncProgressToast({
       : null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 w-72 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+    <div className="fixed bottom-20 right-4 z-40 w-72 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
       {/* Progress bar strip at top */}
       {pct !== null && (
         <div className="h-0.5 w-full bg-zinc-100 dark:bg-zinc-800">
