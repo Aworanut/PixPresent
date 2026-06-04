@@ -137,3 +137,51 @@ export async function downloadDriveFile(
   // `data` is ArrayBuffer when responseType = 'arraybuffer'
   return Buffer.from(res.data as ArrayBuffer);
 }
+
+/** Transient network errors (no HTTP status) worth retrying. */
+const DRIVE_TRANSIENT_NET_CODES = new Set([
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "EAI_AGAIN",
+  "ENOTFOUND",
+  "ECONNREFUSED",
+  "EPIPE",
+]);
+
+/**
+ * Whether a Google Drive API error is worth retrying. Covers transient network
+ * blips, 429, and 5xx — plus the 403 + rate-limit reason that Drive uses for
+ * throttling (Drive often signals quota limits as 403 `userRateLimitExceeded` /
+ * `rateLimitExceeded`, not 429). Mirrors `isDropboxRetryable` for the Drive
+ * provider's `withDriveRetry`.
+ */
+export function isDriveRetryable(err: unknown): boolean {
+  const e = (err ?? {}) as {
+    status?: number;
+    code?: number | string;
+    response?: {
+      status?: number;
+      data?: { error?: { errors?: Array<{ reason?: string }> } };
+    };
+    errors?: Array<{ reason?: string }>;
+  };
+
+  // Transient network errors surface as a string `code` with no HTTP status.
+  if (typeof e.code === "string" && DRIVE_TRANSIENT_NET_CODES.has(e.code)) {
+    return true;
+  }
+
+  const status =
+    Number(e.status ?? e.response?.status ?? (typeof e.code === "number" ? e.code : 0)) || 0;
+
+  if (status === 429 || status >= 500) return true;
+
+  if (status === 403) {
+    const reasons = e.response?.data?.error?.errors ?? e.errors ?? [];
+    return reasons.some(
+      (r) => r?.reason === "rateLimitExceeded" || r?.reason === "userRateLimitExceeded",
+    );
+  }
+
+  return false;
+}
