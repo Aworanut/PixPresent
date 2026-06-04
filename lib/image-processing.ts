@@ -4,7 +4,7 @@
  *
  * Strategy (§11.2):
  *  - Web:  JPEG 85%, max 1920px long edge, strip EXIF (privacy)
- *  - Full: JPEG 95%, max 8000px (no upscale), keep EXIF for commercial use
+ *  - Full: JPEG 90%, max 4000px (no upscale), keep EXIF for commercial use
  */
 
 import sharp from "sharp";
@@ -13,7 +13,7 @@ import { clampCropToImage, type CropPixels } from "@/lib/crop";
 
 export type ProcessedImage = {
   web: Buffer; // ~300-800 KB
-  full: Buffer; // ~2-8 MB
+  full: Buffer; // ~0.5-2 MB
   artist?: string;
   copyright?: string;
   takenAt?: string;
@@ -69,12 +69,14 @@ export async function processImage(input: Buffer): Promise<ProcessedImage> {
       .clone()
       .rotate() // auto-rotate from EXIF orientation
       .resize({
-        width: 8000,
-        height: 8000,
+        width: 4000,
+        height: 4000,
         fit: "inside",
         withoutEnlargement: true,
       })
-      .jpeg({ quality: 95, mozjpeg: true })
+      // q90 libjpeg (mozjpeg off): mozjpeg's trellis quantisation dominated
+      // sync CPU (~62% of per-photo time at 8000px/q95) for marginal size gains.
+      .jpeg({ quality: 90, mozjpeg: false })
       .withMetadata() // keep EXIF
       .toBuffer(),
   ]);
