@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { PencilSquareIcon, PhoneIcon } from "@heroicons/react/24/outline";
+import { Facebook, Line, Tiktok } from "@thesvg/react";
 import { updateProfile } from "@/lib/actions/account";
 import { isStoredAvatarUrl } from "@/lib/avatar-url";
 import type { TenantProfile } from "@/lib/auth/current-tenant";
@@ -13,40 +14,14 @@ import { cn } from "@/lib/utils";
 
 // ─── Minimal Custom SVG Icons ──────────────────────────────────────────────────
 
-function LineIcon({ className }: { className?: string }) {
-  return (
-    <svg className={cn("fill-current", className)} viewBox="0 0 24 24">
-      <path 
-        fillRule="evenodd" 
-        clipRule="evenodd" 
-        d="M12 3C7.03 3 3 6.2 3 10.1c0 3.5 3.2 6.4 7.6 7l-.2 1.5c-.05.38.14.5.44.29l2-1.45c.22-.16.5-.22.77-.18c3.9.3 7.4-2.7 7.4-7.25C21 6.2 16.97 3 12 3z M7 8.5h1v3h1.2v1H7V8.5z M10.2 8.5h1v4h-1V8.5z M12.8 8.5h0.9l1.6 3v-3h0.9v4h-0.9l-1.6-3v3h-0.9V8.5z M17.5 8.5h2.5v0.9H18.4v0.6h1.3v0.9H18.4v0.7H20v0.9h-2.5V8.5z" 
-      />
-    </svg>
-  );
-}
-
+// Instagram keeps a monochrome outline mark — thesvg only ships the full-colour
+// gradient logo, which would clash with this card's unified gold treatment.
 function InstagramIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
       <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-    </svg>
-  );
-}
-
-function FacebookIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-    </svg>
-  );
-}
-
-function TikTokIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
     </svg>
   );
 }
@@ -195,7 +170,7 @@ export function ProfileSection({ tenant, email }: Props) {
               {/* Line ID */}
               {lineId && (
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400">
-                  <LineIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <Line fill="currentColor" className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
                   <span className="font-mono truncate">@{lineId.replace(/^@/, "")}</span>
                 </div>
               )}
@@ -211,7 +186,7 @@ export function ProfileSection({ tenant, email }: Props) {
               {/* Facebook */}
               {facebook && (
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400 min-w-0">
-                  <FacebookIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <Facebook fill="currentColor" className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
                   <span className="font-mono truncate" title={facebook}>
                     {facebook.replace(/^https?:\/\/(www\.)?facebook\.com\//, "")}
                   </span>
@@ -221,7 +196,7 @@ export function ProfileSection({ tenant, email }: Props) {
               {/* TikTok */}
               {tiktok && (
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400">
-                  <TikTokIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <Tiktok fill="currentColor" className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
                   <span className="font-mono truncate">@{tiktok.replace(/^@/, "")}</span>
                 </div>
               )}
