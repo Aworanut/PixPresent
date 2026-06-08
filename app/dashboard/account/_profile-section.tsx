@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { PencilSquareIcon, PhoneIcon } from "@heroicons/react/24/outline";
-import { Facebook, Line, Tiktok } from "@thesvg/react";
+import { Line, Tiktok } from "@thesvg/react";
 import { updateProfile } from "@/lib/actions/account";
 import { isStoredAvatarUrl } from "@/lib/avatar-url";
 import type { TenantProfile } from "@/lib/auth/current-tenant";
@@ -22,6 +22,23 @@ function InstagramIcon({ className }: { className?: string }) {
       <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
       <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  );
+}
+
+// Facebook as a filled gold badge with the "f" knocked out (transparent), so the
+// letter shows the card background on both light and dark themes. We render only
+// thesvg.org's circle silhouette path — dropping its separate solid-"f" path
+// turns the letter into a cutout instead of a same-colour fill.
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 666.667 666.667" fill="currentColor">
+      <g transform="matrix(1.33333 0 0 -1.33333 -133.333 800)">
+        <path
+          d="M0 0c0 138.071-111.929 250-250 250S-500 138.071-500 0c0-117.245 80.715-215.622 189.606-242.638v166.242h-51.552V0h51.552v32.919c0 85.092 38.508 124.532 122.048 124.532 15.838 0 43.167-3.105 54.347-6.211V81.986c-5.901.621-16.149.932-28.882.932-40.993 0-56.832-15.528-56.832-55.9V0h81.659l-14.028-76.396h-67.631v-171.773C-95.927-233.218 0-127.818 0 0"
+          transform="translate(600 350)"
+        />
+      </g>
     </svg>
   );
 }
@@ -186,7 +203,7 @@ export function ProfileSection({ tenant, email }: Props) {
               {/* Facebook */}
               {facebook && (
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400 min-w-0">
-                  <Facebook fill="currentColor" className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <FacebookIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
                   <span className="font-mono truncate" title={facebook}>
                     {facebook.replace(/^https?:\/\/(www\.)?facebook\.com\//, "")}
                   </span>
