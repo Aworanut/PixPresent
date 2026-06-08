@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CloudIcon, FolderIcon } from "@heroicons/react/24/outline";
+import { Dropbox, GoogleDrive } from "@thesvg/react";
 import { disconnectProvider, type StorageProviderId } from "@/lib/actions/connections";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
@@ -15,8 +15,8 @@ export type ProviderStatus = {
 };
 
 const ICONS: Record<StorageProviderId, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
-  google: FolderIcon,
-  dropbox: CloudIcon,
+  google: GoogleDrive,
+  dropbox: Dropbox,
 };
 
 // ─── Feedback banner (driven by OAuth callback query params) ─────────────────────
@@ -91,7 +91,7 @@ function ProviderCard({ provider }: { provider: ProviderStatus }) {
     <div className="flex items-center justify-between gap-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3.5">
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex-shrink-0 h-9 w-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-          <Icon className="h-5 w-5 stroke-[1.5] text-zinc-600 dark:text-zinc-300" />
+          <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
