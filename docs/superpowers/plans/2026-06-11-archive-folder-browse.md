@@ -90,6 +90,23 @@ query:
 
 Then confirm with `mcp__supabase__list_tables` (verbose) that `photos.folder_path` exists on prod.
 
+- [ ] **Step 6: Reconcile the migration version with prod (REQUIRED — avoids a `db push` break)**
+
+`apply_migration` records its OWN timestamp on prod (the apply time), NOT the repo filename's `20260611120000`. If left mismatched, a future `supabase db push` sees the repo migration as un-applied → re-runs `add column folder_path` → **error: column already exists** (this exact trap was hit with the people migration earlier this session).
+
+Read the version prod actually recorded, then rename the repo file to match:
+
+```bash
+# 1. Get the version prod recorded (last row, name = add_folder_path_to_photos):
+#    use mcp__supabase__list_migrations  → note its `version` (e.g. 20260611NNNNNN)
+# 2. Rename the local file to that exact version:
+git mv supabase/migrations/20260611120000_add_folder_path_to_photos.sql \
+       supabase/migrations/<PROD_VERSION>_add_folder_path_to_photos.sql
+git commit --amend --no-edit   # fold into the Step 4 commit, or a fresh commit
+```
+
+After this, repo and prod agree on the version → `db push` treats it as already applied.
+
 ---
 
 ## Task 2: `SourceFile.relativePath` + Dropbox recursive listing
@@ -344,7 +361,7 @@ import {
     },
 ```
 
-(`listImagesInFolder` is still imported transitively via `listImagesRecursive`; remove the now-unused direct import of `listImagesInFolder` from this provider if present — it is not imported here, so no change.)
+(`google-drive-provider.ts:3` currently imports `listImagesInFolder` directly — the import block above replaces that name with `listImagesRecursive`, so the old import is dropped. `listImagesInFolder` is still used internally by `listImagesRecursive` inside `google-drive-api.ts`, so it is not deleted there.)
 
 - [ ] **Step 3: Typecheck + lint**
 
@@ -439,7 +456,24 @@ In the photo insert (around line 647), add `folder_path`:
 
 - [ ] **Step 4: Persist `folder_path` in the R2-backfill path too**
 
-The `backfillR2Url` helper (around line 531) updates an existing row that was indexed but missing its R2 URL. Add `folder_path` to that update so backfilled rows also get their path. Locate the `.from("photos").update({...})` inside `backfillR2Url` and add `folder_path: file.relativePath ?? ""` to the update object. (If `backfillR2Url` does not currently receive `file`, it already does — it takes `{ file, ... }` per the call site at line 355.)
+The `backfillR2Url` helper (it already receives `file`) updates a row that was indexed but missing its R2 URL. Add `folder_path` to that update (around line 532) so backfilled rows also get their path:
+
+```ts
+  await admin
+    .from("photos")
+    .update({
+      r2_web_url: webUpload.ok ? webUpload.url : null,
+      r2_full_url: fullUpload.ok ? fullUpload.url : null,
+      original_filename: file.name,
+      taken_at: exif.takenAt || file.modifiedTime || new Date().toISOString(),
+      photographer_name: exif.artist || null,
+      copyright: exif.copyright || null,
+      event_storage_folder_id: folderDbId,
+      storage_bytes: web.length + full.length,
+      folder_path: file.relativePath ?? "",
+    })
+    .eq("id", existingPhotoId);
+```
 
 - [ ] **Step 5: Typecheck + lint**
 
@@ -633,20 +667,33 @@ export type GalleryPhoto = {
 
 - [ ] **Step 3: Add folder state + derive the view, scoping `visible` to the current folder**
 
-In `app/dashboard/events/[id]/_photo-gallery.tsx`, import the helper and icons at the top:
+In `app/dashboard/events/[id]/_photo-gallery.tsx`, import the helper, icons, and `useSearchParams` at the top:
 
 ```ts
+import { useSearchParams } from "next/navigation";
 import { deriveFolderView } from "@/lib/archive/folder-view";
 import { FolderIcon, ChevronRightIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 ```
 
-Inside `PhotoGallery`, after the existing state declarations (e.g. after `personFilter`), add the folder-navigation state:
+Inside `PhotoGallery`, after the existing state declarations (e.g. after `personFilter`), add the folder-navigation state. **`path` lives in the URL (`?path=`)** via the native History API → browser Back/Forward, refresh, and shared folder links all work; and because every photo is already in this client component's props, `pushState` filters client-side with **no server refetch**:
 
 ```ts
-  // File-explorer navigation (issue: archive folder browse)
-  const [path, setPath] = useState("");
+  // File-explorer navigation (issue: archive folder browse).
+  const searchParams = useSearchParams();
+  const path = searchParams.get("path") ?? "";
+  const setPath = (p: string) => {
+    const params = new URLSearchParams(window.location.search);
+    if (p) params.set("path", p);
+    else params.delete("path");
+    const qs = params.toString();
+    // Native History API updates useSearchParams without re-running the server
+    // component (Next 16 syncs it); browser Back pops to the previous folder.
+    window.history.pushState(null, "", qs ? `?${qs}` : window.location.pathname);
+  };
   const [flat, setFlat] = useState(false); // true = ignore folders, show whole event
 ```
+
+> Note: `useSearchParams()` here is fine because the event page is auth-gated (dynamic). If `next build` ever warns that `useSearchParams` needs a Suspense boundary, wrap `<PhotoGallery>` in `app/dashboard/events/[id]/page.tsx` with `<Suspense>`.
 
 Replace the current `visible` derivation so that, in folder mode, the grid is scoped to photos at the current path, and subfolders are derived from the tab-filtered set. Find:
 
