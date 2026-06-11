@@ -126,3 +126,43 @@ export async function getPendingScanCount(): Promise<number> {
   if (error) throw error;
   return count ?? 0;
 }
+
+export type EventPerson = { id: string; name: string; count: number };
+export type EventPeopleResult = {
+  people: EventPerson[];
+  photoIdsByPerson: Record<string, string[]>;
+};
+
+/** Group flat (person × photo) rows into a sorted people list + photo-id map. Pure. */
+export function groupEventPeople(
+  rows: { personId: string; name: string; photoId: string }[],
+): EventPeopleResult {
+  const photoIdsByPerson: Record<string, string[]> = {};
+  const nameById: Record<string, string> = {};
+  for (const r of rows) {
+    (photoIdsByPerson[r.personId] ??= []).push(r.photoId);
+    nameById[r.personId] = r.name;
+  }
+  const people = Object.keys(photoIdsByPerson)
+    .map((id) => ({ id, name: nameById[id], count: photoIdsByPerson[id].length }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  return { people, photoIdsByPerson };
+}
+
+/** Confirmed named people in an event, with per-person photo ids (RLS-scoped). */
+export async function getEventPeople(eventId: string): Promise<EventPeopleResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("photo_people")
+    .select("person_id, photo_id, people!inner(name)")
+    .eq("event_id", eventId)
+    .eq("status", "confirmed");
+  if (error) throw error;
+
+  const flat = (data ?? []).map((r) => ({
+    personId: r.person_id,
+    photoId: r.photo_id,
+    name: (r.people as unknown as { name: string }).name,
+  }));
+  return groupEventPeople(flat);
+}
