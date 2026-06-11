@@ -43,19 +43,37 @@ export type DropboxEntry = {
   id: string;
   name: string;
   path_lower?: string;
+  path_display?: string;
   size?: number;
   client_modified?: string;
   server_modified?: string;
 };
 
+/**
+ * Folder path of a Dropbox file relative to the connected root folder.
+ * Strips the root prefix (case-insensitive — Dropbox lowercases path_lower)
+ * and the filename, returning just the in-between directories joined with "/".
+ * "" means the file sits directly in the connected folder.
+ */
+export function dropboxRelativePath(rootPath: string, filePath: string): string {
+  const root = rootPath.replace(/\/+$/, "");
+  const rel = filePath.toLowerCase().startsWith(root.toLowerCase())
+    ? filePath.slice(root.length)
+    : filePath;
+  const trimmed = rel.replace(/^\/+/, "");
+  const lastSlash = trimmed.lastIndexOf("/");
+  return lastSlash === -1 ? "" : trimmed.slice(0, lastSlash);
+}
+
 /** Map a Dropbox file entry to the provider-agnostic SourceFile. */
-export function mapDropboxEntry(e: DropboxEntry): SourceFile {
+export function mapDropboxEntry(e: DropboxEntry, relativePath = ""): SourceFile {
   return {
     id: e.id,
     name: e.name,
     mimeType: ext2mime(e.name),
     size: e.size,
     modifiedTime: e.client_modified ?? e.server_modified,
+    relativePath,
   };
 }
 
@@ -183,7 +201,7 @@ export async function dropboxResolveSharedLink(
   return { ok: true, path: json.path_lower, name: json.name ?? "Dropbox" };
 }
 
-/** List image files in a folder (non-recursive), following pagination. */
+/** List image files in a folder AND all subfolders, following pagination. */
 export async function dropboxListFolder(
   accessToken: string,
   path: string,
@@ -197,14 +215,17 @@ export async function dropboxListFolder(
   let res = await fetch(`${RPC_BASE}/files/list_folder`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ path, recursive: false, limit: 2000 }),
+    body: JSON.stringify({ path, recursive: true, limit: 2000 }),
   });
   if (!res.ok) throw new Error(`Dropbox list_folder failed: ${res.status} ${await res.text()}`);
   let json = (await res.json()) as { entries: DropboxEntry[]; cursor: string; has_more: boolean };
 
   const collect = (entries: DropboxEntry[]) => {
     for (const e of entries) {
-      if (e[".tag"] === "file" && IMAGE_EXT.test(e.name)) out.push(mapDropboxEntry(e));
+      if (e[".tag"] === "file" && IMAGE_EXT.test(e.name)) {
+        const full = e.path_display ?? e.path_lower ?? `${path}/${e.name}`;
+        out.push(mapDropboxEntry(e, dropboxRelativePath(path, full)));
+      }
     }
   };
   collect(json.entries);

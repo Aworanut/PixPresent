@@ -20,6 +20,8 @@ export type SourceFile = {
   size?: number;
   /** ISO timestamp; best-available "taken/modified" hint, used as taken_at fallback. */
   modifiedTime?: string;
+  /** Subfolder path relative to the connected folder root (e.g. 'a/b'). '' = root. */
+  relativePath?: string;
 };
 
 export interface StorageProvider {
