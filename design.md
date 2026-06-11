@@ -1,9 +1,10 @@
-# FaceFind Design System Spec — Luxury Minimalism & High-End Editorial
-*Inspired by high-end fashion and wedding digital magazines (e.g., Vogue Weddings).*
+# PixPresent Design System Spec — Warm Editorial
 
-This document defines the custom **Bilingual Design System** developed specifically for the **FaceFind AI Photo Retrieval Platform**. It focuses on generous breathing space, typography-first hierarchy, hairline visuals, and a timeless neutral color palette to avoid standard generic AI aesthetics.
+*Editorial restraint (Cormorant typography, generous whitespace, hairline detail) meets a warm, approachable palette — inspired by high-end fashion & wedding magazines (e.g. Vogue Weddings).*
 
-The following B2C SaaS components have been officially chosen, validated, and locked in the Interactive Specimen Lab.
+This document defines the custom **Bilingual Design System** for the **PixPresent AI Photo Retrieval Platform**. The product leads with a **Warm Editorial** direction — a warm linen base, oversized Cormorant headlines, and champagne-gold accents — keeping the typography-first hierarchy and hairline visuals while trading the cool neutral palette for warmth. The original **Cream & Obsidian** luxury-minimalism palette is retained as the **in-app / legacy** system (see §2.2): it still backs the `globals.css :root` tokens, the dashboard/auth shell, and the locked components in §3.
+
+The B2C SaaS components in §3 were chosen, validated, and locked in the Interactive Specimen Lab.
 
 ---
 
@@ -50,24 +51,57 @@ English headings and Thai headings are handled by two distinct typefaces:
     }
     ```
 
+### 1.5 Editorial Display Scale (marketing surfaces)
+**ความพอดีคือหัวใจของความสวยงาม — restraint is the point.** Oversized type earns its drama *only* because everything around it stays quiet. One statement element per view; let whitespace carry the rest. Bigger is balanced by less, never by more.
+
+*   **Hero headline:** Cormorant `font-light`, `clamp(3rem, 6vw, 6.25rem)`, `line-height: 0.98`; one key phrase in *italic* with the sun gradient. One hero headline per page.
+*   **Section titles:** Cormorant `font-light`, `clamp(2.25rem, 4vw, 3.75rem)`.
+*   **Eyebrows:** 12px, `uppercase`, `letter-spacing: 0.28em`, editorial gold `#A16207`, optionally with a short `#C9A227` rule — a whisper, not a heading.
+*   **Stat / price numerals:** Cormorant, large (`text-3xl`–`text-5xl`), `font-medium`, paired with small muted sans labels.
+*   **Restraint checklist (ความพอดี):** one gradient only (the primary CTA) · gold as accent, never fill · generous vertical rhythm (`py-20` / `py-28` sections) · motion kept subtle (§3.6) · if a surface feels busy, remove — don't add.
+
+In-app surfaces keep the tighter heading sizes from §1.1.
+
 ---
 
-## 2. Timeless Color System (Cream & Obsidian)
-Avoid heavy colorful gradients. Use curated, warm neutral tones to convey luxury.
+## 2. Color System
 
-### 2.1 Default Theme (Light Cream)
+The product **leads with Warm Editorial** (§2.1). The original **Cream & Obsidian** luxury-minimalism palette (§2.2) is retained as the in-app / legacy system — it still backs `globals.css :root` / `.dark` tokens, the dashboard/auth shell, and the locked components in §3.
+
+### 2.1 Warm Editorial Palette — [PRIMARY]
+Warm, light, and emotional. Gradients are reserved for the primary action + soft decorative glows; everything else stays flat. Gold is an **accent, never a fill**. Oversized Cormorant headlines + generous whitespace carry the hierarchy.
+
+| Role | Value | Notes |
+|---|---|---|
+| Background (linen) | `#FDFBF7` | warm off-white base |
+| Foreground (espresso) | `#271A12` | headings + strong text |
+| Body text | `#5C4A3A` | muted warm brown |
+| Hint / caption | `#7A6A59` | lightest text |
+| Hairlines | `#EFE2CE` · `#EBDFC9` | warm borders / dividers |
+| Primary action | `#FB923C → #EA580C` | sun gradient — **CTAs only** |
+| Sage (soft tint) | `#84A98C` | chips / badges at ~15% opacity |
+| Editorial gold — text | `#A16207` | eyebrows, key-word accents, inline icons; contrast-safe (≥ 4.5:1) on linen |
+| Editorial gold — lines / rings | `#C9A227` | eyebrow rules, matched-photo "you" ring, dividers; decorative only |
+| Surfaces | white / `rgba(255,255,255,0.7)` | warm hairline border + soft warm shadow `0 30px 80px -30px rgba(124,45,18,0.35)` |
+
+**Gold rule:** `#A16207` (text) and `#C9A227` (lines) are the editorial golds. The brighter champagne `#D4AF37` stays for **in-app interactive indicators** (§2.2.3) — never use it as editorial text on light backgrounds (fails contrast).
+
+### 2.2 In-app / Legacy — Cream & Obsidian (Luxury Minimalism)
+The cool neutral system still in use across the app shell and the locked components in §3. Avoid heavy colorful gradients here; curated neutral tones convey restraint.
+
+#### 2.2.1 Default Theme (Light Cream)
 * **Background:** Soft Cream / Off-White (`#FBF9F6`)
 * **Foreground / Default Text:** Deep Charcoal (`#111111`)
 * **Border Lines:** Hairline borders (`rgba(17, 17, 17, 0.1)`)
 * **Selection Highlight:** Soft champagne-light (`#F5EEDC`)
 
-### 2.2 Dark Theme (Obsidian Charcoal)
+#### 2.2.2 Dark Theme (Obsidian Charcoal)
 * **Background:** Deep Charcoal / Obsidian (`#111111`)
 * **Foreground / Default Text:** Soft Warm Cream (`#FBF9F6`)
 * **Border Lines:** Thin hairline outlines (`rgba(251, 249, 246, 0.1)`)
 * **Selection Highlight:** Muted zinc-800 (`#27272A`)
 
-### 2.3 Muted Accent Color (Champagne Gold)
+#### 2.2.3 Muted Accent Color (Champagne Gold)
 * **Hex Code:** `#D4AF37`
 * **Rules of Use:** Use **sparingly** and **only** for interactive indicators (e.g. active file drops, scanning lines, focus borders, active link pills).
 
@@ -189,6 +223,29 @@ Opening gallery photos activates a full-screen backdrop overlay with blurred aes
 .photo-modal-overlay.active {
   display: flex;
   opacity: 1;
+}
+```
+
+### 3.6 Reveal Motion — [LOCKED] Stagger & Scroll Entrance
+Content enters with a subtle **fade + upward translate** — never a sideways slide. All entrance motion shares the system's signature ease-out curve `cubic-bezier(0.16, 1, 0.3, 1)` (same as `.toast-top-banner` and `.cta-button`) so motion feels consistent everywhere. Motion is **transform + opacity only** (GPU-friendly) and is always disabled under `prefers-reduced-motion`.
+
+*   **`.photo-reveal` — staggered grid entrance.** Tiles fade up (`translateY(10px) → 0`) over `0.4s`, each delayed by `index × 40ms` (capped at ~10 so large galleries never lag). Powers the hero packages-gallery mock and the **guest face-search results grid**.
+*   **`.reveal-up` — on-load hero entrance.** Above-the-fold elements (eyebrow, headline, sub, CTAs, stats) fade up (`translateY(16px) → 0`) over `0.6s`, staggered via inline `animationDelay`.
+*   **`.reveal-on-scroll` — scroll-triggered entrance.** Below-the-fold sections start hidden and run `revealUp` when scrolled into view, via the `Reveal` wrapper (`app/_reveal.tsx`, IntersectionObserver, `threshold: 0.15`).
+
+```css
+@keyframes photoReveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes revealUp   { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+.photo-reveal     { opacity: 0; animation: photoReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.reveal-up        { opacity: 0; animation: revealUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.reveal-on-scroll { opacity: 0; transform: translateY(16px); }
+.reveal-on-scroll.is-visible { animation: revealUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-reveal, .reveal-up, .reveal-on-scroll, .reveal-on-scroll.is-visible {
+    opacity: 1 !important; transform: none !important; animation: none !important;
+  }
 }
 ```
 
