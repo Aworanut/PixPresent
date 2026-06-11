@@ -122,6 +122,44 @@ export async function listImagesInFolder(
 }
 
 /**
+ * List image files in a Drive folder AND all nested subfolders, recording each
+ * file's path relative to the starting folder (e.g. 'พิธีเช้า/ช่วงเช้า'). The
+ * starting folder itself contributes relativePath ''. Reuses listImagesInFolder
+ * per level; walks subfolders via the folder mimeType.
+ */
+export async function listImagesRecursive(
+  drive: ReturnType<typeof getDriveClient>,
+  folderId: string,
+  relativePath = "",
+): Promise<Array<{ file: DriveFile; relativePath: string }>> {
+  const out: Array<{ file: DriveFile; relativePath: string }> = [];
+
+  // Images directly in this folder.
+  const images = await listImagesInFolder(drive, folderId);
+  for (const file of images) out.push({ file, relativePath });
+
+  // Recurse into subfolders.
+  let pageToken: string | undefined;
+  do {
+    const res = await drive.files.list({
+      q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: "nextPageToken, files(id, name)",
+      pageSize: 1000,
+      pageToken,
+    });
+    for (const sub of res.data.files ?? []) {
+      if (sub.id && sub.name) {
+        const childPath = relativePath ? `${relativePath}/${sub.name}` : sub.name;
+        out.push(...(await listImagesRecursive(drive, sub.id, childPath)));
+      }
+    }
+    pageToken = res.data.nextPageToken ?? undefined;
+  } while (pageToken);
+
+  return out;
+}
+
+/**
  * Download a Drive file as a Buffer.
  * Use for images before resizing + uploading to R2 in #7.
  */

@@ -1,6 +1,6 @@
 import {
   getDriveClient,
-  listImagesInFolder,
+  listImagesRecursive,
   downloadDriveFile,
   isDriveRetryable,
   type DriveFile,
@@ -40,8 +40,8 @@ export function createGoogleDriveProvider(refreshToken: string): StorageProvider
   const drive = getDriveClient(refreshToken);
   return {
     async listImages(folderRef: string): Promise<SourceFile[]> {
-      const files = await withDriveRetry(() => listImagesInFolder(drive, folderRef));
-      return files.map(mapDriveFile);
+      const entries = await withDriveRetry(() => listImagesRecursive(drive, folderRef));
+      return entries.map(({ file, relativePath }) => ({ ...mapDriveFile(file), relativePath }));
     },
     downloadFile(fileId: string): Promise<Buffer> {
       return withDriveRetry(() => downloadDriveFile(drive, fileId));
