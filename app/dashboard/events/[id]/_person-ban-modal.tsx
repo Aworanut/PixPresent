@@ -10,7 +10,28 @@ type FaceDetail = {
   bbox: { left: number; top: number; width: number; height: number };
 };
 
-type Mode = "hide" | "unhide";
+// Payload emitted when a face is picked in mode="filter" — drives the gallery's
+// "ดูเฉพาะรูปของคนนี้" filter (issue #22). Shape mirrors person_reference_faces
+// fields so a future "บันทึกเป็นบุคคล" enrollment can reuse it directly.
+export type FilterPayload = {
+  faceId: string;
+  sourcePhotoId: string;
+  bbox: { left: number; top: number; width: number; height: number };
+  sourceUrl: string | null;
+  photoIds: Set<string>;
+};
+
+// Emitted when a face is picked in mode="enroll" — drives "บันทึกเป็นบุคคล".
+// Shape matches person_reference_faces (source='tagged'); the R2 key is derived
+// server-side from sourcePhotoId, so none is carried here.
+export type EnrollPayload = {
+  faceId: string;
+  sourcePhotoId: string;
+  bbox: { left: number; top: number; width: number; height: number };
+};
+
+type BanMode = "hide" | "unhide";
+type Mode = BanMode | "filter" | "enroll";
 
 // ─── PersonPickerModal ────────────────────────────────────────────────────────
 // Stage 1: pick a face from this photo. Stage 2: preview that person's photos
@@ -21,26 +42,54 @@ export function PersonPickerModal({
   photo,
   mode,
   onClose,
+  onApplyFilter,
+  onApplyEnroll,
 }: {
   eventId: string;
-  photo: { r2_web_url: string | null; face_details: FaceDetail[] };
+  photo: { id: string; r2_web_url: string | null; face_details: FaceDetail[] };
   mode: Mode;
   onClose: () => void;
+  onApplyFilter?: (payload: FilterPayload) => void;
+  onApplyEnroll?: (payload: EnrollPayload) => void;
 }) {
   const [searching, startSearch] = useTransition();
   const [activeFaceId, setActiveFaceId] = useState<string | null>(null);
   const [previews, setPreviews] = useState<FaceMatchPreview[] | null>(null);
 
-  const pickFace = (faceId: string) => {
-    setActiveFaceId(faceId);
+  const pickFace = (face: FaceDetail) => {
+    setActiveFaceId(face.face_id);
+    // Enroll just needs the picked face — no similarity search required.
+    if (mode === "enroll") {
+      onApplyEnroll?.({
+        faceId: face.face_id,
+        sourcePhotoId: photo.id,
+        bbox: face.bbox,
+      });
+      onClose();
+      return;
+    }
     startSearch(async () => {
-      const result = await findMatchingFacesByFaceId(eventId, faceId);
+      const result = await findMatchingFacesByFaceId(eventId, face.face_id);
+      // mode="filter": hand the matched photo ids back to the gallery and close,
+      // skipping the hide/unhide preview stage entirely.
+      if (mode === "filter") {
+        onApplyFilter?.({
+          faceId: face.face_id,
+          sourcePhotoId: photo.id,
+          bbox: face.bbox,
+          sourceUrl: photo.r2_web_url,
+          photoIds: new Set(result.map((r) => r.photoId)),
+        });
+        onClose();
+        return;
+      }
       setPreviews(result);
     });
   };
 
-  // Stage 2 — preview the picked person's photos
-  if (previews) {
+  // Stage 2 — preview the picked person's photos (only in hide/unhide mode;
+  // filter and enroll short-circuit in pickFace and never set previews).
+  if (previews && mode !== "filter" && mode !== "enroll") {
     return (
       <FaceMatchPreviewModal
         eventId={eventId}
@@ -68,7 +117,13 @@ export function PersonPickerModal({
       >
         <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
           <p className="font-mono text-xs tracking-widest uppercase text-zinc-400">
-            {mode === "hide" ? "เลือกบุคคลที่จะซ่อน" : "เลือกบุคคลที่จะแสดง"}
+            {mode === "hide"
+              ? "เลือกบุคคลที่จะซ่อน"
+              : mode === "filter"
+                ? "เลือกใบหน้าที่จะกรอง"
+                : mode === "enroll"
+                  ? "เลือกใบหน้าเพื่อบันทึกเป็นบุคคล"
+                  : "เลือกบุคคลที่จะแสดง"}
           </p>
           <button
             type="button"
@@ -97,7 +152,7 @@ export function PersonPickerModal({
                     key={face.face_id}
                     type="button"
                     disabled={searching}
-                    onClick={() => pickFace(face.face_id)}
+                    onClick={() => pickFace(face)}
                     title="คลิกเพื่อดูรูปของคนนี้"
                     style={{
                       position: "absolute",
@@ -124,7 +179,13 @@ export function PersonPickerModal({
         </div>
 
         <div className="px-5 py-3 border-t border-zinc-800 flex items-center justify-between gap-3">
-          <p className="text-xs text-zinc-500">คลิกใบหน้าเพื่อดูรูปของคนนั้น</p>
+          <p className="text-xs text-zinc-500">
+            {mode === "filter"
+              ? "คลิกใบหน้าเพื่อกรองรูปของคนนั้น"
+              : mode === "enroll"
+                ? "คลิกใบหน้าเพื่อบันทึกเป็นบุคคล"
+                : "คลิกใบหน้าเพื่อดูรูปของคนนั้น"}
+          </p>
           <button
             type="button"
             onClick={onClose}
@@ -170,7 +231,7 @@ export function FaceMatchPreviewModal({
 }: {
   eventId: string;
   previews: FaceMatchPreview[];
-  mode: Mode;
+  mode: BanMode;
   onClose: () => void;
   onConfirmed: () => void;
 }) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useTransition, useRef, useEffect, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
@@ -10,7 +10,8 @@ import {
   deletePhotos,
   type PhotoVisibility,
 } from "@/lib/actions/photos";
-import { PersonPickerModal } from "./_person-ban-modal";
+import { PersonPickerModal, type FilterPayload, type EnrollPayload } from "./_person-ban-modal";
+import { enrollPersonAction } from "@/lib/actions/people";
 import { PhotoBadge } from "@/components/ui/photo-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -24,6 +25,8 @@ import {
   UserIcon,
   EyeSlashIcon,
   EyeIcon,
+  MagnifyingGlassIcon,
+  UserPlusIcon,
 } from "@heroicons/react/24/outline";
 
 type FaceDetail = {
@@ -66,25 +69,30 @@ export function PhotoGallery({ eventId, photos }: Props) {
   // Lightbox State
   const [activePhotoIdx, setActivePhotoIdx] = useState<number | null>(null);
 
+  // Person filter: narrow the gallery to one person's photos (issue #22)
+  const [personFilter, setPersonFilter] = useState<FilterPayload | null>(null);
+
   // Tab split
   const activePhotos = photos.filter((p) => p.visibility !== "hidden");
   const hiddenPhotos = photos.filter((p) => p.visibility === "hidden");
   const tabPhotos = tab === "active" ? activePhotos : hiddenPhotos;
 
-  // Face count filter
-  const visible = tabPhotos.filter((p) => {
-    if (faceFilter === "all") return true;
-    const n = p.face_details.length;
-    if (faceFilter === "0") return n === 0;
-    if (faceFilter === "1") return n === 1;
-    if (faceFilter === "2") return n === 2;
-    if (faceFilter === "3+") return n >= 3;
-    return true;
-  });
+  // Face count filter + person filter (issue #22) — intersect both layers
+  const visible = tabPhotos
+    .filter((p) => {
+      if (faceFilter === "all") return true;
+      const n = p.face_details.length;
+      if (faceFilter === "0") return n === 0;
+      if (faceFilter === "1") return n === 1;
+      if (faceFilter === "2") return n === 2;
+      if (faceFilter === "3+") return n >= 3;
+      return true;
+    })
+    .filter((p) => !personFilter || personFilter.photoIds.has(p.id));
 
   // Clear selection and close lightbox when the tab/filter changes — adjust
   // state during render (React's recommended alternative to a reset effect).
-  const tabFilterKey = `${tab}|${faceFilter}`;
+  const tabFilterKey = `${tab}|${faceFilter}|${personFilter?.faceId ?? ""}`;
   const [prevTabFilterKey, setPrevTabFilterKey] = useState(tabFilterKey);
   if (prevTabFilterKey !== tabFilterKey) {
     setPrevTabFilterKey(tabFilterKey);
@@ -280,9 +288,51 @@ export function PhotoGallery({ eventId, photos }: Props) {
         </div>
       )}
 
+      {/* ── Active person filter chip (issue #22) ───────────────────────────── */}
+      {personFilter && (
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 border border-[rgba(212,175,55,0.3)]">
+          {/* Face thumbnail — crop the ref face from its source photo via bbox */}
+          <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-zinc-300 dark:bg-zinc-700">
+            {personFilter.sourceUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={personFilter.sourceUrl}
+                alt=""
+                className="absolute max-w-none"
+                style={{
+                  width: `${(1 / personFilter.bbox.width) * 28}px`,
+                  left: `${-(personFilter.bbox.left / personFilter.bbox.width) * 28}px`,
+                  top: `${-(personFilter.bbox.top / personFilter.bbox.width) * 28}px`,
+                }}
+              />
+            )}
+          </div>
+          <span className="text-xs text-zinc-600 dark:text-zinc-400">
+            กรองตามใบหน้า · เจอ {visible.length} รูป
+          </span>
+          <button
+            type="button"
+            onClick={() => setPersonFilter(null)}
+            className="ml-auto flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+            aria-label="ล้างตัวกรองใบหน้า"
+          >
+            <XMarkIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ── Empty state ─────────────────────────────────────────────────────── */}
       {visible.length === 0 && (
-        <EmptyState icon={PhotoIcon} message={tab === "hidden" ? "ยังไม่มีรูปที่ไม่เผยแพร่" : "ยังไม่มีรูป"} />
+        <EmptyState
+          icon={PhotoIcon}
+          message={
+            personFilter
+              ? "บุคคลนี้ไม่มีรูปในแท็บนี้ — ลองสลับแท็บ หรือกด ✕ ล้างตัวกรอง"
+              : tab === "hidden"
+                ? "ยังไม่มีรูปที่ไม่เผยแพร่"
+                : "ยังไม่มีรูป"
+          }
+        />
       )}
 
       {/* ── Grid ────────────────────────────────────────────────────────────── */}
@@ -293,6 +343,7 @@ export function PhotoGallery({ eventId, photos }: Props) {
               key={photo.id}
               photo={photo}
               eventId={eventId}
+              onApplyPersonFilter={setPersonFilter}
               selectMode={selectMode}
               selected={selectedIds.has(photo.id)}
               onToggleSelect={toggleSelect}
@@ -310,6 +361,7 @@ export function PhotoGallery({ eventId, photos }: Props) {
               key={photo.id}
               photo={photo}
               eventId={eventId}
+              onApplyPersonFilter={setPersonFilter}
               selectMode={selectMode}
               selected={selectedIds.has(photo.id)}
               onToggleSelect={toggleSelect}
@@ -341,6 +393,7 @@ export function PhotoGallery({ eventId, photos }: Props) {
 function GridCard({
   photo,
   eventId,
+  onApplyPersonFilter,
   selectMode,
   selected,
   onToggleSelect,
@@ -348,6 +401,7 @@ function GridCard({
 }: {
   photo: GalleryPhoto;
   eventId: string;
+  onApplyPersonFilter: (payload: FilterPayload) => void;
   selectMode: boolean;
   selected: boolean;
   onToggleSelect: (id: string) => void;
@@ -423,7 +477,7 @@ function GridCard({
           className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()}
         >
-          <PhotoMenu photo={photo} eventId={eventId} />
+          <PhotoMenu photo={photo} eventId={eventId} onApplyPersonFilter={onApplyPersonFilter} />
         </div>
       )}
     </div>
@@ -435,6 +489,7 @@ function GridCard({
 function ListRow({
   photo,
   eventId,
+  onApplyPersonFilter,
   selectMode,
   selected,
   onToggleSelect,
@@ -442,6 +497,7 @@ function ListRow({
 }: {
   photo: GalleryPhoto;
   eventId: string;
+  onApplyPersonFilter: (payload: FilterPayload) => void;
   selectMode: boolean;
   selected: boolean;
   onToggleSelect: (id: string) => void;
@@ -496,7 +552,7 @@ function ListRow({
           className="opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()}
         >
-          <PhotoMenu photo={photo} eventId={eventId} />
+          <PhotoMenu photo={photo} eventId={eventId} onApplyPersonFilter={onApplyPersonFilter} />
         </div>
       )}
     </div>
@@ -578,9 +634,20 @@ function HairlineButton({
 
 // ─── ⋮ Photo menu ─────────────────────────────────────────────────────────────
 
-function PhotoMenu({ photo, eventId }: { photo: GalleryPhoto; eventId: string }) {
+function PhotoMenu({
+  photo,
+  eventId,
+  onApplyPersonFilter,
+}: {
+  photo: GalleryPhoto;
+  eventId: string;
+  onApplyPersonFilter: (payload: FilterPayload) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [filterPickerOpen, setFilterPickerOpen] = useState(false);
+  const [enrollPickerOpen, setEnrollPickerOpen] = useState(false);
+  const [enrollPayload, setEnrollPayload] = useState<EnrollPayload | null>(null);
   const [pending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -651,12 +718,26 @@ function PhotoMenu({ photo, eventId }: { photo: GalleryPhoto; eventId: string })
           <div className="my-1 border-t border-[rgba(17,17,17,0.06)] dark:border-[rgba(251,249,246,0.06)]" />
 
           {photo.face_details.length > 0 && (
-            <MenuItem
-              onClick={() => { setOpen(false); setPickerOpen(true); }}
-              icon={isHidden ? EyeIcon : EyeSlashIcon}
-            >
-              {isHidden ? "แสดงบุคคล" : "ซ่อนบุคคล"}
-            </MenuItem>
+            <>
+              <MenuItem
+                onClick={() => { setOpen(false); setPickerOpen(true); }}
+                icon={isHidden ? EyeIcon : EyeSlashIcon}
+              >
+                {isHidden ? "แสดงบุคคล" : "ซ่อนบุคคล"}
+              </MenuItem>
+              <MenuItem
+                onClick={() => { setOpen(false); setFilterPickerOpen(true); }}
+                icon={MagnifyingGlassIcon}
+              >
+                ดูเฉพาะรูปของคนนี้
+              </MenuItem>
+              <MenuItem
+                onClick={() => { setOpen(false); setEnrollPickerOpen(true); }}
+                icon={UserPlusIcon}
+              >
+                บันทึกเป็นบุคคล
+              </MenuItem>
+            </>
           )}
 
           <div className="my-1 border-t border-[rgba(17,17,17,0.06)] dark:border-[rgba(251,249,246,0.06)]" />
@@ -680,6 +761,126 @@ function PhotoMenu({ photo, eventId }: { photo: GalleryPhoto; eventId: string })
           />,
           document.body,
         )}
+
+      {/* Person filter picker (issue #22) — picks a face, hands ids to the gallery */}
+      {filterPickerOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <PersonPickerModal
+            eventId={eventId}
+            photo={photo}
+            mode="filter"
+            onClose={() => setFilterPickerOpen(false)}
+            onApplyFilter={(payload) => {
+              onApplyPersonFilter(payload);
+              setFilterPickerOpen(false);
+            }}
+          />,
+          document.body,
+        )}
+
+      {/* Enroll picker (issue #24) — pick a face → name modal → create person */}
+      {enrollPickerOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <PersonPickerModal
+            eventId={eventId}
+            photo={photo}
+            mode="enroll"
+            onClose={() => setEnrollPickerOpen(false)}
+            onApplyEnroll={(payload) => {
+              setEnrollPayload(payload);
+              setEnrollPickerOpen(false);
+            }}
+          />,
+          document.body,
+        )}
+
+      {enrollPayload &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <EnrollModal payload={enrollPayload} onClose={() => setEnrollPayload(null)} />,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+// ─── Enroll modal (issue #24) ───────────────────────────────────────────────
+// Names the picked face and creates the person via enrollPersonAction. The
+// crop + backfill scan happen server-side; the key is derived from the photo id.
+
+function EnrollModal({
+  payload,
+  onClose,
+}: {
+  payload: EnrollPayload;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("name", name.trim());
+        fd.set("sourcePhotoId", payload.sourcePhotoId);
+        fd.set("bbox", JSON.stringify(payload.bbox));
+        await enrollPersonAction(fd);
+        onClose();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
+      }
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-sm p-6 space-y-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="font-mono text-xs tracking-widest uppercase text-zinc-400">บันทึกเป็นบุคคล</p>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="ชื่อ-นามสกุล"
+          className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+          autoFocus
+          required
+        />
+        <p className="text-xs text-zinc-500">
+          ระบบจะค้นหารูปของคนนี้ในทุกงานให้อัตโนมัติ
+        </p>
+        {error && <p className="text-xs text-rose-400">{error}</p>}
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={pending}
+            className="px-3 py-1.5 rounded border border-zinc-700 bg-transparent text-xs font-mono tracking-wider text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 transition-all disabled:opacity-40"
+          >
+            CANCEL
+          </button>
+          <button
+            type="submit"
+            disabled={pending || !name.trim()}
+            className="px-4 py-1.5 rounded text-xs font-mono tracking-wider font-semibold bg-[#D4AF37] text-black hover:bg-[#c49f2e] transition-all disabled:opacity-60"
+          >
+            {pending ? "กำลังบันทึก..." : "บันทึก"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

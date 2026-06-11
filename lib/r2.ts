@@ -15,7 +15,7 @@ import {
   type PutObjectCommandInput,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 function getR2Client(): S3Client | null {
   const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } =
@@ -83,6 +83,36 @@ export async function presignR2Download(
   return url;
 }
 
+/**
+ * Download an object from R2 and return its bytes as a Buffer.
+ * Used by the person-archive enrollment/matching engine to read photos and
+ * reference-face crops. Returns null when R2 credentials are missing (stub mode).
+ */
+export async function downloadFromR2(key: string): Promise<Buffer | null> {
+  const client = getR2Client();
+  if (!client || !BUCKET) return null;
+
+  const result = await client.send(
+    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+  );
+  if (!result.Body) return null;
+
+  const bytes = await result.Body.transformToByteArray();
+  return Buffer.from(bytes);
+}
+
+/**
+ * Delete an object from R2. Used when removing a person's reference face so the
+ * crop doesn't linger. Returns false (no-op) when R2 credentials are missing.
+ */
+export async function deleteFromR2(key: string): Promise<boolean> {
+  const client = getR2Client();
+  if (!client || !BUCKET) return false;
+
+  await client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+  return true;
+}
+
 /** R2 path helpers (§6, §11.2) */
 export const r2Paths = {
   photoWeb: (eventId: string, photoId: string) =>
@@ -93,4 +123,6 @@ export const r2Paths = {
     `guest-selfies/${eventId}/${sessionId}.jpg`,
   slip: (tenantId: string, slipId: string) =>
     `slips/${tenantId}/${slipId}.jpg`,
+  personRefFace: (tenantId: string, personId: string, refFaceId: string) =>
+    `tenants/${tenantId}/ref-faces/${personId}/${refFaceId}.jpg`,
 } as const;

@@ -396,6 +396,216 @@ export type Database = {
           },
         ]
       }
+      people: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      person_event_scans: {
+        Row: {
+          error: string | null
+          event_id: string
+          id: string
+          last_run_at: string | null
+          person_id: string
+          photos_matched: number
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          error?: string | null
+          event_id: string
+          id?: string
+          last_run_at?: string | null
+          person_id: string
+          photos_matched?: number
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          error?: string | null
+          event_id?: string
+          id?: string
+          last_run_at?: string | null
+          person_id?: string
+          photos_matched?: number
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_event_scans_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_event_scans_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_event_scans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      person_reference_faces: {
+        Row: {
+          bbox: Json | null
+          created_at: string
+          id: string
+          person_id: string
+          r2_key: string
+          source: string
+          source_photo_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          bbox?: Json | null
+          created_at?: string
+          id?: string
+          person_id: string
+          r2_key: string
+          source: string
+          source_photo_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          bbox?: Json | null
+          created_at?: string
+          id?: string
+          person_id?: string
+          r2_key?: string
+          source?: string
+          source_photo_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_reference_faces_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_reference_faces_source_photo_id_fkey"
+            columns: ["source_photo_id"]
+            isOneToOne: false
+            referencedRelation: "photos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_reference_faces_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photo_people: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          event_id: string
+          id: string
+          matched_by: string
+          person_id: string
+          photo_id: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          event_id: string
+          id?: string
+          matched_by: string
+          person_id: string
+          photo_id: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          matched_by?: string
+          person_id?: string
+          photo_id?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_people_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_people_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_people_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: false
+            referencedRelation: "photos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_people_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       photos: {
         Row: {
           copyright: string | null
