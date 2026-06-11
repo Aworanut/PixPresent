@@ -6,6 +6,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { EventToolbar } from "./_event-toolbar";
 import { EventTitleEditor } from "./_event-title-editor";
 import { PhotoGallery, type GalleryPhoto } from "./_photo-gallery";
+import { getEventPeople } from "@/lib/people/queries";
 
 export default async function EventDetailPage({
   params,
@@ -69,6 +70,8 @@ export default async function EventDetailPage({
   }));
 
   const folderList = folders ?? [];
+  const { people: eventPeople, photoIdsByPerson } = await getEventPeople(id);
+
   const hasPhotos = photoList.length > 0;
 
   const formattedDate = event.event_date
@@ -130,7 +133,13 @@ export default async function EventDetailPage({
 
       {/* ── Gallery / Empty state ── */}
       {hasPhotos ? (
-        <PhotoGallery eventId={event.id} eventName={event.name} photos={photoList} />
+        <PhotoGallery
+          eventId={event.id}
+          eventName={event.name}
+          photos={photoList}
+          eventPeople={eventPeople}
+          photoIdsByPerson={photoIdsByPerson}
+        />
       ) : (
         <EmptyGallery
           eventId={event.id}

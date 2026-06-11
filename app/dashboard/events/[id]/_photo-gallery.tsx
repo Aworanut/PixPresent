@@ -15,6 +15,8 @@ import {
 import { PersonPickerModal, type FilterPayload, type EnrollPayload } from "./_person-ban-modal";
 import { enrollPersonAction } from "@/lib/actions/people";
 import { deriveFolderView } from "@/lib/archive/folder-view";
+import { PeopleSidebar } from "./_people-sidebar";
+import type { EventPerson } from "@/lib/people/queries";
 import { PhotoBadge } from "@/components/ui/photo-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -68,12 +70,14 @@ type Props = {
   eventId: string;
   eventName: string;
   photos: GalleryPhoto[];
+  eventPeople: EventPerson[];
+  photoIdsByPerson: Record<string, string[]>;
 };
 
 // ─── Design system tokens ─────────────────────────────────────────────────────
 // Champagne gold: #D4AF37 | Cream: #F5EEDC | Obsidian: #111111
 
-export function PhotoGallery({ eventId, eventName, photos }: Props) {
+export function PhotoGallery({ eventId, eventName, photos, eventPeople, photoIdsByPerson }: Props) {
   const [tab, setTab] = useState<Tab>("active");
   const [view, setView] = useState<View>("grid");
   const [faceFilter, setFaceFilter] = useState<FaceFilter>("all");
@@ -95,6 +99,18 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
       face: { sourceUrl: payload.sourceUrl, bbox: payload.bbox },
     });
   };
+  const selectPerson = (personId: string | null) => {
+    if (!personId) return setActiveFilter(null);
+    const person = eventPeople.find((p) => p.id === personId);
+    if (!person) return;
+    setActiveFilter({
+      key: personId,
+      label: person.name,
+      photoIds: new Set(photoIdsByPerson[personId] ?? []),
+    });
+  };
+  // The sidebar highlights a row only for a person-filter (not a face-pick).
+  const sidebarActiveId = activeFilter && !activeFilter.face ? activeFilter.key : null;
 
   // File-explorer navigation (archive folder browse). `path` lives in the URL
   // (?path=) via the native History API so browser back/forward, refresh, and
@@ -220,7 +236,8 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="lg:flex lg:items-start lg:gap-6">
+      <div className="space-y-3 lg:min-w-0 lg:flex-1">
       {/* ── Top bar ────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Tabs */}
@@ -259,6 +276,18 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Mobile: people as a horizontal chip row (desktop uses the aside) */}
+      {eventPeople.length > 0 && (
+        <div className="lg:hidden">
+          <PeopleSidebar
+            people={eventPeople}
+            activeId={sidebarActiveId}
+            onSelect={selectPerson}
+            layout="horizontal"
+          />
+        </div>
+      )}
 
       {/* ── Face count filter ───────────────────────────────────────────────── */}
       <div className="flex items-center gap-1.5 flex-wrap">
@@ -502,6 +531,18 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
           onSetVisibility={handleSetVisibility}
           onDelete={handleDeletePhoto}
         />
+      )}
+      </div>
+
+      {eventPeople.length > 0 && (
+        <aside className="hidden shrink-0 lg:sticky lg:top-4 lg:block lg:w-60">
+          <PeopleSidebar
+            people={eventPeople}
+            activeId={sidebarActiveId}
+            onSelect={selectPerson}
+            layout="vertical"
+          />
+        </aside>
       )}
     </div>
   );
