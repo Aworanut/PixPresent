@@ -64,8 +64,16 @@ export default async function PeoplePage({
               href={`/dashboard/people/${person.id}`}
               className="group block rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 hover:border-[#D4AF37] transition-colors"
             >
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                <UserCircleIcon className="h-8 w-8 text-zinc-400" />
+              <div className="mx-auto mb-3 h-16 w-16 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                {person.refFaceUrl ? (
+                  <img
+                    src={person.refFaceUrl}
+                    alt={person.name}
+                    className="h-full w-full object-cover object-top"
+                  />
+                ) : (
+                  <UserCircleIcon className="h-8 w-8 text-zinc-400" />
+                )}
               </div>
               <p className="truncate text-center text-sm font-medium text-zinc-900 dark:text-zinc-50">
                 {person.name}

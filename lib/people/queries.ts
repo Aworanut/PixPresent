@@ -11,6 +11,7 @@ export type PersonListItem = {
   name: string;
   note: string | null;
   photoCount: number;
+  refFaceUrl?: string;
 };
 
 export type PersonPhoto = {
@@ -41,12 +42,30 @@ export async function listPeople(q?: string): Promise<PersonListItem[]> {
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data ?? []).map((p) => ({
+  const people = (data ?? []).map((p) => ({
     id: p.id,
     name: p.name,
     note: p.note,
     photoCount: (p.photo_people as unknown as { count: number }[])[0]?.count ?? 0,
   }));
+
+  if (people.length > 0) {
+    const { data: refFaces } = await supabase
+      .from("person_reference_faces")
+      .select("person_id, r2_key")
+      .in("person_id", people.map((p) => p.id))
+      .order("created_at");
+    const publicBase = (process.env.R2_PUBLIC_URL ?? "").replace(/\/$/, "");
+    const urlById: Record<string, string> = {};
+    for (const rf of refFaces ?? []) {
+      if (!urlById[rf.person_id] && publicBase) {
+        urlById[rf.person_id] = `${publicBase}/${rf.r2_key}`;
+      }
+    }
+    return people.map((p) => ({ ...p, ...(urlById[p.id] ? { refFaceUrl: urlById[p.id] } : {}) }));
+  }
+
+  return people;
 }
 
 export async function getPerson(personId: string) {
