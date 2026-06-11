@@ -143,22 +143,28 @@ function EventCard({ event }: { event: EventRow }) {
       href={`` + `/dashboard/events/${event.id}`}
       className="group relative block h-28 sm:h-32 overflow-hidden rounded-none border border-zinc-200 dark:border-zinc-800 hover:border-[#D4AF37] dark:hover:border-[#D4AF37] hover:shadow-sm transition-all duration-300"
     >
-      {cover ? (
+      {/* พื้นขาวเต็มใบ */}
+      <div className="absolute inset-0 bg-white dark:bg-zinc-900" />
+
+      {cover && (
         <>
+          {/* รูปย่อฝั่งซ้าย โชว์ส่วนกลางของภาพ (object-center) */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={cover}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover pointer-events-none transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-y-0 left-0 h-full w-32 sm:w-40 object-cover object-center pointer-events-none transition-transform duration-500 group-hover:scale-105"
           />
-          {/* รูปโผล่แค่ ~30% ฝั่งขวา ที่เหลือเป็นพื้นขาว เฟดซ้าย→ขวา */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white from-70% to-transparent dark:from-zinc-900" />
+          {/* เฟดขอบขวาของรูปกลืนเป็นพื้นขาว (ซ้าย→ขวา) */}
+          <div className="absolute inset-y-0 left-0 w-32 sm:w-40 bg-gradient-to-r from-transparent from-65% to-white dark:to-zinc-900" />
         </>
-      ) : (
-        <div className="absolute inset-0 bg-white dark:bg-zinc-900" />
       )}
 
-      <div className="relative z-10 flex h-full items-center justify-between gap-4 pl-7 sm:pl-9 pr-5 sm:pr-6">
+      <div
+        className={`relative z-10 flex h-full items-center justify-between gap-4 pr-5 sm:pr-6 ${
+          cover ? "pl-36 sm:pl-44" : "pl-7 sm:pl-9"
+        }`}
+      >
         <div className="min-w-0 space-y-1.5">
           <h3 className="text-base font-medium truncate font-sans text-zinc-900 dark:text-zinc-50">
             {event.name}
