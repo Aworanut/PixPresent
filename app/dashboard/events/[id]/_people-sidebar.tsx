@@ -25,6 +25,7 @@ export function PeopleSidebar({ people, activeId, onSelect, layout }: Props) {
             active={activeId === p.id}
             onClick={() => onSelect(activeId === p.id ? null : p.id)}
             label={`${p.name} ${p.count}`}
+            refFaceUrl={p.refFaceUrl}
           />
         ))}
       </div>
@@ -44,6 +45,7 @@ export function PeopleSidebar({ people, activeId, onSelect, layout }: Props) {
           onClick={() => onSelect(activeId === p.id ? null : p.id)}
           name={p.name}
           count={p.count}
+          refFaceUrl={p.refFaceUrl}
         />
       ))}
     </div>
@@ -55,11 +57,13 @@ function Row({
   onClick,
   name,
   count,
+  refFaceUrl,
 }: {
   active: boolean;
   onClick: () => void;
   name: string;
   count?: number;
+  refFaceUrl?: string;
 }) {
   return (
     <button
@@ -73,9 +77,17 @@ function Row({
       ].join(" ")}
     >
       {count !== undefined && (
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700 text-[10px] font-bold text-zinc-600 dark:text-zinc-300">
-          {name.charAt(0)}
-        </span>
+        refFaceUrl ? (
+          <img
+            src={refFaceUrl}
+            alt={name}
+            className="h-6 w-6 shrink-0 rounded-full object-cover object-top"
+          />
+        ) : (
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700 text-[10px] font-bold text-zinc-600 dark:text-zinc-300">
+            {name.charAt(0)}
+          </span>
+        )
       )}
       <span className="min-w-0 flex-1 truncate text-sm text-zinc-800 dark:text-zinc-200">{name}</span>
       {count !== undefined && (
@@ -87,18 +99,35 @@ function Row({
   );
 }
 
-function Chip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function Chip({
+  active,
+  onClick,
+  label,
+  refFaceUrl,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  refFaceUrl?: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
-        "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+        "shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
         active
           ? "bg-[#D4AF37] text-black"
           : "border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-[#D4AF37]",
       ].join(" ")}
     >
+      {refFaceUrl && (
+        <img
+          src={refFaceUrl}
+          alt=""
+          className="h-4 w-4 rounded-full object-cover object-top -ml-0.5"
+        />
+      )}
       {label}
     </button>
   );

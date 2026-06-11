@@ -127,7 +127,7 @@ export async function getPendingScanCount(): Promise<number> {
   return count ?? 0;
 }
 
-export type EventPerson = { id: string; name: string; count: number };
+export type EventPerson = { id: string; name: string; count: number; refFaceUrl?: string };
 export type EventPeopleResult = {
   people: EventPerson[];
   photoIdsByPerson: Record<string, string[]>;
@@ -136,6 +136,7 @@ export type EventPeopleResult = {
 /** Group flat (person × photo) rows into a sorted people list + photo-id map. Pure. */
 export function groupEventPeople(
   rows: { personId: string; name: string; photoId: string }[],
+  refFaceUrlById?: Record<string, string>,
 ): EventPeopleResult {
   const photoIdsByPerson: Record<string, string[]> = {};
   const nameById: Record<string, string> = {};
@@ -144,7 +145,12 @@ export function groupEventPeople(
     nameById[r.personId] = r.name;
   }
   const people = Object.keys(photoIdsByPerson)
-    .map((id) => ({ id, name: nameById[id], count: photoIdsByPerson[id].length }))
+    .map((id) => ({
+      id,
+      name: nameById[id],
+      count: photoIdsByPerson[id].length,
+      ...(refFaceUrlById?.[id] ? { refFaceUrl: refFaceUrlById[id] } : {}),
+    }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   return { people, photoIdsByPerson };
 }
@@ -164,5 +170,22 @@ export async function getEventPeople(eventId: string): Promise<EventPeopleResult
     photoId: r.photo_id,
     name: (r.people as unknown as { name: string }).name,
   }));
-  return groupEventPeople(flat);
+
+  const personIds = [...new Set(flat.map((r) => r.personId))];
+  const refFaceUrlById: Record<string, string> = {};
+  if (personIds.length > 0) {
+    const { data: refFaces } = await supabase
+      .from("person_reference_faces")
+      .select("person_id, r2_key")
+      .in("person_id", personIds)
+      .order("created_at");
+    const publicBase = (process.env.R2_PUBLIC_URL ?? "").replace(/\/$/, "");
+    for (const rf of refFaces ?? []) {
+      if (!refFaceUrlById[rf.person_id] && publicBase) {
+        refFaceUrlById[rf.person_id] = `${publicBase}/${rf.r2_key}`;
+      }
+    }
+  }
+
+  return groupEventPeople(flat, refFaceUrlById);
 }
