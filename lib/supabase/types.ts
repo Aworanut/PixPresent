@@ -613,6 +613,7 @@ export type Database = {
           event_id: string
           event_storage_folder_id: string | null
           face_details: Json
+          folder_path: string
           id: string
           indexed_at: string | null
           original_filename: string | null
@@ -633,6 +634,7 @@ export type Database = {
           event_id: string
           event_storage_folder_id?: string | null
           face_details?: Json
+          folder_path?: string
           id?: string
           indexed_at?: string | null
           original_filename?: string | null
@@ -653,6 +655,7 @@ export type Database = {
           event_id?: string
           event_storage_folder_id?: string | null
           face_details?: Json
+          folder_path?: string
           id?: string
           indexed_at?: string | null
           original_filename?: string | null
