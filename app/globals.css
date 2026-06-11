@@ -213,6 +213,52 @@ html[lang="th"] .tracking-mega {
   from { transform: translate(-50%, -100%); opacity: 0; }
   to { transform: translate(-50%, 0); opacity: 1; }
 }
+
+/* Guest photo-grid reveal — staggered entrance for face-match results.
+   ease-out curve matches slideDownCenter; transform + opacity only (GPU-friendly).
+   `both` holds the from-state during the per-item animationDelay so nothing flashes. */
+@keyframes photoReveal {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.photo-reveal {
+  opacity: 0;
+  animation: photoReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .photo-reveal {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+/* Editorial reveal — on-load (hero, .reveal-up) and scroll-triggered
+   (.reveal-on-scroll, .is-visible added by _reveal.tsx IntersectionObserver).
+   Shared revealUp keyframe; ease-out matches slideDownCenter / photoReveal. */
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal-up {
+  opacity: 0;
+  animation: revealUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.reveal-on-scroll.is-visible {
+  animation: revealUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-up,
+  .reveal-on-scroll,
+  .reveal-on-scroll.is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
 .toast-top-banner {
   position: fixed;
   top: 6.5rem; /* Just below header */

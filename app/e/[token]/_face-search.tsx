@@ -202,6 +202,7 @@ export function FaceSearch({ eventId, shareToken }: Props) {
               <PhotoCard
                 key={photo.id}
                 photo={photo}
+                index={i}
                 onOpen={() => setLightboxIndex(i)}
               />
             ))}
@@ -676,13 +677,21 @@ async function compressImage(
 
 type PhotoCardProps = {
   photo: Photo;
+  index: number;
   onOpen: () => void;
 };
 
-function PhotoCard({ photo, onOpen }: PhotoCardProps) {
+function PhotoCard({ photo, index, onOpen }: PhotoCardProps) {
+  // Staggered reveal — cap the delay so large galleries don't make the last items
+  // lag in (skill rule: avoid "excessive motion"). ease-out + reduced-motion: globals.css.
+  const revealStyle = { animationDelay: `${Math.min(index, 10) * 40}ms` };
+
   if (!photo.webUrl) {
     return (
-      <div className="aspect-square rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+      <div
+        className="photo-reveal aspect-square rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center"
+        style={revealStyle}
+      >
         <span className="text-2xl">🖼️</span>
       </div>
     );
@@ -692,7 +701,8 @@ function PhotoCard({ photo, onOpen }: PhotoCardProps) {
     <button
       type="button"
       onClick={onOpen}
-      className="group relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+      style={revealStyle}
+      className="photo-reveal group relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500"
     >
       <Image
         src={photo.webUrl}
