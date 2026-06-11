@@ -57,6 +57,13 @@ type Tab = "active" | "hidden";
 type View = "grid" | "list";
 type FaceFilter = "all" | "0" | "1" | "2" | "3+";
 
+type ActivePersonFilter = {
+  key: string; // faceId (face-pick) or personId (sidebar) — used as the reset key
+  label: string;
+  photoIds: Set<string>;
+  face?: { sourceUrl: string | null; bbox: { left: number; top: number; width: number; height: number } };
+};
+
 type Props = {
   eventId: string;
   eventName: string;
@@ -77,8 +84,17 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
   // Lightbox State
   const [activePhotoIdx, setActivePhotoIdx] = useState<number | null>(null);
 
-  // Person filter: narrow the gallery to one person's photos (issue #22)
-  const [personFilter, setPersonFilter] = useState<FilterPayload | null>(null);
+  // Unified person filter: set by the ⋮ face-pick (#22) OR the people sidebar.
+  // `face` is present only for the face-pick → chip shows a cropped thumbnail.
+  const [activeFilter, setActiveFilter] = useState<ActivePersonFilter | null>(null);
+  const applyFaceFilter = (payload: FilterPayload) => {
+    setActiveFilter({
+      key: payload.faceId,
+      label: "ใบหน้าที่เลือก",
+      photoIds: payload.photoIds,
+      face: { sourceUrl: payload.sourceUrl, bbox: payload.bbox },
+    });
+  };
 
   // File-explorer navigation (archive folder browse). `path` lives in the URL
   // (?path=) via the native History API so browser back/forward, refresh, and
@@ -116,11 +132,11 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
       if (faceFilter === "3+") return n >= 3;
       return true;
     })
-    .filter((p) => !personFilter || personFilter.photoIds.has(p.id));
+    .filter((p) => !activeFilter || activeFilter.photoIds.has(p.id));
 
   // Clear selection and close lightbox when tab/filter/folder changes — adjust
   // state during render (React's recommended alternative to a reset effect).
-  const tabFilterKey = `${tab}|${faceFilter}|${personFilter?.faceId ?? ""}|${flat ? "flat" : path}`;
+  const tabFilterKey = `${tab}|${faceFilter}|${activeFilter?.key ?? ""}|${flat ? "flat" : path}`;
   const [prevTabFilterKey, setPrevTabFilterKey] = useState(tabFilterKey);
   if (prevTabFilterKey !== tabFilterKey) {
     setPrevTabFilterKey(tabFilterKey);
@@ -316,33 +332,36 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
         </div>
       )}
 
-      {/* ── Active person filter chip (issue #22) ───────────────────────────── */}
-      {personFilter && (
+      {/* ── Active person filter chip (face-pick #22 or sidebar) ────────────── */}
+      {activeFilter && (
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 border border-[rgba(212,175,55,0.3)]">
-          {/* Face thumbnail — crop the ref face from its source photo via bbox */}
-          <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-zinc-300 dark:bg-zinc-700">
-            {personFilter.sourceUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={personFilter.sourceUrl}
-                alt=""
-                className="absolute max-w-none"
-                style={{
-                  width: `${(1 / personFilter.bbox.width) * 28}px`,
-                  left: `${-(personFilter.bbox.left / personFilter.bbox.width) * 28}px`,
-                  top: `${-(personFilter.bbox.top / personFilter.bbox.width) * 28}px`,
-                }}
-              />
+          <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-300 dark:bg-zinc-700 text-[10px] font-bold text-zinc-600 dark:text-zinc-300">
+            {activeFilter.face ? (
+              activeFilter.face.sourceUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={activeFilter.face.sourceUrl}
+                  alt=""
+                  className="absolute max-w-none"
+                  style={{
+                    width: `${(1 / activeFilter.face.bbox.width) * 28}px`,
+                    left: `${-(activeFilter.face.bbox.left / activeFilter.face.bbox.width) * 28}px`,
+                    top: `${-(activeFilter.face.bbox.top / activeFilter.face.bbox.width) * 28}px`,
+                  }}
+                />
+              )
+            ) : (
+              <span>{activeFilter.label.charAt(0)}</span>
             )}
           </div>
           <span className="text-xs text-zinc-600 dark:text-zinc-400">
-            กรองตามใบหน้า · เจอ {visible.length} รูป
+            {activeFilter.label} · เจอ {visible.length} รูป
           </span>
           <button
             type="button"
-            onClick={() => setPersonFilter(null)}
+            onClick={() => setActiveFilter(null)}
             className="ml-auto flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-            aria-label="ล้างตัวกรองใบหน้า"
+            aria-label="ล้างตัวกรองบุคคล"
           >
             <XMarkIcon className="h-3.5 w-3.5" />
           </button>
@@ -424,7 +443,7 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
         <EmptyState
           icon={PhotoIcon}
           message={
-            personFilter
+            activeFilter
               ? "บุคคลนี้ไม่มีรูปในแท็บนี้ — ลองสลับแท็บ หรือกด ✕ ล้างตัวกรอง"
               : !flat && path !== ""
                 ? "แฟ้มนี้ไม่มีรูป"
@@ -443,7 +462,7 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
               key={photo.id}
               photo={photo}
               eventId={eventId}
-              onApplyPersonFilter={setPersonFilter}
+              onApplyPersonFilter={applyFaceFilter}
               selectMode={selectMode}
               selected={selectedIds.has(photo.id)}
               onToggleSelect={toggleSelect}
@@ -461,7 +480,7 @@ export function PhotoGallery({ eventId, eventName, photos }: Props) {
               key={photo.id}
               photo={photo}
               eventId={eventId}
-              onApplyPersonFilter={setPersonFilter}
+              onApplyPersonFilter={applyFaceFilter}
               selectMode={selectMode}
               selected={selectedIds.has(photo.id)}
               onToggleSelect={toggleSelect}
