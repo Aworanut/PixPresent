@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useEffect, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import {
   setPhotoVisibility,
   setPhotosVisibility,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/actions/photos";
 import { PersonPickerModal, type FilterPayload, type EnrollPayload } from "./_person-ban-modal";
 import { enrollPersonAction } from "@/lib/actions/people";
+import { deriveFolderView } from "@/lib/archive/folder-view";
 import { PhotoBadge } from "@/components/ui/photo-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -27,6 +29,9 @@ import {
   EyeIcon,
   MagnifyingGlassIcon,
   UserPlusIcon,
+  FolderIcon,
+  ChevronRightIcon,
+  Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 
 type FaceDetail = {
@@ -44,6 +49,7 @@ export type GalleryPhoto = {
   taken_at: string | null;
   photographer_name: string | null;
   copyright: string | null;
+  folder_path: string;
 };
 
 type Tab = "active" | "hidden";
@@ -72,13 +78,33 @@ export function PhotoGallery({ eventId, photos }: Props) {
   // Person filter: narrow the gallery to one person's photos (issue #22)
   const [personFilter, setPersonFilter] = useState<FilterPayload | null>(null);
 
+  // File-explorer navigation (archive folder browse). `path` lives in the URL
+  // (?path=) via the native History API so browser back/forward, refresh, and
+  // shared folder links work — and since every photo is already loaded here,
+  // pushState filters client-side with no server refetch.
+  const searchParams = useSearchParams();
+  const path = searchParams.get("path") ?? "";
+  const setPath = (p: string) => {
+    const params = new URLSearchParams(window.location.search);
+    if (p) params.set("path", p);
+    else params.delete("path");
+    const qs = params.toString();
+    window.history.pushState(null, "", qs ? `?${qs}` : window.location.pathname);
+  };
+  const [flat, setFlat] = useState(false); // true = ignore folders, show whole event
+
   // Tab split
   const activePhotos = photos.filter((p) => p.visibility !== "hidden");
   const hiddenPhotos = photos.filter((p) => p.visibility === "hidden");
   const tabPhotos = tab === "active" ? activePhotos : hiddenPhotos;
 
-  // Face count filter + person filter (issue #22) — intersect both layers
-  const visible = tabPhotos
+  // Folder view derived from the tab-filtered photos (archive folder browse).
+  const { subfolders, photosHere } = deriveFolderView(tabPhotos, path);
+  // Folder mode → grid shows photos in THIS folder; flat mode → whole event.
+  const scoped = flat ? tabPhotos : photosHere;
+
+  // Face count filter + person filter (issue #22) — intersect on the scoped set.
+  const visible = scoped
     .filter((p) => {
       if (faceFilter === "all") return true;
       const n = p.face_details.length;
@@ -90,9 +116,9 @@ export function PhotoGallery({ eventId, photos }: Props) {
     })
     .filter((p) => !personFilter || personFilter.photoIds.has(p.id));
 
-  // Clear selection and close lightbox when the tab/filter changes — adjust
+  // Clear selection and close lightbox when tab/filter/folder changes — adjust
   // state during render (React's recommended alternative to a reset effect).
-  const tabFilterKey = `${tab}|${faceFilter}|${personFilter?.faceId ?? ""}`;
+  const tabFilterKey = `${tab}|${faceFilter}|${personFilter?.faceId ?? ""}|${flat ? "flat" : path}`;
   const [prevTabFilterKey, setPrevTabFilterKey] = useState(tabFilterKey);
   if (prevTabFilterKey !== tabFilterKey) {
     setPrevTabFilterKey(tabFilterKey);
@@ -321,16 +347,81 @@ export function PhotoGallery({ eventId, photos }: Props) {
         </div>
       )}
 
+      {/* ── Folder explorer header (archive folder browse) ───────────────────── */}
+      <div className="flex items-center gap-2 flex-wrap text-sm">
+        {flat ? (
+          <span className="text-zinc-500 dark:text-zinc-400">ทุกรูปในงานนี้</span>
+        ) : (
+          <nav className="flex items-center gap-1 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setPath("")}
+              className="text-zinc-600 dark:text-zinc-300 hover:text-[#D4AF37] transition-colors"
+            >
+              คลัง
+            </button>
+            {path
+              .split("/")
+              .filter(Boolean)
+              .map((seg, i, arr) => {
+                const target = arr.slice(0, i + 1).join("/");
+                return (
+                  <span key={target} className="flex items-center gap-1">
+                    <ChevronRightIcon className="h-3.5 w-3.5 text-zinc-400" />
+                    <button
+                      type="button"
+                      onClick={() => setPath(target)}
+                      className="text-zinc-600 dark:text-zinc-300 hover:text-[#D4AF37] transition-colors"
+                    >
+                      {seg}
+                    </button>
+                  </span>
+                );
+              })}
+          </nav>
+        )}
+        <button
+          type="button"
+          onClick={() => setFlat((v) => !v)}
+          className="ml-auto flex items-center gap-1.5 rounded-full border border-zinc-300 dark:border-zinc-700 px-2.5 py-1 text-xs text-zinc-500 dark:text-zinc-400 hover:border-[#D4AF37] transition-colors"
+        >
+          <Squares2X2Icon className="h-3.5 w-3.5" />
+          {flat ? "ดูเป็นแฟ้ม" : "ดูรวมทั้งงาน"}
+        </button>
+      </div>
+
+      {/* Subfolder tiles (folder mode only) */}
+      {!flat && subfolders.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          {subfolders.map((sf) => (
+            <button
+              key={sf.path}
+              type="button"
+              onClick={() => setPath(sf.path)}
+              className="flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-zinc-800 p-3 text-left hover:border-[#D4AF37] transition-colors"
+            >
+              <FolderIcon className="h-8 w-8 shrink-0 text-[#D4AF37]" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{sf.name}</p>
+                <p className="text-xs text-zinc-400">{sf.count} รูป</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Empty state ─────────────────────────────────────────────────────── */}
-      {visible.length === 0 && (
+      {visible.length === 0 && subfolders.length === 0 && (
         <EmptyState
           icon={PhotoIcon}
           message={
             personFilter
               ? "บุคคลนี้ไม่มีรูปในแท็บนี้ — ลองสลับแท็บ หรือกด ✕ ล้างตัวกรอง"
-              : tab === "hidden"
-                ? "ยังไม่มีรูปที่ไม่เผยแพร่"
-                : "ยังไม่มีรูป"
+              : !flat && path !== ""
+                ? "แฟ้มนี้ไม่มีรูป"
+                : tab === "hidden"
+                  ? "ยังไม่มีรูปที่ไม่เผยแพร่"
+                  : "ยังไม่มีรูป"
           }
         />
       )}
