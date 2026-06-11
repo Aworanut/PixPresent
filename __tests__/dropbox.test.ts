@@ -79,6 +79,18 @@ describe("mapDropboxEntry", () => {
       mimeType: "image/jpeg",
       size: 4096,
       modifiedTime: "2026-05-01T10:00:00Z",
+      relativePath: "",
     });
+  });
+
+  it("carries a provided relativePath", () => {
+    const entry: DropboxEntry = {
+      ".tag": "file",
+      id: "id:abc123",
+      name: "DSC_0001.JPG",
+      size: 4096,
+      client_modified: "2026-05-01T10:00:00Z",
+    };
+    expect(mapDropboxEntry(entry, "morning/early").relativePath).toBe("morning/early");
   });
 });

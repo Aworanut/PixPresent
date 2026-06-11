@@ -300,10 +300,10 @@ async function runSync({
       phase: "syncing",
     });
 
-    // Load already-indexed file IDs + R2 URL status
+    // Load already-indexed file IDs + R2 URL status + folder_path
     const { data: existingPhotos } = await admin
       .from("photos")
-      .select("id, storage_file_id, r2_web_url")
+      .select("id, storage_file_id, r2_web_url, folder_path")
       .eq("event_id", eventId);
 
     // Fully done: indexed + has R2 URL → skip entirely
@@ -317,6 +317,11 @@ async function runSync({
       (existingPhotos ?? [])
         .filter((p) => !p.r2_web_url)
         .map((p) => [p.storage_file_id, p.id]),
+    );
+    // file id → existing row, used to backfill folder_path on re-sync without
+    // re-downloading (paths were '' before recursive listing existed).
+    const existingById = new Map(
+      (existingPhotos ?? []).map((p) => [p.storage_file_id, p]),
     );
 
     let doneFolderCount = 0;
@@ -338,6 +343,13 @@ async function runSync({
       if (storageExceeded) return;
 
       if (doneSet.has(file.id)) {
+        // Backfill folder_path on re-sync without re-downloading (paths were ''
+        // before recursive listing). Only writes when it actually changed.
+        const existing = existingById.get(file.id);
+        const newPath = file.relativePath ?? "";
+        if (existing && existing.folder_path !== newPath) {
+          await admin.from("photos").update({ folder_path: newPath }).eq("id", existing.id);
+        }
         doneFolderCount++;
         send({
           type: "progress",
@@ -538,6 +550,7 @@ async function backfillR2Url({
       copyright: exif.copyright || null,
       event_storage_folder_id: folderDbId,
       storage_bytes: web.length + full.length,
+      folder_path: file.relativePath ?? "",
     })
     .eq("id", existingPhotoId);
 }
@@ -659,6 +672,7 @@ async function processOnePhoto({
     copyright: exif.copyright || null,
     event_storage_folder_id: folderDbId,
     storage_bytes: storageBytes,
+    folder_path: file.relativePath ?? "",
   });
   perf.insertMs += performance.now() - tIns;
   perf.count++;
