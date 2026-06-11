@@ -885,3 +885,175 @@ create trigger on_auth_user_created
 - Omise ย้ายไป #B-04 Phase 2 backlog (รอ scale ก่อน)
 - **ตัด #6 Photographer Management** → multi-folder per event ใน #5 แทน (workflow จริงคือ organizer share editor folder ให้ช่างทุกคน)
 - **เพิ่ม #20 Dropbox Storage Source** → ดึงจาก Phase 2 มา Phase 1 (ลูกค้า web-only Dropbox ติด Drive-only — ดู ADR 0003)
+
+---
+
+## Phase 3 — Person Archive (Internal Face-Searchable Archive)
+
+> **เป้าหมาย:** เปลี่ยน PixPresent เป็นคลังภาพถาวรขององค์กร — ค้นหารูปทุกงานทุกปีด้วยชื่อคน แทน Dropbox ส่วนตัวที่เต็ม
+> **ต้องการ business tier** (unlimited retention พร้อมแล้วใน #B-06 partial)
+> **Specs:** `docs/superpowers/specs/2026-06-03-person-archive-face-search-design.md`, `docs/superpowers/specs/2026-06-04-gallery-face-filter-design.md`
+> **Plans:** `docs/superpowers/plans/2026-06-11-gallery-face-filter.md`, `docs/superpowers/plans/2026-06-11-person-archive.md`
+
+---
+
+### #22 — Gallery Face Filter
+
+**Type:** AFK
+**Related:** #23 (seam สำหรับ Person Archive)
+**Spec:** `docs/superpowers/specs/2026-06-04-gallery-face-filter-design.md`
+**Plan:** `docs/superpowers/plans/2026-06-11-gallery-face-filter.md`
+
+**What to build**
+
+"ดูเฉพาะรูปของคนนี้" ใน event gallery ของ dashboard — เลือกใบหน้าหนึ่งในรูปแล้ว gallery กรองเหลือเฉพาะรูปที่มีคนนั้นในงานนี้ reuse `findMatchingFacesByFaceId` + `PersonPickerModal` ที่มีอยู่แล้ว ไม่มี schema ใหม่ วาง seam ให้ Person Archive ต่อยอดได้ทันที
+
+**Acceptance criteria**
+
+- [ ] `PersonPickerModal` รองรับ `mode="filter"` + `onApplyFilter` callback (ข้าม stage 2 preview)
+- [ ] `PhotoGallery` มี `personFilter` state + ชั้นกรองใน `visible` derivation
+- [ ] เมนู ⋮ ของรูปที่มี `face_details.length > 0` มีรายการ "ดูเฉพาะรูปของคนนี้"
+- [ ] Active-filter chip แสดงเมื่อ filter active: thumbnail หน้า + จำนวนรูป + ปุ่ม ✕
+- [ ] Filter compose กับ tab + face count filter ได้ถูกต้อง (intersect)
+- [ ] กด ✕ → reset กลับครบ (activePhotoIdx ด้วย)
+- [ ] Rekognition stub (local ไม่มี env) → degrade graceful (เหลือแค่รูปต้นทาง)
+
+**Blocked by:** None - can start immediately
+
+---
+
+### #23 — Person Archive: Schema + RLS
+
+**Type:** AFK
+**Parent:** Person Archive
+**Related:** #22 (seam), #21 (sync resume pattern ใช้ร่วม)
+**Plan:** `docs/superpowers/plans/2026-06-11-person-archive.md`
+
+**What to build**
+
+สร้าง 4 ตารางใหม่สำหรับ person archive domain พร้อม RLS by `tenant_id` ตามแพตเทิร์นเดิม และ regenerate TypeScript types
+
+**Status:** ✅ shipped (local) 2026-06-11 — `supabase/migrations/20260611000000_create_people_tables.sql`, `db:reset` + `db:types` ผ่าน, `tsc` เขียว. **ยังไม่ apply บน prod** (รอ Docker→prod decision)
+
+**Acceptance criteria**
+
+- [x] Migration: `people` (`id`, `tenant_id`, `name`, `note`, timestamps)
+- [x] Migration: `person_reference_faces` (`id`, `tenant_id`, `person_id`, `source` check('tagged','uploaded'), `source_photo_id` null, `bbox` jsonb null, `r2_key`, `created_at`)
+- [x] Migration: `photo_people` (`id`, `tenant_id`, `person_id`, `photo_id`, `event_id`, `confidence` real, `matched_by` check('scan','manual'), `status` check('confirmed','pending'), `created_at`) + unique(person_id, photo_id)
+- [x] Migration: `person_event_scans` (`id`, `tenant_id`, `person_id`, `event_id`, `status` check('pending','running','done','error'), `photos_matched` int default 0, `error` text null, `last_run_at` null) + unique(person_id, event_id)
+- [x] RLS policies ทุกตาราง: `for all using (tenant_id = current_tenant_id())` + `force row level security` (house pattern เหมือน events/photos); service role bypass
+- [x] `npm run db:types` → `lib/supabase/types.ts` อัพเดทครบ
+
+**Blocked by:** None - can start immediately
+
+---
+
+### #24 — Person Archive: Enrollment (Tag-a-Face)
+
+**Type:** AFK
+**Parent:** Person Archive
+
+**What to build**
+
+ให้ organizer จิ้มใบหน้าในรูปที่มีอยู่แล้ว → ตั้งชื่อเป็นคนใหม่หรือผูกกับคนที่มี → crop ใบหน้า → เก็บเป็น reference face → enqueue backfill scan ทุก event รวม upload fallback และการเพิ่ม ref face ให้คนที่มีแล้ว
+
+**Status:** 🟢 core done (local) 2026-06-11 — logic + actions + tag-a-face UI shipped, tsc+lint+93 tests เขียว. **ค้าง→#26:** UI ของ "ผูกกับคนที่มี" / "อัปรูปอ้างอิง" / ปุ่มลบ (actions พร้อมแล้ว แต่ที่วางคือหน้า person detail). คลิกจริงยังไม่ได้ verify (auth + R2 creds)
+
+**Acceptance criteria**
+
+- [x] `lib/people/enrollment.ts`: `enrollPerson`, `addReferenceFace`, `cropFaceToR2` (ใช้ sharp + bbox พร้อม 30% padding) — unit-tested (crop math)
+- [x] `lib/actions/people.ts`: Server Actions สำหรับ enrollment (business-tier gated via `requireBusinessTenant`)
+- [x] UI ใน gallery: "บันทึกเป็นบุคคล" ใน ⋮ menu → picker (`mode="enroll"`) → `EnrollModal` ตั้งชื่อ → create person. *(เลือก "ผูกกับคนที่มี" จาก gallery → เลื่อนไป #26 person detail)*
+- [x] สร้าง `people` row + `person_reference_faces` (`source='tagged'`) + `photo_people` self-match (`manual`, `confirmed`, confidence=100)
+- [x] Enqueue backfill: upsert `person_event_scans` (person × ทุก event) = `pending`
+- [x] Upload fallback: `addUploadedRefFaceAction` (`source='uploaded'`) → enqueue. *(UI ปุ่ม "อัปรูปอ้างอิง" → #26)*
+- [x] ลบ ref face: `deleteRefFaceAction` (deleteFromR2 + delete row). *(UI → #26)*
+- [x] ลบคน: `deletePersonAction` (ลบ R2 crops ทุกใบ → delete person → DB cascade ลบ ref faces/photo_people/scans). *(UI → #26)*
+
+**Blocked by:** #23 ✅
+
+---
+
+### #25 — Person Archive: Matching Engine
+
+**Type:** AFK
+**Parent:** Person Archive
+
+**What to build**
+
+Resumable scan route ที่ยิง `SearchFacesByImage` สำหรับแต่ละคู่ (person × event) จาก `person_event_scans.status='pending'` → upsert `photo_people` → ใช้ pattern auto-resume 60s เดียวกับ sync route
+
+**Acceptance criteria**
+
+- [ ] `lib/aws/rekognition.ts`: เพิ่ม `searchFacesByImage(imageBytes, collectionId)` → `string[]` (matched FaceIds)
+- [ ] `lib/r2.ts`: เพิ่ม `downloadFromR2(key)` → `Buffer`
+- [ ] `lib/people/matching.ts`: `scanPendingUnits(tenantId, deadlineMs)` — claim unit, ยิง SearchFacesByImage ต่อ ref face, union FaceIds, query photos, upsert `photo_people` (confidence ≥ 90 → confirmed, < 90 → pending; skip ถ้า manual/confirmed อยู่แล้ว)
+- [ ] `app/api/people/scan/route.ts`: POST handler → SSE stream, `maxDuration=60`, process pending units จนหมด 60s → `{ type: 'progress' }` / `{ type: 'done' }` / `{ type: 'error' }`
+- [ ] Client trigger + auto-resume component (รูปแบบเดียวกับ `_event-toolbar.tsx` sync resume)
+- [ ] Trigger เมื่อ enroll ใหม่ → call scan route หลัง enqueue
+
+**Blocked by:** #24
+
+---
+
+### #26 — Person Archive: People Search UI
+
+**Type:** AFK
+**Parent:** Person Archive
+
+**What to build**
+
+หน้า `/dashboard/people`: list คนทั้งหมด + search ชื่อ → คลิก → photo grid ทุกรูปของคนนั้นข้ามทุกงาน พร้อม filter event/ปี และ review pending matches
+
+**Acceptance criteria**
+
+- [ ] `lib/people/queries.ts`: `listPeople`, `getPersonWithPhotos`, `getPendingMatches`
+- [ ] `app/dashboard/people/page.tsx`: list + search box (server component, ผ่าน `?q=` searchParam)
+- [ ] `app/dashboard/people/[id]/page.tsx`: person detail — ref faces panel, photo grid (`photo_people WHERE status='confirmed'`), filter by event
+- [ ] Pending review panel: `status='pending'` matches — confirm/reject เป็นชุด (Server Action)
+- [ ] เพิ่ม ref face จาก person detail (upload หรือ tag จากรูปใน grid)
+- [ ] ลบคน (confirm dialog → cascade)
+- [ ] Nav link "บุคคล" ใน dashboard header (business tier เท่านั้น)
+
+**Blocked by:** #25
+
+---
+
+### #27 — Person Archive: Auto-incremental Scan
+
+**Type:** AFK
+**Parent:** Person Archive
+
+**What to build**
+
+เมื่อ sync event เสร็จ → enqueue (ทุก person × event นั้น) = `pending` → matching engine รัน → รูปใหม่ถูกจับคู่อัตโนมัติโดยไม่ต้องสั่ง rescan มือ (Goal #3 ของ spec)
+
+**Acceptance criteria**
+
+- [ ] ใน `app/api/events/[id]/sync/route.ts`: หลัง sync เสร็จ → upsert `person_event_scans` (ทุก person ใน tenant × event นั้น) = `pending`
+- [ ] Trigger scan route อัตโนมัติหลัง sync complete event (client หรือ server-side)
+- [ ] ถ้า tenant ไม่มี people → skip (ไม่ error, ไม่ต้องยิง)
+- [ ] test: sync event ที่มี people → `person_event_scans` มี pending rows เพิ่ม
+
+**Blocked by:** #25
+
+---
+
+### #28 — Person Archive: Guards + PDPA
+
+**Type:** AFK
+**Parent:** Person Archive
+
+**What to build**
+
+ล็อก person archive ด้วย business-tier gate · ลบคน cascade ครบ (R2 objects + DB) · log Rekognition call ต่อ tenant สำหรับ cost monitoring · UI แสดง note PDPA
+
+**Acceptance criteria**
+
+- [ ] Business-tier check ใน Server Actions (`tenant.plan !== 'business'` → throw "ต้องใช้ Business tier")
+- [ ] ลบคน: ลบ R2 keys ทุก `person_reference_faces.r2_key` ก่อน ค่อย delete DB row (cascade จัดการที่เหลือ)
+- [ ] Log จำนวน `SearchFacesByImage` calls ต่อ tenant (ใน scan route console หรือ credit_ledger metadata)
+- [ ] `/dashboard/people` แสดง note ว่าข้อมูลใบหน้าถูกเก็บตามนโยบายภายในองค์กร
+- [ ] Upgrade prompt ถ้า tenant ไม่ใช่ business tier พยายามเข้า `/dashboard/people`
+
+**Blocked by:** #24
