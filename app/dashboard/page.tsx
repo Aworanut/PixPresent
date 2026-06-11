@@ -3,6 +3,7 @@ import { CalendarDaysIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenant, tenantDisplayName } from "@/lib/auth/current-tenant";
 import { buttonVariants } from "@/components/ui/button";
+import { ArchiveExplorer, type ArchiveFolderRow } from "./_archive-explorer";
 
 export default async function DashboardPage() {
   const ctx = await getCurrentTenant();
@@ -10,11 +11,26 @@ export default async function DashboardPage() {
 
   const { data: events } = await supabase
     .from("events")
-    .select("id, name, event_date, created_at, cover_image_url")
+    .select("id, name, event_date, created_at, cover_image_url, photos(count)")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   const list = events ?? [];
+
+  // Business tier: the dashboard IS a file explorer — every event = a root
+  // folder (mask change; see the business-archive-dashboard spec). SaaS tiers
+  // keep the card view below.
+  if (ctx?.tenant.plan === "business") {
+    const folders: ArchiveFolderRow[] = [...list]
+      .sort((a, b) => (b.event_date ?? "").localeCompare(a.event_date ?? ""))
+      .map((e) => ({
+        id: e.id,
+        name: e.name,
+        event_date: e.event_date,
+        photoCount: (e.photos as unknown as { count: number }[])[0]?.count ?? 0,
+      }));
+    return <ArchiveExplorer folders={folders} />;
+  }
 
   // Split by event_date relative to today (Asia/Bangkok). Events with no date
   // or a date that hasn't passed yet are "Ongoing"; dates before today are "Past".
