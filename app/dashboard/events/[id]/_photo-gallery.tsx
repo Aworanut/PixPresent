@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useEffect, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   setPhotoVisibility,
@@ -58,13 +59,14 @@ type FaceFilter = "all" | "0" | "1" | "2" | "3+";
 
 type Props = {
   eventId: string;
+  eventName: string;
   photos: GalleryPhoto[];
 };
 
 // ─── Design system tokens ─────────────────────────────────────────────────────
 // Champagne gold: #D4AF37 | Cream: #F5EEDC | Obsidian: #111111
 
-export function PhotoGallery({ eventId, photos }: Props) {
+export function PhotoGallery({ eventId, eventName, photos }: Props) {
   const [tab, setTab] = useState<Tab>("active");
   const [view, setView] = useState<View>("grid");
   const [faceFilter, setFaceFilter] = useState<FaceFilter>("all");
@@ -353,12 +355,19 @@ export function PhotoGallery({ eventId, photos }: Props) {
           <span className="text-zinc-500 dark:text-zinc-400">ทุกรูปในงานนี้</span>
         ) : (
           <nav className="flex items-center gap-1 flex-wrap">
+            <Link
+              href="/dashboard"
+              className="text-zinc-600 dark:text-zinc-300 hover:text-[#D4AF37] transition-colors"
+            >
+              คลัง
+            </Link>
+            <ChevronRightIcon className="h-3.5 w-3.5 text-zinc-400" />
             <button
               type="button"
               onClick={() => setPath("")}
               className="text-zinc-600 dark:text-zinc-300 hover:text-[#D4AF37] transition-colors"
             >
-              คลัง
+              {eventName}
             </button>
             {path
               .split("/")

@@ -130,7 +130,7 @@ export default async function EventDetailPage({
 
       {/* ── Gallery / Empty state ── */}
       {hasPhotos ? (
-        <PhotoGallery eventId={event.id} photos={photoList} />
+        <PhotoGallery eventId={event.id} eventName={event.name} photos={photoList} />
       ) : (
         <EmptyGallery
           eventId={event.id}
