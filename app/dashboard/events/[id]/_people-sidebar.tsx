@@ -81,7 +81,7 @@ function Row({
           <img
             src={refFaceUrl}
             alt={name}
-            className="h-6 w-6 shrink-0 rounded-full object-cover object-top"
+            className="h-7 w-7 shrink-0 rounded-full object-cover object-center"
           />
         ) : (
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700 text-[10px] font-bold text-zinc-600 dark:text-zinc-300">
@@ -125,7 +125,7 @@ function Chip({
         <img
           src={refFaceUrl}
           alt=""
-          className="h-4 w-4 rounded-full object-cover object-top -ml-0.5"
+          className="h-4 w-4 rounded-full object-cover object-center -ml-0.5"
         />
       )}
       {label}
