@@ -33,7 +33,7 @@ export function PeopleSidebar({ people, activeId, onSelect, layout }: Props) {
 
   return (
     <div className="space-y-1">
-      <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-mono">
+      <p className="px-1 pb-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
         บุคคลในงานนี้
       </p>
       <Row active={activeId === null} onClick={() => onSelect(null)} name="ทั้งหมด" />
