@@ -983,16 +983,18 @@ create trigger on_auth_user_created
 
 Resumable scan route ที่ยิง `SearchFacesByImage` สำหรับแต่ละคู่ (person × event) จาก `person_event_scans.status='pending'` → upsert `photo_people` → ใช้ pattern auto-resume 60s เดียวกับ sync route
 
+**Status:** 🟢 engine + route done (local) 2026-06-11 — tsc+lint+tests เขียว. **ค้าง→#26/#27:** client auto-resume runner (อยู่หน้า people #26) + trigger หลัง enroll/sync (#27 auto-incremental). คลิกจริงยังไม่ได้ verify
+
 **Acceptance criteria**
 
-- [ ] `lib/aws/rekognition.ts`: เพิ่ม `searchFacesByImage(imageBytes, collectionId)` → `string[]` (matched FaceIds)
-- [ ] `lib/r2.ts`: เพิ่ม `downloadFromR2(key)` → `Buffer`
-- [ ] `lib/people/matching.ts`: `scanPendingUnits(tenantId, deadlineMs)` — claim unit, ยิง SearchFacesByImage ต่อ ref face, union FaceIds, query photos, upsert `photo_people` (confidence ≥ 90 → confirmed, < 90 → pending; skip ถ้า manual/confirmed อยู่แล้ว)
-- [ ] `app/api/people/scan/route.ts`: POST handler → SSE stream, `maxDuration=60`, process pending units จนหมด 60s → `{ type: 'progress' }` / `{ type: 'done' }` / `{ type: 'error' }`
-- [ ] Client trigger + auto-resume component (รูปแบบเดียวกับ `_event-toolbar.tsx` sync resume)
-- [ ] Trigger เมื่อ enroll ใหม่ → call scan route หลัง enqueue
+- [x] `lib/aws/rekognition.ts`: `searchFacesByImage(imageBytes, collectionId)` → `Array<{faceId, similarity}>` (เก็บ similarity ไว้คิด confidence)
+- [x] `lib/r2.ts`: `downloadFromR2(key)` → `Buffer` (shipped ใน #24)
+- [x] `lib/people/matching.ts`: `scanPendingUnits(tenantId, deadlineMs)` — claim unit (mark running), ยิง SearchFacesByImage ต่อ ref face, union via `buildFaceToSimilarityMap`, query photos (array overlap), upsert `photo_people` (`matchStatus`: ≥90 confirmed / <90 pending; `ignoreDuplicates` กัน downgrade manual/confirmed) — unit-tested helpers
+- [x] `app/api/people/scan/route.ts`: POST → SSE, `maxDuration=60`, drain pending จน deadline → `progress` + `done`(drained) / `continue`(resume) / `error`
+- [ ] Client trigger + auto-resume component → **#26** (มีที่อยู่บนหน้า `/dashboard/people`)
+- [ ] Trigger เมื่อ enroll/sync → **#27** (auto-incremental)
 
-**Blocked by:** #24
+**Blocked by:** #24 ✅
 
 ---
 

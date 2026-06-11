@@ -3,6 +3,7 @@ import {
   RekognitionClient,
   DeleteCollectionCommand,
   SearchFacesCommand,
+  SearchFacesByImageCommand,
 } from "@aws-sdk/client-rekognition";
 
 let cachedClient: RekognitionClient | null = null;
@@ -52,6 +53,46 @@ export async function searchFacesBySimilarFaceId(
       err instanceof Error &&
       (err.name === "ResourceNotFoundException" ||
         err.name === "InvalidParameterException")
+    )
+      return [];
+    throw err;
+  }
+}
+
+/**
+ * Search a collection for faces matching the given image bytes. Used by the
+ * person-archive matching engine to find a named person's photos in an event.
+ * Returns matched FaceIds with their similarity scores. Empty on stub / no match.
+ */
+export async function searchFacesByImage(
+  imageBytes: Uint8Array,
+  collectionId: string,
+  threshold = 80,
+): Promise<Array<{ faceId: string; similarity: number }>> {
+  const client = getClient();
+  if (!client) {
+    console.warn("[rekognition] AWS creds missing — returning stub empty results");
+    return [];
+  }
+  try {
+    const result = await client.send(
+      new SearchFacesByImageCommand({
+        CollectionId: collectionId,
+        Image: { Bytes: imageBytes },
+        MaxFaces: 500,
+        FaceMatchThreshold: threshold,
+      }),
+    );
+    return (result.FaceMatches ?? [])
+      .filter((m) => m.Face?.FaceId != null)
+      .map((m) => ({ faceId: m.Face!.FaceId!, similarity: m.Similarity ?? 0 }));
+  } catch (err: unknown) {
+    // No face in the reference image, empty collection, or bad image → no matches.
+    if (
+      err instanceof Error &&
+      (err.name === "ResourceNotFoundException" ||
+        err.name === "InvalidParameterException" ||
+        err.name === "InvalidImageFormatException")
     )
       return [];
     throw err;
