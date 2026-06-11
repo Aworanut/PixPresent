@@ -24,3 +24,22 @@ export function hasUnlimitedRetention(plan: string | null | undefined): boolean 
 export function isValidTenantPlan(value: string): value is TenantPlan {
   return (TENANT_PLANS as readonly string[]).includes(value);
 }
+
+/**
+ * Whether an event's data-retention window (+7-day grace, matching the
+ * cleanup-collections cron) has fully elapsed. Always false for an
+ * unlimited-retention plan — its data is never cleaned up, so it can never
+ * be "expired". Used by the guest landing page's data-expired state.
+ */
+export function isRetentionExpired(opts: {
+  plan: string | null | undefined;
+  activatedAt: string | null;
+  dataRetentionDays: number | null | undefined;
+  now?: Date;
+}): boolean {
+  if (hasUnlimitedRetention(opts.plan)) return false;
+  if (!opts.activatedAt) return false;
+  const cutoff = new Date(opts.activatedAt);
+  cutoff.setDate(cutoff.getDate() + (opts.dataRetentionDays ?? 7) + 7);
+  return cutoff < (opts.now ?? new Date());
+}

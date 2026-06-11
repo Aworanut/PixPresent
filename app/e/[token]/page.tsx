@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { isRetentionExpired } from "@/lib/tenant-plans";
 import { FaceSearch } from "./_face-search";
 import { InAppBrowserNotice } from "./_inapp-browser-notice";
 import { GuestFeedback } from "./_guest-feedback";
@@ -39,7 +40,7 @@ export default async function GuestEventPage({ params }: Props) {
   // Fetch linked photographer/studio tenant profile
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("display_name, name, avatar_url, phone, line_id, instagram_username, facebook_url, bio, tiktok_username")
+    .select("display_name, name, avatar_url, phone, line_id, instagram_username, facebook_url, bio, tiktok_username, plan")
     .eq("id", event.tenant_id)
     .single();
 
@@ -47,12 +48,15 @@ export default async function GuestEventPage({ params }: Props) {
 
   // Data retention window + 7-day grace period has elapsed → Rekognition
   // collection was cleaned up by the nightly cron. Show a specific message
-  // rather than letting face-search fail with a generic error.
-  const isDataExpired = !!event.activated_at && (() => {
-    const cutoff = new Date(event.activated_at!);
-    cutoff.setDate(cutoff.getDate() + (event.data_retention_days ?? 7) + 7);
-    return cutoff < now;
-  })();
+  // rather than letting face-search fail with a generic error. Unlimited-
+  // retention plans (business) are never cleaned up, so they never expire —
+  // mirrors the cron's UNLIMITED_RETENTION_PLANS skip.
+  const isDataExpired = isRetentionExpired({
+    plan: tenant?.plan,
+    activatedAt: event.activated_at,
+    dataRetentionDays: event.data_retention_days,
+    now,
+  });
 
   const isExpired =
     !event.share_token_expires_at ||
