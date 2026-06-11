@@ -29,6 +29,9 @@
 
 # agent tooling (local skills cache — do not commit)
 .agent/
+.agents/
+.claude/skills/
+skills-lock.json
 
 # debug
 npm-debug.log*
