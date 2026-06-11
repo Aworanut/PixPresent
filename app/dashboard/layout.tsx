@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { ShieldCheckIcon, UsersIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenant, tenantDisplayName } from "@/lib/auth/current-tenant";
 import { needsOnboarding } from "@/lib/auth/onboarding";
@@ -53,6 +53,7 @@ export default async function DashboardLayout({
   const displayName = tenantDisplayName(ctx.tenant);
   const avatarUrl = ctx.tenant.avatar_url ?? ctx.user.avatar_url;
   const isSuperAdmin = isSuperAdminEmail(ctx.user.email);
+  const isBusiness = ctx.tenant.plan === "business";
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-zinc-950">
@@ -66,6 +67,15 @@ export default async function DashboardLayout({
           </Link>
 
           <div className="flex items-center gap-3">
+            {isBusiness && (
+              <Link
+                href="/dashboard/people"
+                className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 hover:text-[#D4AF37] dark:hover:text-[#D4AF37] transition-colors"
+              >
+                <UsersIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">บุคคล</span>
+              </Link>
+            )}
             {isSuperAdmin && (
               <Link
                 href="/admin"

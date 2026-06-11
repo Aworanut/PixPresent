@@ -28,6 +28,7 @@ import { processImage } from "@/lib/image-processing";
 import { uploadToR2, r2Paths } from "@/lib/r2";
 import type { SourceType, SourceFile, StorageProvider } from "@/lib/storage";
 import type { RekognitionClient } from "@aws-sdk/client-rekognition";
+import { enqueueEventScans } from "@/lib/people/enrollment";
 
 // Hobby plan caps serverless functions at 60s. Each invocation syncs as many
 // photos as fit in the window; the client re-runs to resume (already-done files
@@ -147,6 +148,11 @@ export async function POST(
           });
         } else {
           send({ type: "done", photoCount: result.totalPhotos });
+          // Auto-incremental (#27): queue every roster person against this event
+          // so newly-synced photos get matched without a manual rescan. Best-effort.
+          await enqueueEventScans(tenant.id, eventId, admin).catch((err) =>
+            console.error("[sync] enqueueEventScans failed:", err),
+          );
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") {

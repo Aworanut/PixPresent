@@ -106,3 +106,35 @@ export async function deletePersonAction(personId: string) {
 
   revalidatePath("/dashboard/people");
 }
+
+/** Confirm a pending scan match → promote to a manual, confirmed link. */
+export async function confirmMatchAction(photoPeopleId: string) {
+  const ctx = await requireBusinessTenant();
+  const supabase = createServiceRoleClient();
+
+  const { data: row } = await supabase
+    .from("photo_people")
+    .update({ status: "confirmed", matched_by: "manual" })
+    .eq("id", photoPeopleId)
+    .eq("tenant_id", ctx.tenant.id)
+    .select("person_id")
+    .maybeSingle();
+
+  if (row) revalidatePath(`/dashboard/people/${row.person_id}`);
+}
+
+/** Reject a pending scan match → remove the link entirely. */
+export async function rejectMatchAction(photoPeopleId: string) {
+  const ctx = await requireBusinessTenant();
+  const supabase = createServiceRoleClient();
+
+  const { data: row } = await supabase
+    .from("photo_people")
+    .delete()
+    .eq("id", photoPeopleId)
+    .eq("tenant_id", ctx.tenant.id)
+    .select("person_id")
+    .maybeSingle();
+
+  if (row) revalidatePath(`/dashboard/people/${row.person_id}`);
+}

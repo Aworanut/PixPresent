@@ -181,3 +181,33 @@ export async function enqueueBackfillScans(
     { onConflict: "person_id,event_id" },
   );
 }
+
+/**
+ * Inverse of enqueueBackfillScans: queue (every tenant person × one event) =
+ * pending. Called after a sync finishes so newly-synced photos get matched
+ * against the whole roster automatically (Goal #3). No-op if the tenant has no
+ * people yet. Idempotent via unique(person_id, event_id).
+ */
+export async function enqueueEventScans(
+  tenantId: string,
+  eventId: string,
+  supabase: ServiceClient,
+): Promise<void> {
+  const { data: people } = await supabase
+    .from("people")
+    .select("id")
+    .eq("tenant_id", tenantId);
+
+  if (!people?.length) return;
+
+  await supabase.from("person_event_scans").upsert(
+    people.map((p) => ({
+      tenant_id: tenantId,
+      person_id: p.id,
+      event_id: eventId,
+      status: "pending" as const,
+      photos_matched: 0,
+    })),
+    { onConflict: "person_id,event_id" },
+  );
+}
