@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { CameraIcon, PhotoIcon } from "@heroicons/react/24/outline";
+import { CameraIcon, CheckIcon, PhotoIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { searchFaces, type SearchResult } from "@/lib/actions/face-search";
 
@@ -83,16 +83,37 @@ export function FaceSearch({ eventId, shareToken }: Props) {
   if (step === "consent") {
     return (
       <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 space-y-5">
-        <div className="space-y-2">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-            ก่อนค้นหารูปของคุณ
-          </h2>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            ระบบจะส่งรูป selfie ของคุณไปยัง AWS Rekognition เพื่อค้นหาใบหน้า
-            รูป selfie จะถูกเก็บชั่วคราวและลบหลัง session หมดอายุ
-            ไม่มีการเก็บข้อมูล biometric เพื่อ marketing
-          </p>
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+            <ShieldCheckIcon className="h-5 w-5 text-zinc-700 dark:text-zinc-200" />
+          </span>
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+              ค้นหารูปของคุณอย่างเป็นส่วนตัว
+            </h2>
+            <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              PixPresent ใช้ภาพเซลฟี่ของคุณเพื่อจับคู่ใบหน้ากับรูปภาพในงานนี้เท่านั้น
+              ระบบจะแสดงเฉพาะรูปที่มีคุณ และลบภาพเซลฟี่ทันทีเมื่อค้นหาเสร็จ
+            </p>
+          </div>
         </div>
+
+        <ul className="space-y-2.5">
+          {[
+            "ใช้เพื่อค้นหารูปของคุณในงานนี้เท่านั้น",
+            "ลบภาพเซลฟี่ทันทีหลังค้นหา ไม่จัดเก็บถาวร",
+            "ไม่เปิดเผย ไม่จำหน่าย และไม่ใช้เพื่อการตลาด",
+          ].map((line) => (
+            <li
+              key={line}
+              className="flex items-start gap-2.5 text-sm text-zinc-700 dark:text-zinc-300"
+            >
+              <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+
         <label className="flex items-start gap-3 cursor-pointer group">
           <input
             type="checkbox"
@@ -101,17 +122,22 @@ export function FaceSearch({ eventId, shareToken }: Props) {
             className="mt-0.5 h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 accent-zinc-900 dark:accent-zinc-100"
           />
           <span className="text-sm text-zinc-700 dark:text-zinc-300">
-            ฉันยอมรับการประมวลผลรูปภาพใบหน้าเพื่อค้นหารูปของฉันในงานนี้
+            ฉันยินยอมให้ใช้ภาพเซลฟี่นี้เพื่อค้นหารูปของฉันในงานนี้
           </span>
         </label>
+
         <Button
           type="button"
           className="w-full"
           disabled={!consentChecked}
           onClick={() => setStep("upload")}
         >
-          ยืนยัน — ไปค้นหารูปของฉัน
+          เริ่มค้นหารูปของฉัน
         </Button>
+
+        <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
+          ดำเนินการตามหลักการคุ้มครองข้อมูลส่วนบุคคล (PDPA)
+        </p>
       </div>
     );
   }
