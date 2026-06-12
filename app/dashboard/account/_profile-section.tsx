@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { PencilSquareIcon, PhoneIcon } from "@heroicons/react/24/outline";
+import { Line, Tiktok } from "@thesvg/react";
 import { updateProfile } from "@/lib/actions/account";
 import { isStoredAvatarUrl } from "@/lib/avatar-url";
 import type { TenantProfile } from "@/lib/auth/current-tenant";
@@ -13,18 +14,8 @@ import { cn } from "@/lib/utils";
 
 // ─── Minimal Custom SVG Icons ──────────────────────────────────────────────────
 
-function LineIcon({ className }: { className?: string }) {
-  return (
-    <svg className={cn("fill-current", className)} viewBox="0 0 24 24">
-      <path 
-        fillRule="evenodd" 
-        clipRule="evenodd" 
-        d="M12 3C7.03 3 3 6.2 3 10.1c0 3.5 3.2 6.4 7.6 7l-.2 1.5c-.05.38.14.5.44.29l2-1.45c.22-.16.5-.22.77-.18c3.9.3 7.4-2.7 7.4-7.25C21 6.2 16.97 3 12 3z M7 8.5h1v3h1.2v1H7V8.5z M10.2 8.5h1v4h-1V8.5z M12.8 8.5h0.9l1.6 3v-3h0.9v4h-0.9l-1.6-3v3h-0.9V8.5z M17.5 8.5h2.5v0.9H18.4v0.6h1.3v0.9H18.4v0.7H20v0.9h-2.5V8.5z" 
-      />
-    </svg>
-  );
-}
-
+// Instagram keeps a monochrome outline mark — thesvg only ships the full-colour
+// gradient logo, which would clash with this card's unified gold treatment.
 function InstagramIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -35,18 +26,19 @@ function InstagramIcon({ className }: { className?: string }) {
   );
 }
 
+// Facebook as a filled gold badge with the "f" knocked out (transparent), so the
+// letter shows the card background on both light and dark themes. We render only
+// thesvg.org's circle silhouette path — dropping its separate solid-"f" path
+// turns the letter into a cutout instead of a same-colour fill.
 function FacebookIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-    </svg>
-  );
-}
-
-function TikTokIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+    <svg className={className} viewBox="0 0 666.667 666.667" fill="currentColor">
+      <g transform="matrix(1.33333 0 0 -1.33333 -133.333 800)">
+        <path
+          d="M0 0c0 138.071-111.929 250-250 250S-500 138.071-500 0c0-117.245 80.715-215.622 189.606-242.638v166.242h-51.552V0h51.552v32.919c0 85.092 38.508 124.532 122.048 124.532 15.838 0 43.167-3.105 54.347-6.211V81.986c-5.901.621-16.149.932-28.882.932-40.993 0-56.832-15.528-56.832-55.9V0h81.659l-14.028-76.396h-67.631v-171.773C-95.927-233.218 0-127.818 0 0"
+          transform="translate(600 350)"
+        />
+      </g>
     </svg>
   );
 }
@@ -195,7 +187,7 @@ export function ProfileSection({ tenant, email }: Props) {
               {/* Line ID */}
               {lineId && (
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400">
-                  <LineIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <Line fill="currentColor" className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
                   <span className="font-mono truncate">@{lineId.replace(/^@/, "")}</span>
                 </div>
               )}
@@ -221,7 +213,7 @@ export function ProfileSection({ tenant, email }: Props) {
               {/* TikTok */}
               {tiktok && (
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600 dark:text-zinc-400">
-                  <TikTokIcon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
+                  <Tiktok fill="currentColor" className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
                   <span className="font-mono truncate">@{tiktok.replace(/^@/, "")}</span>
                 </div>
               )}
