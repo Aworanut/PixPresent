@@ -12,7 +12,7 @@ type Props = {
 };
 
 type Step = "consent" | "upload" | "searching" | "results" | "empty" | "error";
-type Photo = { id: string; webUrl: string; fullUrl: string };
+type Photo = { id: string; webUrl: string; fullUrl: string; faceCount: number };
 
 export function FaceSearch({ eventId, shareToken }: Props) {
   const [step, setStep] = useState<Step>("consent");
@@ -155,6 +155,14 @@ export function FaceSearch({ eventId, shareToken }: Props) {
   // ─── Results ───────────────────────────────────────────────────────────────
   if (step === "results" && result?.ok) {
     const photos = result.photos;
+    // Promote a solo photo (faceCount === 1) to a 2×2 "big" tile, but at most one
+    // big per 6 tiles (gap 5) so the page stays compact and bigs spread out.
+    let sinceBig = 99;
+    const bigFlags = photos.map((p) => {
+      const big = p.faceCount === 1 && sinceBig >= 5;
+      sinceBig = big ? 0 : sinceBig + 1;
+      return big;
+    });
     const allIds = photos.map((p) => p.id).join(",");
     const downloadHref = `/api/download/zip?ids=${allIds}&token=${shareToken}`;
 
@@ -196,13 +204,14 @@ export function FaceSearch({ eventId, shareToken }: Props) {
             </div>
           </div>
 
-          {/* Grid */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {/* Grid — solo photos (1 face) feature as 2×2, dense-packed */}
+          <div className="grid grid-flow-row-dense grid-cols-2 gap-2 sm:grid-cols-3">
             {photos.map((photo, i) => (
               <PhotoCard
                 key={photo.id}
                 photo={photo}
                 index={i}
+                big={bigFlags[i]}
                 onOpen={() => setLightboxIndex(i)}
               />
             ))}
@@ -678,18 +687,21 @@ async function compressImage(
 type PhotoCardProps = {
   photo: Photo;
   index: number;
+  big?: boolean;
   onOpen: () => void;
 };
 
-function PhotoCard({ photo, index, onOpen }: PhotoCardProps) {
+function PhotoCard({ photo, index, big = false, onOpen }: PhotoCardProps) {
   // Staggered reveal — cap the delay so large galleries don't make the last items
   // lag in (skill rule: avoid "excessive motion"). ease-out + reduced-motion: globals.css.
   const revealStyle = { animationDelay: `${Math.min(index, 10) * 40}ms` };
+  // Solo photos (faceCount === 1) feature as a 2×2 tile (gap-capped in the results grid).
+  const spanClass = big ? "col-span-2 row-span-2" : "";
 
   if (!photo.webUrl) {
     return (
       <div
-        className="photo-reveal aspect-square rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center"
+        className={`photo-reveal aspect-square rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center ${spanClass}`}
         style={revealStyle}
       >
         <span className="text-2xl">🖼️</span>
@@ -702,14 +714,14 @@ function PhotoCard({ photo, index, onOpen }: PhotoCardProps) {
       type="button"
       onClick={onOpen}
       style={revealStyle}
-      className="photo-reveal group relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+      className={`photo-reveal group relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 ${spanClass}`}
     >
       <Image
         src={photo.webUrl}
         alt="event photo"
         fill
         className="object-cover group-hover:opacity-90 transition-opacity"
-        sizes="(max-width: 640px) 50vw, 33vw"
+        sizes={big ? "(max-width: 640px) 100vw, 66vw" : "(max-width: 640px) 50vw, 33vw"}
       />
       {/* Hover hint */}
       <div className="absolute inset-0 flex items-end p-2 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">

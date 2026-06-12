@@ -3,7 +3,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { matchedVisibilities } from "@/lib/face-search-visibility";
 
-type MatchedPhoto = { id: string; webUrl: string; fullUrl: string };
+type MatchedPhoto = { id: string; webUrl: string; fullUrl: string; faceCount: number };
 
 export type SearchResult =
   | { ok: true; sessionId: string; photos: MatchedPhoto[] }
@@ -114,14 +114,14 @@ export async function searchFaces(formData: FormData): Promise<SearchResult> {
     matchResult.length > 0
       ? supabase
           .from("photos")
-          .select("id, r2_web_url, r2_full_url")
+          .select("id, r2_web_url, r2_full_url, rekognition_face_ids")
           .eq("event_id", eventId)
           .in("visibility", matchedVisibilities("ordinary"))
           .in("id", matchResult)
       : Promise.resolve({ data: [] }),
     supabase
       .from("photos")
-      .select("id, r2_web_url, r2_full_url")
+      .select("id, r2_web_url, r2_full_url, rekognition_face_ids")
       .eq("event_id", eventId)
       .eq("visibility", "public"),
   ]);
@@ -135,6 +135,7 @@ export async function searchFaces(formData: FormData): Promise<SearchResult> {
       id: row.id,
       webUrl: row.r2_web_url ?? "",
       fullUrl: row.r2_full_url ?? "",
+      faceCount: row.rekognition_face_ids?.length ?? 0,
     });
   }
 
