@@ -20,7 +20,7 @@ export function FeedbackWidget() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-xs font-medium text-white shadow-lg transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-none bg-[#271A12] px-4 py-2.5 text-xs font-medium text-white shadow-lg transition-colors hover:bg-[#3d2a1e] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
       >
         <ChatBubbleLeftRightIcon className="h-4 w-4" />
         ส่ง feedback
@@ -33,20 +33,20 @@ export function FeedbackWidget() {
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl dark:bg-zinc-900"
+            className="w-full max-w-md rounded-none bg-[#FDFBF7] p-5 shadow-2xl dark:bg-zinc-900"
             role="dialog"
             aria-modal="true"
             aria-label="ส่ง feedback"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              <h2 className="text-sm font-semibold text-[#271A12] dark:text-zinc-50 font-heading">
                 บอกเราหน่อย — ช่วยให้ PixPresent ดีขึ้น
               </h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                className="text-[#5C4A3A] hover:text-[#271A12] dark:hover:text-zinc-200"
                 aria-label="ปิด"
               >
                 <XMarkIcon className="h-5 w-5" />

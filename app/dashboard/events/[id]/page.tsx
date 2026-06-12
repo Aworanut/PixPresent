@@ -90,7 +90,7 @@ export default async function EventDetailPage({
           <nav className="text-sm mb-2">
             <Link
               href="/dashboard"
-              className="text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300"
+              className="text-[#5C4A3A]/60 hover:text-[#271A12] dark:text-zinc-500 dark:hover:text-zinc-300"
             >
               ← Events
             </Link>
@@ -165,16 +165,16 @@ function EmptyGallery({
   if (!driveConnected) {
     return (
       <EmptyShell>
-        <LinkSlashIcon className="h-12 w-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
-        <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+        <LinkSlashIcon className="h-12 w-12 text-[#C9A227]/40 dark:text-zinc-600 mx-auto mb-3" />
+        <p className="text-base font-medium text-[#271A12] dark:text-zinc-100 font-heading">
           ยังไม่ได้เชื่อมต่อ Google Drive
         </p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-[#5C4A3A] dark:text-zinc-400">
           เชื่อมต่อ Drive เพื่อเริ่ม sync รูปภาพ
         </p>
         <Link
           href="/dashboard/account/connections"
-          className="mt-2 inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
+          className="mt-2 inline-flex items-center gap-2 rounded-none bg-[#271A12] dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-[#3d2a1e] dark:hover:bg-zinc-300 transition-colors"
         >
           เชื่อมต่อ Google Drive
         </Link>
@@ -185,16 +185,16 @@ function EmptyGallery({
   if (!hasFolders) {
     return (
       <EmptyShell>
-        <FolderIcon className="h-12 w-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
-        <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+        <FolderIcon className="h-12 w-12 text-[#C9A227]/40 dark:text-zinc-600 mx-auto mb-3" />
+        <p className="text-base font-medium text-[#271A12] dark:text-zinc-100 font-heading">
           ยังไม่มี Drive folder
         </p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-[#5C4A3A] dark:text-zinc-400">
           เพิ่ม folder ของช่างภาพก่อน แล้วค่อย sync
         </p>
         <Link
           href={`/dashboard/events/${eventId}?open=folders`}
-          className="mt-2 inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors cursor-pointer"
+          className="mt-2 inline-flex items-center gap-2 rounded-none bg-[#271A12] dark:bg-zinc-100 px-4 py-2 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-[#3d2a1e] dark:hover:bg-zinc-300 transition-colors cursor-pointer"
         >
           เพิ่ม folder
         </Link>
@@ -204,14 +204,14 @@ function EmptyGallery({
 
   return (
     <EmptyShell>
-      <CameraIcon className="h-12 w-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
-      <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+      <CameraIcon className="h-12 w-12 text-[#C9A227]/40 dark:text-zinc-600 mx-auto mb-3" />
+      <p className="text-base font-medium text-[#271A12] dark:text-zinc-100 font-heading">
         ยังไม่มีรูปภาพ
       </p>
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="text-sm text-[#5C4A3A] dark:text-zinc-400">
         กด Sync เพื่อดึงรูปจาก Google Drive มา index
       </p>
-      <p className="text-xs text-zinc-400 dark:text-zinc-500 flex items-center justify-center gap-1 mt-1">
+      <p className="text-xs text-[#5C4A3A]/60 dark:text-zinc-500 flex items-center justify-center gap-1 mt-1">
         <ArrowPathIcon className="h-3.5 w-3.5" /> คลิกไอคอน Sync ด้านบนขวาเพื่อเริ่ม
       </p>
     </EmptyShell>
@@ -222,7 +222,7 @@ function EmptyGallery({
 
 function EmptyShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 py-20 gap-2 text-center px-6">
+    <div className="flex flex-col items-center justify-center rounded-none border border-dashed border-[#C9A227]/25 dark:border-zinc-800 py-20 gap-2 text-center px-6">
       {children}
     </div>
   );
