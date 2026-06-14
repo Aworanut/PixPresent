@@ -4,5 +4,10 @@
       "path": "/api/cron/cleanup-collections",
       "schedule": "0 19 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/events/[id]/sync/route.ts": { "maxDuration": 60 },
+    "app/api/download/zip/route.ts": { "maxDuration": 60 },
+    "app/api/cron/cleanup-collections/route.ts": { "maxDuration": 60 }
+  }
 }
